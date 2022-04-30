@@ -20,7 +20,10 @@ URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends: 
     methods,
-    R (>= 4.0)
+    R (>= 4.0),
+    MetaboAnalystR,
+    DEP,
+    fluctuator
 Imports: 
     assertthat,
     BiocParallel,
@@ -92,8 +95,8 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
-    NicWir/fluctuator
-    NicWir/MetaboAnalystR
+    github::NicWir/fluctuator,
+    github::NicWir/MetaboAnalystR,
     bioc::release/DEP
 biocViews: 
 Encoding: UTF-8
