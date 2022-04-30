@@ -19,12 +19,12 @@ License: `use_gpl3_license()`
 URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
-    ggplot2,
     DEP,
-    fluctuator,
-    MetaboAnalystR,
-    magrittr,
     dplyr,
+    fluctuator,
+    ggplot2,
+    magrittr,
+    MetaboAnalystR,
     methods,
     R (>= 4.0)
 Imports: 
@@ -107,14 +107,14 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
-    bioc::release/globaltest,
-    bioc::release/GlobalAncova,
-    bioc::release/Rgraphviz,
+    bioc::release/DEP,
     bioc::release/genefilter,
+    bioc::release/GlobalAncova,
+    bioc::release/globaltest,
+    bioc::release/KEGGgraph,
+    bioc::release/Rgraphviz,
     bioc::release/SSPA,
     bioc::release/sva,
-    bioc::release/KEGGgraph,
-    bioc::release/DEP,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR
 biocViews: 
