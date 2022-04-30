@@ -1,0 +1,2179 @@
+met.plot_missval <- function (mSetObj, plot = TRUE, export = TRUE, fontsize = 12)
+{
+  assay <- mSetObj[["dataSet"]][["data_orig"]]
+  if (!any(is.na(assay)) & !any(assay==0)) {
+    stop("No missing or zero values in '", deparse(substitute(se)),
+         "'", call. = FALSE)
+  }
+  # Make assay data binary (1 = valid value, 0 = missing value)
+  df <- assay %>% data.frame(check.names = FALSE)
+  df <- t(sapply(df, as.numeric))
+  colnames(df) <- rownames(assay)
+  missval <-
+    df[apply(df, 1, function(x)
+      any(is.na(x))) | apply(df, 1, function(x)
+        any(x==0)),]
+  missval <- ifelse(is.na(missval)|missval==0, 0, 1)
+  # Plot binary heatmap
+  ht2 = ComplexHeatmap::Heatmap(missval, col = c("white", "black"),
+                                column_names_side = "top", show_row_names = FALSE,
+                                show_column_names = TRUE, name = "Missing values pattern",
+                                column_names_gp = grid::gpar(fontsize = fontsize), heatmap_legend_param = list(at = c(0,
+                                                                                                                      1), labels = c("Missing value", "Valid value")))
+  if (export == TRUE){
+    dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
+    message(paste0("Exporting Missing values pattern to:\n\"", getwd(), "/Plots/MissValPlot.pdf\" and \".../MissValPlot.png\""))
+
+    pdf("Plots/MissValPlot.pdf")
+    ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
+    dev.off()
+
+    png("Plots/MissValPlot.png",
+        width = 6, height = 6, units = 'in', res = 300)
+    ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
+    dev.off()
+  }
+
+  if (plot == TRUE){
+    ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
+  }
+  mSetObj$imgSet$missval_heatmap <- ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
+  return(mSetObj)
+}
+
+# Modified plot_detect function from package DEP with export as PDF and PNG. Plots the group-wise density of proteins with missing values
+met.plot_detect <- function (mSetObj, basesize = 10, plot = TRUE, export = TRUE)
+{
+
+  assay <- mSetObj[["dataSet"]][["data_orig"]] %>% replace(.==0, NA)
+  if (!any(is.na(assay)) & !any(assay==0)) {
+    stop("No missing or zero values in '", if_else(!is.null(mSetObj$dataSet$prenorm),
+                                                   deparse(substitute(mSetObj[["dataSet"]][["prenorm"]])),
+                                                   if_else(!is.null(mSetObj$dataSet$data_proc),
+                                                           deparse(substitute(mSetObj[["dataSet"]][["data_proc"]])),deparse(substitute(mSetObj[["dataSet"]][["data_orig"]])))),
+         "'", call. = FALSE)
+  }
+  df <- assay %>% data.frame(check.names = FALSE)+1
+  df <- t(sapply(df, as.numeric)) %>% data.frame() %>% log10()
+  colnames(df) <- rownames(assay)
+  df <- df %>% rownames_to_column() %>% gather(ID, val, -rowname)
+  stat <- df %>% group_by(rowname) %>% summarize(mean = mean(val,
+                                                             na.rm = TRUE), missval = any(is.na(val)|val==0))
+  cumsum <- stat %>% group_by(missval) %>% arrange(mean) %>%
+    mutate(num = 1, cs = cumsum(num), cs_frac = cs/n())
+  p1 <- ggplot(stat, aes(mean, col = missval)) +
+    geom_density(na.rm = TRUE, show.legend = FALSE) +
+    stat_density(geom="line", position ="identity") +
+    labs(x = expression(log[10] ~ "Intensity"), y = "Density") +
+    guides(col = guide_legend(title = paste0(
+      "Missing values\n(",
+      round(
+        100 * nrow(cumsum[cumsum$missval == TRUE, ]) / nrow(cumsum[cumsum$missval == FALSE, ]),
+        digits = 1
+      ),
+      "% missing)"
+    ))) +
+    theme_minimal(base_size = basesize)
+  p2 <- ggplot(cumsum, aes(mean, cs_frac, col = missval)) +
+    geom_line() + labs(x = expression(log[10] ~ "Intensity"),
+                       y = "Cumulative fraction") +
+    guides(col = guide_legend(title = paste0(
+      "Missing values\n(",
+      round(
+        100 * nrow(cumsum[cumsum$missval == TRUE, ]) / nrow(cumsum[cumsum$missval ==
+                                                                     FALSE, ]),
+        digits = 1
+      ),
+      "% missing)"
+    ))) +
+    theme_minimal(base_size = basesize)
+
+  df_per_group <- df
+  df_per_group$ID <- str_replace(df_per_group$ID, "_[:digit:]+$", "")
+  stat_per_group <- df_per_group %>% group_by(rowname, ID) %>% summarize(mean = mean(val,
+                                                                                     na.rm = TRUE), missval = any(is.na(val)))
+  cumsum_per_group <- stat_per_group %>% group_by(missval) %>% arrange(mean) %>%
+    mutate(num = 1, cs = cumsum(num), cs_frac = cs/n())
+
+  p1_per_group <- ggplot(stat_per_group, aes(mean, col = missval)) +
+    geom_density(na.rm = TRUE, show.legend = FALSE) +
+    stat_density(geom = "line", position = "identity") +
+    labs(x = expression(log[2] ~ "Intensity"), y = "Density") +
+    guides(col = guide_legend(title = paste0(
+      "Missing values\n(",
+      round(
+        100 * nrow(cumsum_per_group[cumsum_per_group$missval == TRUE, ]) / nrow(cumsum_per_group[cumsum_per_group$missval ==
+                                                                                                   FALSE, ]),
+        digits = 1
+      ),
+      "% missing)"
+    ))) +
+    theme_minimal(base_size = basesize)
+  p2_per_group <-
+    ggplot(cumsum_per_group, aes(mean, cs_frac, col = missval)) +
+    geom_line() + labs(x = expression(log[2] ~ "Intensity"),
+                       y = "Cumulative fraction") +
+    guides(col = guide_legend(title = paste0(
+      "Missing values\n(",
+      round(
+        100 * nrow(cumsum_per_group[cumsum_per_group$missval == TRUE, ]) / nrow(cumsum_per_group[cumsum_per_group$missval ==
+                                                                                                   FALSE, ]),
+        digits = 1
+      ),
+      "% missing)"
+    ))) +
+    theme_minimal(base_size = basesize)
+
+
+
+  if (export == TRUE){
+    dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
+    message(paste0("Exporting density distributions and cumulative fraction of proteins with and without missing values to:\n\"", getwd(), "/Plots/DensMissPlot.pdf\" and \".../DensMissPlot.png\""))
+
+    pdf("Plots/DensMissPlot.pdf")
+    gridExtra::grid.arrange(p1, p2, ncol = 1)
+    dev.off()
+
+    png("Plots/DensMissPlot.png",
+        width = 6, height = 6, units = 'in', res = 300)
+    gridExtra::grid.arrange(p1, p2, ncol = 1)
+    dev.off()
+  }
+
+  if (plot == TRUE){
+    gridExtra::grid.arrange(p1, p2, ncol = 1)
+  }
+  mSetObj$imgSet$missval_density <- gridExtra::grid.arrange(p1, p2, ncol = 1)
+  return(mSetObj)
+}
+
+met.plot_ANOVA <- function (mSetObj = NA, imgName, format = "pdf", dpi = 72,
+                            width = NA, subtitle=FALSE, export=FALSE, plot=TRUE)
+{
+  mSetObj <- mSetObj
+  lod <- -log10(mSetObj$analSet$aov$p.adj)
+  df <- data.frame(names=names(lod), values=lod, row.names = NULL)
+  imgName = paste(imgName,".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 9
+  }
+  else if (width == 0) {
+    w <- 7
+  }
+  else {
+    w <- width
+  }
+  h <- w * 6/9
+  mSetObj$imgSet$anova <- imgName
+  g <- ggplot(df, aes(x=as.numeric(row.names(df)), y=values)) +
+    geom_point(aes(fill=mSetObj$analSet$aov$inx.imp), color="black", shape=21, size=2, alpha=0.6) +
+    scale_fill_manual(values = c("#1170AA", "#EF6F6A"), labels=c("unsignificant", "significant")) +
+    geom_text(aes(label = names), size=2, hjust=1, vjust=-1) +
+    labs(x="Metabolites", y="-Log10(adjusted p-value)", title="One-way ANOVA") +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          legend.title = element_blank(), legend.position = "bottom", legend.direction = "horizontal",
+          plot.title = element_text(face = "bold", hjust = 0.5),
+          plot.subtitle = element_text(hjust = 0.5)) +
+    geom_hline(yintercept = -log10(mSetObj[["analSet"]][["aov"]][["raw.thresh"]]), linetype = "longdash",
+               alpha = 0.4)
+  if(subtitle==TRUE){
+    g <- g + labs(subtitle=paste0("(",
+                                  str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                                  "/",
+                                  str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                                  ")"))
+  }
+  if(export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
+                 width = w, height = h, type = format, bg = "white")
+    print(g)
+    dev.off()
+  }
+  mSetObj$imgSet$anova.plot <- g
+  if(plot==TRUE){
+    print(g)
+  }
+  return(mSetObj)
+}
+
+met.plot_SampleNormSummary <- function (mSetObj = NA, imgName, format = "png", dpi = NULL,
+                                        width = NA, show_prenorm = TRUE, export = FALSE, plot=TRUE)
+{
+
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- if_else(show_prenorm, 10, 5.5)
+  }
+  else if (width == 0) {
+    w <- if_else(show_prenorm, 10, 5.5)
+  }
+  else if (width > 0) {
+    w = width
+  }
+  h = w * if_else(show_prenorm, 1.25, 2.3)
+
+  mSetObj$imgSet$summary_norm_sample <- imgName
+  if(!is.null(mSetObj$dataSet$prenorm)){
+    proc.data <- data.frame(mSetObj$dataSet$prenorm)
+  } else if(!is.null(mSetObj$dataSet$data_proc)){
+    proc.data <- mSetObj$dataSet$data_proc
+  } else {
+    proc.data <- qs::qread("data_proc.qs")
+  }
+  if(show_prenorm){
+    p <- function(){
+      layout(matrix(c(1, 2, 2, 2, 3, 4, 4, 4), 4, 2, byrow = FALSE))
+      pre.inx <- MetaboAnalystR:::GetRandomSubsetIndex(nrow(proc.data), sub.num = 50)
+      namesVec <- rownames(proc.data[pre.inx, , drop = FALSE])
+      nm.inx <- namesVec %in% rownames(mSetObj$dataSet$norm)
+      namesVec <- namesVec[nm.inx]
+      pre.inx <- pre.inx[nm.inx]
+      norm.inx <- match(namesVec, rownames(mSetObj$dataSet$norm))
+      namesVec <- substr(namesVec, 1, 20)
+      rangex.pre <- range(proc.data[pre.inx, , drop = FALSE], na.rm = T)
+      rangex.norm <- range(mSetObj$dataSet$norm[norm.inx, , drop = FALSE],
+                           na.rm = T)
+      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      y.label <- "Samples"
+      op <- par(mar = c(6.5, 7, 0, 0), xaxt = "s")
+      plot(density(apply(proc.data, 1, mean, na.rm = TRUE)), col = "darkblue",
+           las = 2, lwd = 2, main = "", xlab = "", ylab = "")
+      mtext(x.label, 1, 4.4)
+      mtext("Density", 2, 5)
+      op <- par(mar = c(5.75, 8, 4, 0), xaxt = "s")
+      boxplot(t(proc.data[pre.inx, , drop = FALSE]), names = namesVec,
+              ylim = rangex.pre, las = 2, col = "lightgreen",
+              horizontal = T)
+      mtext("Before Normalization", 3, 1)
+      op <- par(mar = c(6.5, 7, 0, 2), xaxt = "s")
+      plot(density(apply(mSetObj$dataSet$norm, 1, mean, na.rm = TRUE)),
+           col = "darkblue", las = 2, lwd = 2, main = "",
+           xlab = "", ylab = "")
+      mtext(paste("Normalized", x.label), 1, 4.4)
+      op <- par(mar = c(5.75, 8, 4, 2), xaxt = "s")
+      boxplot(t(mSetObj$dataSet$norm[norm.inx, , drop = FALSE]),
+              names = namesVec, ylim = rangex.norm, las = 2, col = "lightgreen",
+              ylab = "", horizontal = T)
+      mtext(paste0(if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                           "(no normalization/transformation)", str_replace_all(paste0("After Normalization\n",
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", " ("),
+                                                                                       mSetObj[["dataSet"]][["trans.method"]],
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" | mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", ", "),
+                                                                                       mSetObj[["dataSet"]][["scale.method"]],
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", ")")),"N/A", ""))),
+            3, 1)
+    }
+  } else {
+    p <- function(){
+      layout(matrix(c(1, 2, 2, 2), 4, 1, byrow = FALSE))
+      pre.inx <- MetaboAnalystR:::GetRandomSubsetIndex(nrow(proc.data), sub.num = 50)
+      namesVec <- rownames(proc.data[pre.inx, , drop = FALSE])
+      nm.inx <- namesVec %in% rownames(mSetObj$dataSet$norm)
+      namesVec <- namesVec[nm.inx]
+      pre.inx <- pre.inx[nm.inx]
+      norm.inx <- match(namesVec, rownames(mSetObj$dataSet$norm))
+      namesVec <- substr(namesVec, 1, 20)
+      rangex.pre <- range(proc.data[pre.inx, , drop = FALSE], na.rm = T)
+      rangex.norm <- range(mSetObj$dataSet$norm[norm.inx, , drop = FALSE],
+                           na.rm = T)
+      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      y.label <- "Samples"
+      op <- par(mar = c(6.5, 7, 0, 0), xaxt = "s")
+      plot(density(apply(mSetObj$dataSet$norm, 1, mean, na.rm = TRUE)),
+           col = "darkblue", las = 2, lwd = 2, main = "",
+           xlab = "", ylab = "")
+      mtext("Density", 2, 5)
+      mtext(paste("Normalized", x.label), 1, 4.2)
+      op <- par(mar = c(5.75, 8, 4, 0), xaxt = "s")
+      boxplot(t(mSetObj$dataSet$norm[norm.inx, , drop = FALSE]),
+              names = namesVec, ylim = rangex.norm, las = 2, col = "lightgreen",
+              ylab = "", horizontal = T)
+      mtext(paste0(if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                           "(no normalization/transformation)", str_replace_all(paste0("After Normalization\n",
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", " ("),
+                                                                                       mSetObj[["dataSet"]][["trans.method"]],
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" | mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", ", "),
+                                                                                       mSetObj[["dataSet"]][["scale.method"]],
+                                                                                       if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                               "", ")")),"N/A", ""))),
+            3, 1)
+    }
+  }
+  if(export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
+                 width = w, height = h, type = format, bg = "white")
+    p()
+    dev.off()
+  }
+  temp <- tempfile()
+  pdf(file=temp)
+  p(); mSetObj$imgSet$summary_norm_sample.plot <- recordPlot()
+  dev.off()
+  file.remove(temp)
+  if(plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName, format = "png", dpi = NULL, pre.inx = NULL,
+                                         width = NA, show_prenorm = TRUE, export = FALSE, plot=TRUE)
+{
+
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- if_else(show_prenorm, 10.5, 5.75)
+  }
+  else if (width == 0) {
+    w = if_else(show_prenorm, 7.2, 3.6)
+  }
+  else if (width > 0) {
+    w = width
+  }
+  h = w * if_else(show_prenorm, 1.1905, 2)
+  mSetObj$imgSet$summary_norm_feature <- imgName
+  if(!is.null(mSetObj$dataSet$prenorm)){
+    proc.data <- data.frame(mSetObj$dataSet$prenorm)
+  } else if(!is.null(mSetObj$dataSet$data_proc)){
+    proc.data <- mSetObj$dataSet$data_proc
+  } else {
+    proc.data <- qs::qread("data_proc.qs")
+  }
+  if(show_prenorm){
+    p <- function(){
+      layout(matrix(c(1, 2, 2, 2, 3, 4, 4, 4), 4, 2, byrow = FALSE))
+      if (is.null(pre.inx)) {
+        if (ncol(proc.data) > 50) {
+          min.inx <- which.min(colMeans(proc.data))
+          max.inx <- which.max(colMeans(proc.data))
+          order.inx <- order(colMeans(proc.data))
+          pre.inx <- unname(c(min.inx,
+                              order.inx[!order.inx %in% c(min.inx, max.inx)][round(seq(2, (ncol(proc.data) - 2),
+                                                                                       ncol(proc.data) / 50))],
+                              max.inx))
+        } else {
+          pre.inx <- 1:nrow(proc.data)
+        }
+      }
+      namesVec <- colnames(proc.data[, pre.inx, drop = FALSE])
+      nm.inx <- namesVec %in% colnames(mSetObj$dataSet$norm)
+      namesVec <- namesVec[nm.inx]
+      pre.inx <- pre.inx[nm.inx]
+      norm.inx <- match(namesVec, colnames(mSetObj$dataSet$norm))
+      namesVec <- substr(namesVec, 1, 12)
+      rangex.pre <- range(proc.data[, pre.inx, drop = FALSE], na.rm = T)
+      rangex.norm <- range(mSetObj$dataSet$norm[, norm.inx, drop = FALSE],
+                           na.rm = T)
+      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      y.label <- MetaboAnalystR:::GetVariableLabel(mSetObj$dataSet$type)
+      if (anal.type == "roc" & mSetObj$dataSet$roc_cols ==
+          1) {
+        op <- par(mar = c(4, 7, 4, 0), xaxt = "s")
+        plot.new()
+      }
+      else {
+        op <- par(mar = c(4, 7, 4, 0), xaxt = "s")
+        plot(density(apply(proc.data, 2, mean, na.rm = TRUE)),
+             col = "darkblue", las = 2, lwd = 2, main = "",
+             xlab = "", ylab = "")
+        mtext("Density", 2, 5)
+        mtext("Before Normalization", 3, 1)
+      }
+      op <- par(mar = c(7, 7, 0.5, 0), xaxt = "s")
+      boxplot(proc.data[, pre.inx, drop = FALSE], names = namesVec,
+              ylim = rangex.pre, las = 2, col = "lightgreen",
+              horizontal = T, show.names = T)
+      mtext(x.label, 1, 5)
+      if (anal.type == "roc" & mSetObj$dataSet$roc_cols ==
+          1) {
+        op <- par(mar = c(4, 7, 4, 2), xaxt = "s")
+        plot.new()
+      }
+      else {
+        op <- par(mar = c(4, 7, 4, 2), xaxt = "s")
+        plot(density(apply(mSetObj$dataSet$norm, 2, mean, na.rm = TRUE)),
+             col = "darkblue", las = 2, lwd = 2, main = "",
+             xlab = "", ylab = "")
+        mtext(paste0(if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                             "(no normalization/transformation)", str_replace_all(paste0("After Normalization\n",
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", " ("),
+                                                                                         mSetObj[["dataSet"]][["trans.method"]],
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" | mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", ", "),
+                                                                                         mSetObj[["dataSet"]][["scale.method"]],
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", ")")),"N/A", ""))),
+              3, 1)
+      }
+      op <- par(mar = c(7, 7, 0.5, 2), xaxt = "s")
+      boxplot(mSetObj$dataSet$norm[, norm.inx, drop = FALSE], names = namesVec,
+              ylim = rangex.norm, las = 2, col = "lightgreen",
+              horizontal = T, show.names = T)
+      mtext(paste("Normalized", x.label), 1, 5)
+    }
+  } else {
+    p <- function(){
+      layout(matrix(c(1, 2, 2, 2), 4, 1, byrow = FALSE))
+      if(is.null(pre.inx)){
+        if (ncol(proc.data) > 50) {
+          min.inx <- which.min(colMeans(proc.data))
+          max.inx <- which.max(colMeans(proc.data))
+          order.inx <- order(colMeans(proc.data))
+          pre.inx <- unname(c(min.inx,
+                              order.inx[!order.inx %in% c(min.inx, max.inx)][round(seq(2, (ncol(proc.data) - 2),
+                                                                                       ncol(proc.data) / 50))],
+                              max.inx))
+        } else {
+          pre.inx <- 1:nrow(proc.data)
+        }
+      }
+      namesVec <- colnames(proc.data[, pre.inx, drop = FALSE])
+      nm.inx <- namesVec %in% colnames(mSetObj$dataSet$norm)
+      namesVec <- namesVec[nm.inx]
+      pre.inx <- pre.inx[nm.inx]
+      norm.inx <- match(namesVec, colnames(mSetObj$dataSet$norm))
+      namesVec <- substr(namesVec, 1, 12)
+      rangex.pre <- range(proc.data[, pre.inx, drop = FALSE], na.rm = T)
+      rangex.norm <- range(mSetObj$dataSet$norm[, norm.inx, drop = FALSE],
+                           na.rm = T)
+      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      y.label <- MetaboAnalystR:::GetVariableLabel(mSetObj$dataSet$type)
+      if (anal.type == "roc" & mSetObj$dataSet$roc_cols ==
+          1) {
+        op <- par(mar = c(7, 7, 0, 0), xaxt = "s")
+        plot.new()
+      }
+      else {
+        op <- par(mar = c(7, 7, 4, 0), xaxt = "s")
+        plot(density(apply(mSetObj$dataSet$norm, 2, mean, na.rm = TRUE)),
+             col = "darkblue", las = 2, lwd = 2, main = "",
+             xlab = "", ylab = "")
+        mtext(paste0(if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                             "(no normalization/transformation)", str_replace_all(paste0("After Normalization\n",
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", " ("),
+                                                                                         mSetObj[["dataSet"]][["trans.method"]],
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" | mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", ", "),
+                                                                                         mSetObj[["dataSet"]][["scale.method"]],
+                                                                                         if_else(mSetObj[["dataSet"]][["trans.method"]]=="N/A" & mSetObj[["dataSet"]][["scale.method"]]=="N/A" ,
+                                                                                                 "", ")")),"N/A", ""))),
+              3, 1)
+        mtext("Density", 2, 5)
+      }
+      op <- par(mar = c(7, 7, 0, 2), xaxt = "s")
+      boxplot(mSetObj$dataSet$norm[, norm.inx, drop = FALSE], names = namesVec,
+              ylim = rangex.norm, las = 2, col = "lightgreen",
+              horizontal = T, show.names = T)
+      mtext(paste("Normalized", x.label), 1, 4.7)
+    }
+  }
+  if(export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
+                 width = w, height = h, type = format, bg = "white")
+    p()
+    dev.off()
+  }
+  temp <- tempfile()
+  pdf(file=temp)
+  p(); mSetObj$imgSet$summary_norm_feature.plot <- recordPlot()
+  dev.off()
+  file.remove(temp)
+  if(plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_CorrHeatMap_Samples <- function (mSetObj = NA, imgName = "correlation_samples_", format = "pdf", dpi = 72,
+                                          width = NA, target = "row", cor.method = "pearson",
+                                          colors="bwm", viewOpt="overview", fix.col = FALSE,
+                                          no.clst = FALSE, corrCutoff = 0, plot = TRUE, export = FALSE)
+{
+  main <- xlab <- ylab <- NULL
+  data <- mSetObj$dataSet$norm
+  corrCutoff <- as.numeric(corrCutoff)
+  if (target == "row") {
+    data <- t(data)
+  }
+  if (ncol(data) > 1000) {
+    filter.val <- apply(data.matrix(data), 2, IQR, na.rm = T)
+    rk <- rank(-filter.val, ties.method = "random")
+    data <- as.data.frame(data[, rk <= 1000])
+    print("Data is reduced to 1000 vars ..")
+  }
+  colnames(data) <- substr(colnames(data), 1, 18)
+  corr.mat <- cor(data, method = cor.method)
+  corr.mat[abs(corr.mat) < corrCutoff] <- 0
+  mSetObj$analSet$pwcor <- list()
+  mSetObj$analSet$pwcor$data <- data
+  mSetObj$analSet$pwcor$cor.method <- cor.method
+  mSetObj$analSet$pwcor$no.clst <- no.clst
+  if (colors == "gbr") {
+    colors <- colorRampPalette(c("green", "black",
+                                 "red"), space = "rgb")(256)
+  }
+  else if (colors == "heat") {
+    colors <- heat.colors(256)
+  }
+  else if (colors == "topo") {
+    colors <- topo.colors(256)
+  }
+  else if (colors == "gray") {
+    colors <- colorRampPalette(c("grey90", "grey10"))(256)
+  }
+  else {
+    colors <- rev(colorRampPalette(c(RColorBrewer::brewer.pal(10,
+                                                              "RdBu"), "#001833"))(256))
+  }
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (viewOpt == "overview") {
+    if (is.na(width)) {
+      w <- 9
+    }
+    else if (width == 0) {
+      w <- 7.2
+    }
+    else {
+      w <- 7.2
+    }
+    h <- w
+    mSetObj$imgSet$corr.heatmap.samples <- imgName
+  }
+  else {
+    if (ncol(corr.mat) > 50) {
+      myH <- ncol(corr.mat) * 12 + 40
+    }
+    else if (ncol(corr.mat) > 20) {
+      myH <- ncol(corr.mat) * 12 + 60
+    }
+    else {
+      myH <- ncol(corr.mat) * 12 + 120
+    }
+    h <- round(myH/72, 2)
+    if (is.na(width)) {
+      w <- h
+    }
+    else if (width == 0) {
+      w <- h <- 7.2
+    }
+    else {
+      w <- h <- 7.2
+    }
+    mSetObj$imgSet$corr.heatmap.samples <- imgName
+  }
+  if (no.clst) {
+    rowv = FALSE
+    colv = FALSE
+    dendro = "none"
+  }
+  else {
+    rowv = TRUE
+    colv = TRUE
+    dendro = "both"
+  }
+
+  if (fix.col) {
+    breaks <- seq(from = -1,
+                  to = 1,
+                  length = 257)
+    res <-
+      pheatmap::pheatmap(
+        corr.mat,
+        fontsize = 11,
+        fontsize_row = 11,
+        cluster_rows = colv,
+        cluster_cols = rowv,
+        color = colors,
+        breaks = breaks,
+        silent=T
+      )
+  }
+  else {
+    res <-
+      pheatmap::pheatmap(
+        corr.mat,
+        fontsize = 11,
+        fontsize_row = 11,
+        cluster_rows = colv,
+        cluster_cols = rowv,
+        color = colors,
+        silent=T
+      )
+  }
+
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = format,
+        bg = "white"
+      )
+    }
+    grid::grid.newpage()
+    grid::grid.draw(res$gtable)
+    dev.off()
+  }
+
+  if (!no.clst) {
+    new.ord <- res$tree_row$order
+    corr.mat <- corr.mat[new.ord, new.ord]
+    mSetObj$analSet$pwcor$new.ord <- new.ord
+  }
+  if(plot == TRUE){
+    grid::grid.newpage()
+    grid::grid.draw(res$gtable)
+  }
+  mSetObj$imgSet$corr.heatmap.features <- res
+  fast.write.csv(signif(corr.mat, 5), file = "correlation_table_samples.csv")
+  return(mSetObj)
+}
+met.plot_CorrHeatMap_Features <- function (mSetObj = NA, imgName = "correlation_features_", format = "pdf", dpi = 300,
+                                           width = NA, target = "col", cor.method = "pearson",
+                                           colors="bwm", viewOpt="overview", fix.col = TRUE,
+                                           no.clst = FALSE, corrCutoff = 0, plot = TRUE, export = FALSE)
+{
+  main <- xlab <- ylab <- NULL
+  data <- mSetObj$dataSet$norm
+  corrCutoff <- as.numeric(corrCutoff)
+  if (target == "row") {
+    data <- t(data)
+  }
+  if (ncol(data) > 1000) {
+    filter.val <- apply(data.matrix(data), 2, IQR, na.rm = T)
+    rk <- rank(-filter.val, ties.method = "random")
+    data <- as.data.frame(data[, rk <= 1000])
+    print("Data is reduced to 1000 vars ..")
+  }
+  colnames(data) <- substr(colnames(data), 1, 18)
+  corr.mat <- cor(data, method = cor.method)
+  corr.mat[abs(corr.mat) < corrCutoff] <- 0
+  mSetObj$analSet$pwcor <- list()
+  mSetObj$analSet$pwcor$data <- data
+  mSetObj$analSet$pwcor$cor.method <- cor.method
+  mSetObj$analSet$pwcor$no.clst <- no.clst
+  if (colors == "gbr") {
+    colors <- colorRampPalette(c("green", "black",
+                                 "red"), space = "rgb")(256)
+  }
+  else if (colors == "heat") {
+    colors <- heat.colors(256)
+  }
+  else if (colors == "topo") {
+    colors <- topo.colors(256)
+  }
+  else if (colors == "gray") {
+    colors <- colorRampPalette(c("grey90", "grey10"))(256)
+  }
+  else {
+    colors <- rev(colorRampPalette(c(RColorBrewer::brewer.pal(10,
+                                                              "RdBu"), "#001833"))(256))
+  }
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (viewOpt == "overview") {
+    if (is.na(width)) {
+      w <- 9
+    }
+    else if (width == 0) {
+      w <- 7.2
+    }
+    else {
+      w <- 7.2
+    }
+    h <- w
+    mSetObj$imgSet$corr.heatmap.features <- imgName
+  }
+  else {
+    if (ncol(corr.mat) > 50) {
+      myH <- ncol(corr.mat) * 12 + 40
+    }
+    else if (ncol(corr.mat) > 20) {
+      myH <- ncol(corr.mat) * 12 + 60
+    }
+    else {
+      myH <- ncol(corr.mat) * 12 + 120
+    }
+    h <- round(myH/72, 2)
+    if (is.na(width)) {
+      w <- h
+    }
+    else if (width == 0) {
+      w <- h <- 7.2
+    }
+    else {
+      w <- h <- 7.2
+    }
+    mSetObj$imgSet$corr.heatmap.features <- imgName
+  }
+  if (no.clst) {
+    rowv = FALSE
+    colv = FALSE
+    dendro = "none"
+  }
+  else {
+    rowv = TRUE
+    colv = TRUE
+    dendro = "both"
+  }
+
+  if (fix.col) {
+    breaks <- seq(from = -1,
+                  to = 1,
+                  length = 257)
+    res <-
+      pheatmap::pheatmap(
+        corr.mat,
+        fontsize = 4 ^ (2 - (ncol(mSetObj$dataSet$norm) / 110)),
+        fontsize_row = 4 ^ (2 - (ncol(mSetObj$dataSet$norm) / 110)),
+        cluster_rows = colv,
+        cluster_cols = rowv,
+        color = colors,
+        border_color = NA,
+        breaks = breaks,
+        silent=T
+      )
+  }
+  else {
+    res <-
+      pheatmap::pheatmap(
+        corr.mat,
+        fontsize = 4 ^ (2 - (ncol(mSetObj$dataSet$norm) / 110)),
+        fontsize_row = 4 ^ (2 - (ncol(mSetObj$dataSet$norm) / 110)),
+        cluster_rows = colv,
+        cluster_cols = rowv,
+        color = colors,
+        border_color = NA,
+        silent=T
+      )
+  }
+
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = format,
+        bg = "white"
+      )
+    }
+    grid::grid.newpage()
+    grid::grid.draw(res$gtable)
+    dev.off()
+  }
+  if (!no.clst) {
+    new.ord <- res$tree_row$order
+    corr.mat <- corr.mat[new.ord, new.ord]
+    mSetObj$analSet$pwcor$new.ord <- new.ord
+  }
+  if(plot == TRUE){
+    grid::grid.newpage()
+    grid::grid.draw(res$gtable)
+  }
+  mSetObj$imgSet$corr.heatmap.features <- res
+  fast.write.csv(signif(corr.mat, 5), file = "correlation_table_features.csv")
+  return(mSetObj)
+}
+
+met.plot_PCAScree <- function (mSetObj = NA, imgName, format = "png", dpi = 72,
+                               width = NA, scree.num, plot = TRUE, export = FALSE)
+{
+
+  stds <- mSetObj$analSet$pca$std[1:scree.num]
+  pcvars <- mSetObj$analSet$pca$variance[1:scree.num]
+  cumvars <- mSetObj$analSet$pca$cum.var[1:scree.num]
+  ylims <- range(c(pcvars, cumvars))
+  extd <- (ylims[2] - ylims[1])/10
+  miny <- ifelse(ylims[1] - extd > 0, ylims[1] - extd, 0)
+  maxy <- ifelse(ylims[2] + extd > 1, 1, ylims[2] + extd)
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 10
+  }
+  else if (width == 0) {
+    w <- 8
+  }
+  else {
+    w <- width
+  }
+  h <- w * 2/3
+  mSetObj$imgSet$pca.scree <- imgName
+  p <- function(){
+    par(mar = c(5, 5, 6, 3))
+    plot(pcvars, type = "l", col = "blue", main = "Scree plot",
+         xlab = "PC index", ylab = "Variance explained",
+         ylim = c(miny, maxy), axes = F)
+    text(pcvars, labels = paste(100 * round(pcvars, 3), "%"),
+         adj = c(-0.3, -0.5), srt = 45, xpd = T)
+    points(pcvars, col = "red")
+    lines(cumvars, type = "l", col = "green")
+    text(cumvars, labels = paste(100 * round(cumvars, 3), "%"),
+         adj = c(-0.3, -0.5), srt = 45, xpd = T)
+    points(cumvars, col = "red")
+    abline(v = 1:scree.num, lty = 3)
+    axis(2)
+    axis(1, 1:length(pcvars), 1:length(pcvars))
+  }
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = "png",
+        bg = "white"
+      )
+    }
+    p()
+    dev.off()
+  }
+  if (plot == TRUE){
+    p()
+  }
+  p(); mSetObj$imgSet$pca.scree.plot <- recordPlot()
+  return(mSetObj)
+}
+met.plot_PCA2DScore <- function (mSetObj = NA, imgName, format = "png", dpi = 72, subtitle = FALSE,
+                                 width = NA, pcx, pcy, reg = 0.95, show = 1, grey.scale = 0, plot = TRUE, export = FALSE)
+{
+  cls <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  xlabel = paste("PC", pcx, "(", round(100 * mSetObj$analSet$pca$variance[pcx],
+                                       1), "%)")
+  ylabel = paste("PC", pcy, "(", round(100 * mSetObj$analSet$pca$variance[pcy],
+                                       1), "%)")
+  pc1 = mSetObj$analSet$pca$x[, pcx]
+  pc2 = mSetObj$analSet$pca$x[, pcy]
+  text.lbls <- substr(names(pc1), 1, 14)
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 7.2
+  }
+  else if (width == 0) {
+    w <- 7.2
+  }
+  else {
+    w <- width
+  }
+  if (exists("group_factor")) {
+    legend.nm <- unique(as.character(sort(group_factor)))
+  }
+  else{
+    legend.nm <- unique(as.character(sort(cls)))
+  }
+  h <- w-1
+  mSetObj[['imgSet']][[paste0('pca.score2d_PC', pcx, "_PC", pcy)]] <- imgName
+  p <- function(){
+    plot.new()
+    op <- par(mar=c(5,5,if_else(subtitle==TRUE, 5.4, 3),3))
+    l <- legend(0, 0, bty='n', legend = legend.nm,
+                plot=FALSE, pch=c(1, 2), lty=c(1, 2))
+    # calculate right margin width in ndc
+    w <- grconvertX(l$rect$w, to='ndc') - grconvertX(0, to='ndc')
+    par(omd=c(0, 1-w, 0, 1))
+
+
+    if (cls.type == "disc") {
+      if (mSetObj$dataSet$type.cls.lbl == "integer") {
+        cls <- as.factor(as.numeric(levels(cls))[cls])
+      }
+      else {
+        cls <- cls
+      }
+      lvs <- levels(cls)
+      pts.array <- array(0, dim = c(100, 2, length(lvs)))
+      for (i in 1:length(lvs)) {
+        inx <- cls == lvs[i]
+        groupVar <- var(cbind(pc1[inx], pc2[inx]), na.rm = T)
+        groupMean <- cbind(mean(pc1[inx], na.rm = T), mean(pc2[inx],
+                                                           na.rm = T))
+        pts.array[, , i] <- ellipse::ellipse(groupVar, centre = groupMean,
+                                             level = reg, npoints = 100)
+      }
+      xrg <- range(pc1, pts.array[, 1, ])
+      yrg <- range(pc2, pts.array[, 2, ])
+      x.ext <- (xrg[2] - xrg[1])/12
+      y.ext <- (yrg[2] - yrg[1])/12
+      xlims <- c(xrg[1] - x.ext, xrg[2] + x.ext)
+      ylims <- c(yrg[1] - y.ext, yrg[2] + y.ext)
+      cols <- MetaboAnalystR:::GetColorSchema(cls, grayscale = F)
+      uniq.cols <- unique(cols)
+      plot(pc1, pc2, xlab = xlabel, xlim = xlims, ylim = ylims,
+           ylab = ylabel, type = "n",
+           col = cols, pch = as.numeric(cls) + 1,
+           cex.lab = 2,
+           cex.axis = 2,
+           cex.main = 2,
+           cex.sub = 2)
+      title("PCA Scores Plot", line = if_else(subtitle==TRUE, 2, 1), cex.main = 2.5)
+      mtext(line = 0.4,cex=2, if_else(subtitle==TRUE, paste0("(",
+                                                             str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                                                             "/",
+                                                             str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                                                             ")"), NULL))
+      grid(col = "lightgray", lty = "dotted", lwd = 1)
+
+
+      if (length(uniq.cols) > 1) {
+        names(uniq.cols) <- unique(as.character(sort(cls)))
+      }
+      for (i in 1:length(lvs)) {
+        if (length(uniq.cols) > 1) {
+          polygon(pts.array[, , i], col = adjustcolor(uniq.cols[lvs[i]],
+                                                      alpha = 0.2), border = NA)
+        }
+        else {
+          polygon(pts.array[, , i], col = adjustcolor(uniq.cols,
+                                                      alpha = 0.2), border = NA)
+        }
+        if (grey.scale) {
+          lines(pts.array[, , i], col = adjustcolor("black",
+                                                    alpha = 0.5), lty = 2)
+        }
+      }
+      pchs <- GetShapeSchema(mSetObj, show, grey.scale)
+      if (grey.scale) {
+        cols <- rep("black", length(cols))
+      }
+      if (show == 1) {
+        text(pc1, pc2, label = text.lbls, pos = 4, xpd = T,
+             cex = 0.75)
+        points(pc1, pc2, pch = pchs, col = cols)
+      }
+      else {
+        if (length(uniq.cols) == 1) {
+          points(pc1, pc2, pch = pchs, col = cols, cex = 1)
+        }
+        else {
+          if (grey.scale == 1 | (exists("shapeVec") &&
+                                 all(shapeVec >= 0))) {
+            my.cols <- adjustcolor(cols, alpha.f = 0.4)
+            my.cols[pchs == 21] <- "black"
+            points(pc1, pc2, pch = pchs, col = my.cols,
+                   bg = adjustcolor(cols, alpha.f = 0.4), cex = 1.8)
+          }
+          else {
+            points(pc1, pc2, pch = 21, bg = adjustcolor(cols,
+                                                        alpha.f = 0.4), cex = 2)
+          }
+        }
+      }
+      uniq.pchs <- unique(pchs)
+      if (length(uniq.cols) != length(levels(cls))) {
+        if (mSetObj$dataSet$type.cls.lbl == "integer") {
+          names(cols) <- as.numeric(cls)
+        }
+        else {
+          names(cols) <- as.character(cls)
+        }
+        match.inx <- match(levels(cls), names(cols))
+        uniq.cols <- cols[match.inx]
+      }
+      if (grey.scale) {
+        uniq.cols <- "black"
+      }
+      legend(par('usr')[2], par('usr')[4], bty='n', legend = legend.nm, pch = uniq.pchs,
+             col = uniq.cols, cex = 1.3, xpd = NA)
+    }
+    else {
+      plot(pc1, pc2, xlab = xlabel, ylab = ylabel, type = "n",
+           main = "Scores Plot")
+      points(pc1, pc2, pch = 15, col = "magenta")
+      text(pc1, pc2, label = text.lbls, pos = 4, col = "blue",
+           xpd = T, cex = 0.8)
+    }
+    par(op)
+  }
+
+  if (export == TRUE){
+    pdf(file=imgName, width = w, height = h,
+        onefile = F)
+    p()
+    dev.off()
+  }
+  p(); mSetObj[['imgSet']][[paste0('pca.score2d_PC', pcx, "_PC", pcy, ".plot")]] <- recordPlot()
+  dev.off()
+  if(plot==TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_PCALoading <- function (mSetObj = NA, imgName, format = "png", dpi = 72, subtitle = FALSE,
+                                 width = NA, inx1, inx2, export = FALSE, plot=TRUE)
+{
+  loadings <- as.matrix(cbind(mSetObj$analSet$pca$rotation[,
+                                                           inx1], mSetObj$analSet$pca$rotation[, inx2]))
+  ord.inx <- order(-abs(loadings[, 1]), -abs(loadings[, 2]))
+  loadings <- signif(loadings[ord.inx, ], 5)
+  ldName1 = paste("Loadings PC", inx1, "(", round(100 * mSetObj$analSet$pca$variance[inx1],
+                                                  1), "%)")
+  ldName2 = paste("Loadings PC", inx2, "(", round(100 * mSetObj$analSet$pca$variance[inx2],
+                                                  1), "%)")
+
+  colnames(loadings) <- c(ldName1, ldName2)
+  mSetObj$analSet$pca$imp.loads <- loadings
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 7.2
+  }
+  else if (width == 0) {
+    w <- 7.2
+  }
+  else {
+    w <- width
+  }
+  h <- w-0.5
+  mSetObj[['imgSet']][[paste0('pca.loading_PC', inx1, "_PC", inx2)]] <- imgName
+  plotType <- mSetObj$analSet$pca$loading.type
+  p <- function(){
+    plot.new()
+    par(mar = c(6, 6.2, if_else(subtitle==TRUE, 5.4, 3), 6), mgp=c(4.5, 1, 0))
+    plot(loadings[, 1], loadings[, 2], las = 1, xlab = ldName1,
+         ylab = ldName2,
+         cex.lab = 2,
+         cex.axis = 2,
+         cex.main = 2,
+         cex.sub = 2)
+    title("PCA Loading Scatterplot", line = if_else(subtitle==TRUE, 2, 1), cex.main = 2.5)
+    mtext(line = 0.4,cex=2, if_else(subtitle==TRUE, paste0("(",
+                                                           str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                                                           "/",
+                                                           str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                                                           ")"), NULL))
+    mSetObj$pca.axis.lims <- par("usr")
+    grid(col = "lightgray", lty = "dotted", lwd = 1)
+    points(loadings[, 1], loadings[, 2], pch = 19, col = adjustcolor("#339933",
+                                                                     alpha.f = 0.4))
+    if (plotType == "all") {
+      text(loadings[, 1], loadings[, 2], labels = substr(rownames(loadings),
+                                                         1, 16), pos = 4, col = "gray30", xpd = T)
+    }
+    else if (plotType == "gray30") {
+      if (length(mSetObj$custom.cmpds) > 0) {
+        hit.inx <- rownames(loadings) %in% mSetObj$custom.cmpds
+        text(loadings[hit.inx, 1], loadings[hit.inx, 2],
+             labels = rownames(loadings)[hit.inx], pos = 4,
+             col = "blue", xpd = T)
+      }
+    }
+  }
+  if (export == TRUE){
+    pdf(file=imgName, width = w, height = h,
+        onefile = F)
+    p()
+    dev.off()
+  }
+  p(); mSetObj[['imgSet']][[paste0('pca.loading_PC', inx1, "_PC", inx2, ".plot")]] <- recordPlot()
+  dev.off()
+  if (plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_PLS2DScore <- function (mSetObj = NA, imgName, format = "png", dpi = 72,
+                                 width = NA, inx1=1, inx2=2, reg = 0.95, show = 1, grey.scale = 0, subtitle=FALSE,
+                                 use.sparse = FALSE, plot = TRUE, export = FALSE)
+{
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 7.2
+  }
+  else if (width == 0) {
+    w <- 7.2
+  }
+  else {
+    w <- width
+  }
+  h <- w-1
+  cls1 <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  mSetObj[['imgSet']][[paste0('pls.score2d_PC', inx1, "_PC", inx2)]] <- imgName
+  lv1 <- mSetObj$analSet$plsr$scores[, inx1]
+  lv2 <- mSetObj$analSet$plsr$scores[, inx2]
+  xlabel <- paste("Component", inx1, "(", round(100 *
+                                                  mSetObj$analSet$plsr$Xvar[inx1]/mSetObj$analSet$plsr$Xtotvar,
+                                                1), "%)")
+  ylabel <- paste("Component", inx2, "(", round(100 *
+                                                  mSetObj$analSet$plsr$Xvar[inx2]/mSetObj$analSet$plsr$Xtotvar,
+                                                1), "%)")
+  if (exists("group_factor")) {
+    legend.nm <- unique(as.character(sort(group_factor)))
+  }
+  else{
+    legend.nm <- unique(as.character(sort(cls1)))
+  }
+  p<- function(){
+    plot.new()
+    l <- legend(0, 0, bty='n', legend = legend.nm,
+                plot=FALSE, pch=c(1, 2), lty=c(1, 2))
+    # calculate right margin width in ndc
+    w <- grconvertX(l$rect$w, to='ndc') - grconvertX(0, to='ndc')
+    par(omd=c(0, 1-w, 0, 1))
+
+    par(mar = c(5, 5, if_else(subtitle==TRUE, 5.4, 3), 3))
+    text.lbls <- substr(rownames(mSetObj$dataSet$norm), 1, 12)
+    if (cls.type == "integer") {
+      cls <- as.factor(as.numeric(levels(cls1))[cls1])
+    }
+    else {
+      cls <- cls1
+    }
+    lvs <- levels(cls)
+    pts.array <- array(0, dim = c(100, 2, length(lvs)))
+    for (i in 1:length(lvs)) {
+      inx <- cls1 == lvs[i]
+      groupVar <- var(cbind(lv1[inx], lv2[inx]), na.rm = T)
+      groupMean <- cbind(mean(lv1[inx], na.rm = T), mean(lv2[inx],
+                                                         na.rm = T))
+      pts.array[, , i] <- ellipse::ellipse(groupVar, centre = groupMean,
+                                           level = reg, npoints = 100)
+    }
+    xrg <- range(lv1, pts.array[, 1, ])
+    yrg <- range(lv2, pts.array[, 2, ])
+    x.ext <- (xrg[2] - xrg[1])/12
+    y.ext <- (yrg[2] - yrg[1])/12
+    xlims <- c(xrg[1] - x.ext, xrg[2] + x.ext)
+    ylims <- c(yrg[1] - y.ext, yrg[2] + y.ext)
+    cols <- MetaboAnalystR:::GetColorSchema(cls, grayscale = F)
+    uniq.cols <- unique(cols)
+    plot(lv1, lv2, xlab = xlabel, xlim = xlims, ylim = ylims,
+         ylab = ylabel, type = "n",
+         cex.lab = 2,
+         cex.axis = 2,
+         cex.main = 2,
+         cex.sub = 2)
+    title("PLS-DA Scores Plot", line = if_else(subtitle==TRUE, 2, 1), cex.main = 2.5)
+    mtext(line = 0.4,cex=2, if_else(subtitle==TRUE, paste0("(",
+                                                           str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                                                           "/",
+                                                           str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                                                           ")"), NULL))
+    grid(col = "lightgray", lty = "dotted", lwd = 1)
+    if (length(uniq.cols) > 1) {
+      names(uniq.cols) <- legend.nm
+    }
+    for (i in 1:length(lvs)) {
+      if (length(uniq.cols) > 1) {
+        polygon(pts.array[, , i], col = adjustcolor(uniq.cols[lvs[i]],
+                                                    alpha = 0.2), border = NA)
+      }
+      else {
+        polygon(pts.array[, , i], col = adjustcolor(uniq.cols,
+                                                    alpha = 0.2), border = NA)
+      }
+      if (grey.scale) {
+        lines(pts.array[, , i], col = adjustcolor("black",
+                                                  alpha = 0.5), lty = 2)
+      }
+    }
+    pchs <- GetShapeSchema(mSetObj, show, grey.scale)
+    if (grey.scale) {
+      cols <- rep("black", length(cols))
+    }
+    if (show == 1) {
+      text(lv1, lv2, label = text.lbls, pos = 4, xpd = T, cex = 0.75)
+      points(lv1, lv2, pch = pchs, col = cols)
+    }
+    else {
+      if (length(uniq.cols) == 1) {
+        points(lv1, lv2, pch = pchs, col = cols, cex = 1)
+      }
+      else {
+        if (grey.scale == 1 | (exists("shapeVec") &&
+                               all(shapeVec >= 0))) {
+          my.cols <- adjustcolor(cols, alpha.f = 0.4)
+          my.cols[pchs == 21] <- "black"
+          points(lv1, lv2, pch = pchs, col = my.cols, bg = adjustcolor(cols,
+                                                                       alpha.f = 0.4), cex = 1.8)
+        }
+        else {
+          points(lv1, lv2, pch = 21, bg = adjustcolor(cols,
+                                                      alpha.f = 0.4), cex = 2)
+        }
+      }
+    }
+    uniq.pchs <- unique(pchs)
+    if (grey.scale) {
+      uniq.cols <- "black"
+    }
+    if (length(uniq.cols) != length(levels(cls))) {
+      if (cls.type == "integer") {
+        names(cols) <- as.numeric(cls)
+      }
+      else {
+        names(cols) <- as.character(cls)
+      }
+      match.inx <- match(levels(cls), names(cols))
+      uniq.cols <- cols[match.inx]
+    }
+    if (length(uniq.pchs) != length(levels(cls))) {
+      names(pchs) <- as.character(cls)
+      match.inx <- match(levels(cls), names(pchs))
+      uniq.pchs <- pchs[match.inx]
+    }
+    legend(par('usr')[2], par('usr')[4], bty='n', legend = legend.nm, pch = uniq.pchs,
+           col = uniq.cols, cex = 1.3, xpd = NA)
+    par(par(mar=c(5,5,3,3)))
+  }
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = "png",
+        bg = "white"
+      )
+    }
+    p()
+    dev.off()
+  }
+  p(); mSetObj[['imgSet']][[paste0('pls.score2d_PC', inx1, "_PC", inx2, ".plot")]] <- recordPlot()
+  dev.off()
+  if (plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_PLSLoading <- function (mSetObj = NA, imgName, format = "png", dpi = 72, subtitle=FALSE,
+                                 width = NA, inx1, inx2, plot = TRUE, export = FALSE)
+{
+  load1 <- mSetObj$analSet$plsr$loadings[, inx1]
+  load2 <- mSetObj$analSet$plsr$loadings[, inx2]
+  loadings = as.matrix(cbind(load1, load2))
+  ord.inx <- order(-abs(loadings[, 1]), -abs(loadings[, 2]))
+  loadings <- signif(loadings[ord.inx, ], 5)
+  ldName1 <- paste(
+    "Loadings Comp. ",
+    inx1,
+    "(",
+    round(
+      100 *
+        mSetObj$analSet$plsr$Xvar[inx1] /
+        mSetObj$analSet$plsr$Xtotvar,
+      1
+    ),
+    "%)"
+  )
+  ldName2 <- paste(
+    "Loadings Comp. ",
+    inx2,
+    "(",
+    round(
+      100 *
+        mSetObj$analSet$plsr$Xvar[inx2] /
+        mSetObj$analSet$plsr$Xtotvar,
+      1
+    ),
+    "%)"
+  )
+  colnames(loadings) <- c(ldName1, ldName2)
+  mSetObj$analSet$plsr$imp.loads <- loadings
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 10
+  }
+  else if (width == 0) {
+    w <- 10
+  }
+  else {
+    w <- width
+  }
+  h <- 0.85*w
+  mSetObj[['imgSet']][[paste0('pls.loading_PC', inx1, "_PC", inx2)]] <- imgName
+  plotType <- mSetObj$analSet$plsr$loading.type
+  p <- function(){
+    par(mar = c(6, 6, if_else(subtitle==TRUE, 5.4, 3), 6), mgp=c(4.5, 1, 0))
+    plot(loadings[, 1], loadings[, 2], las = 2, xlab = ldName1,
+         ylab = ldName2,
+         cex.lab = 2,
+         cex.axis = 2,
+         cex.main = 2,
+         cex.sub = 2)
+    title("PLS-DA Loading Scatterplot", line = if_else(subtitle==TRUE, 2.5, 1), cex.main = 2.3)
+    mtext(line = 0.4,cex=2, if_else(subtitle==TRUE, paste0("(",
+                                                           str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                                                           "/",
+                                                           str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                                                           ")"), NULL))
+    mSetObj$pls.axis.lims <- par("usr")
+    grid(col = "lightgray", lty = "dotted", lwd = 1)
+    points(loadings[, 1], loadings[, 2], pch = 19, col = adjustcolor("#CC6663",
+                                                                     alpha.f = 0.4))
+    if (plotType == "all") {
+      text(loadings[, 1], loadings[, 2], labels = substr(rownames(loadings),
+                                                         1, 16), pos = 4, col = "gray30", xpd = T)
+    }
+    else if (plotType == "custom") {
+      if (length(mSetObj$custom.cmpds) > 0) {
+        hit.inx <- colnames(mSetObj$dataSet$norm) %in% mSetObj$custom.cmpds
+        text(loadings[hit.inx, 1], loadings[hit.inx, 2],
+             labels = rownames(loadings)[hit.inx], pos = 4,
+             col = "gray30", xpd = T)
+      }
+    }
+  }
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = "png",
+        bg = "white"
+      )
+    }
+    p()
+    dev.off()
+  }
+  p(); mSetObj[['imgSet']][[paste0('pls.loading_PC', inx1, "_PC", inx2, ".plot")]] <- recordPlot()
+  dev.off()
+  if (plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_PLS_Imp <- function (mSetObj = NA, imgName, format = "png", dpi = 72,
+                              width = NA, type, feat.nm, feat.num, color.BW = FALSE, plot = TRUE, export = FALSE, title=FALSE)
+{
+
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 8
+  }
+  else if (width == 0) {
+    w <- 7
+  }
+  else {
+    w <- width
+  }
+  h <- w
+  mSetObj[["imgSet"]][[paste0("pls.imp_", type, "_", feat.nm)]]  <- imgName
+  p <- function(){
+    if (type == "vip") {
+      mSetObj$analSet$plsda$imp.type <- "vip"
+      vips <- mSetObj$analSet$plsda$vip.mat[, feat.nm]
+      met.plot_ImpVar(mSetObj, vips, paste0("VIP scores - ", feat.nm), feat.num,
+                      color.BW, title = title)
+    }
+    else {
+      mSetObj$analSet$plsda$imp.type <- "coef"
+      data <- mSetObj$analSet$plsda$coef.mat[, feat.nm]
+      met.plot_ImpVar(mSetObj, data, paste0("Coefficients - ", feat.nm), feat.num,
+                      color.BW, title = title)
+    }
+  }
+  if (export == TRUE) {
+    if (format == "pdf") {
+      pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      Cairo::Cairo(
+        file = imgName,
+        unit = "in",
+        dpi = dpi,
+        width = w,
+        height = h,
+        type = "png",
+        bg = "white"
+      )
+    }
+    p()
+    dev.off()
+  }
+  p(); mSetObj[["imgSet"]][[paste0("pls.imp_", type, "_", feat.nm,".plot")]] <- recordPlot()
+  dev.off()
+  return(mSetObj)
+}
+
+met.plot_ImpVar <- function (mSetObj = NA, imp.vec, xlbl, feat.num = 15, color.BW = FALSE, title=FALSE)
+{
+
+  cls.len <- length(levels(mSetObj$dataSet$cls))
+  if (cls.len == 2) {
+    rt.mrg <- 5
+  }
+  else if (cls.len == 3) {
+    rt.mrg <- 6
+  }
+  else if (cls.len == 4) {
+    rt.mrg <- 7
+  }
+  else if (cls.len == 5) {
+    rt.mrg <- 8
+  }
+  else if (cls.len == 6) {
+    rt.mrg <- 9
+  }
+  else {
+    rt.mrg <- 11
+  }
+  op <- par(mar = c(5, 7, if_else(title==TRUE, 4, 3), rt.mrg))
+  if (feat.num <= 0) {
+    feat.num = 15
+  }
+  if (feat.num > length(imp.vec)) {
+    feat.num <- length(imp.vec)
+  }
+  imp.vec <- rev(sort(imp.vec))[1:feat.num]
+  imp.vec <- sort(imp.vec)
+  mns <- by(mSetObj$dataSet$norm[, names(imp.vec)], mSetObj$dataSet$cls,
+            function(x) {
+              apply(x, 2, mean, trim = 0.1)
+            })
+  mns <- t(matrix(unlist(mns), ncol = feat.num, byrow = TRUE))
+  vip.nms <- substr(names(imp.vec), 1, 14)
+  names(imp.vec) <- NULL
+  dotcolor <- ifelse(color.BW, "darkgrey", "#585855")
+  dotchart(imp.vec, bg = dotcolor, xlab = xlbl, cex = 1.3)
+
+  mtext(side = 2, at = 1:feat.num, vip.nms, las = 2, line = 1)
+  if(title==TRUE){
+    title(paste0("(",
+                 str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                 "/",
+                 str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                 ")"), line = 1, cex.main = 1.3)
+  }
+  axis.lims <- par("usr")
+  shift <- 2 * par("cxy")[1]
+  lgd.x <- axis.lims[2] + shift
+  x <- rep(lgd.x, feat.num)
+  y <- 1:feat.num
+  par(xpd = T)
+  nc <- ncol(mns)
+  colorpalette <- ifelse(color.BW, "Greys", "RdYlBu")
+  col <- colorRampPalette(RColorBrewer::brewer.pal(7, colorpalette))(nc)
+  if (color.BW)
+    col <- rev(col)
+  bg <- matrix("", nrow(mns), nc)
+  for (m in 1:nrow(mns)) {
+    bg[m, ] <- (col[nc:1])[rank(mns[m, ])]
+  }
+  if (mSetObj$dataSet$type.cls.lbl == "integer") {
+    cls <- as.factor(as.numeric(levels(mSetObj$dataSet$cls))[mSetObj$dataSet$cls])
+  }
+  else {
+    cls <- mSetObj$dataSet$cls
+  }
+  cls.lbl <- levels(cls)
+  for (n in 1:ncol(mns)) {
+    points(x, y, bty = "n", pch = 22, bg = bg[, n],
+           cex = 3)
+    text(x[1], axis.lims[4], cls.lbl[n], srt = 45, adj = c(0.2,
+                                                           0.5))
+    x <- x + shift/1.25
+  }
+  col <- colorRampPalette(RColorBrewer::brewer.pal(7, colorpalette))(50)
+  if (color.BW)
+    col <- rev(col)
+  nc <- length(col)
+  x <- rep(x[1] + shift, nc)
+  shifty <- (axis.lims[4] - axis.lims[3])/3
+  starty <- axis.lims[3] + shifty
+  endy <- axis.lims[3] + 2 * shifty
+  y <- seq(from = starty, to = endy, length = nc)
+  points(x, y, bty = "n", pch = 15, col = rev(col), cex = 2)
+  text(x[1], endy + shifty/8, "High")
+  text(x[1], starty - shifty/8, "Low")
+  par(op)
+}
+
+met.plot_heatmap <- function (mSetObj = NA, imgName, format = "png", dpi = 300,
+                              width = NA, dataOpt = "norm", scaleOpt = "row",
+                              smplDist = "euclidean", clstDist = "ward.D", palette = "bwm",
+                              viewOpt = "detail", rowV = T, colV = T, var.inx = NULL,
+                              border = T, grp.ave = F, metadata, plot = TRUE, export = FALSE)
+{
+
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  mSetObj$imgSet$heatmap <- imgName
+  cls <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  cls.class <- mSetObj$dataSet$type.cls.lbl
+  mSetObj$analSet$htmap <- list(dist.par = smplDist, clust.par = clstDist)
+  if (dataOpt == "norm") {
+    my.data <- mSetObj$dataSet$norm
+  }
+  else {
+    if(!is.null(mSetObj$dataSet$prenorm)){
+      row.norm <- mSetObj$dataSet$prenorm
+    } else {
+      my.data <- qs::qread("prenorm.qs")
+    }
+  }
+  if (is.null(var.inx)) {
+    hc.dat <- as.matrix(my.data)
+  }
+  else {
+    hc.dat <- as.matrix(my.data[, var.inx])
+  }
+  colnames(hc.dat) <- substr(colnames(hc.dat), 1, 18)
+  if (cls.class == "integer") {
+    hc.cls <- as.factor(as.numeric(levels(cls))[cls])
+  }
+  else {
+    hc.cls <- cls
+  }
+  if (grp.ave) {
+    lvs <- levels(hc.cls)
+    my.mns <- matrix(ncol = ncol(hc.dat), nrow = length(lvs))
+    for (i in 1:length(lvs)) {
+      inx <- hc.cls == lvs[i]
+      my.mns[i, ] <- apply(hc.dat[inx, ], 2, mean)
+    }
+    rownames(my.mns) <- lvs
+    colnames(my.mns) <- colnames(hc.dat)
+    hc.dat <- my.mns
+    hc.cls <- as.factor(lvs)
+  }
+  if (palette == "gbr") {
+    colors <- colorRampPalette(c("green", "black",
+                                 "red"), space = "rgb")(256)
+  }
+  else if (palette == "heat") {
+    colors <- heat.colors(256)
+  }
+  else if (palette == "topo") {
+    colors <- topo.colors(256)
+  }
+  else if (palette == "gray") {
+    colors <- colorRampPalette(c("grey90", "grey10"),
+                               space = "rgb")(256)
+  }
+  else {
+    colors <- rev(colorRampPalette(RColorBrewer::brewer.pal(10,
+                                                            "RdBu"))(256))
+  }
+  if (cls.type == "disc") {
+    annotation <- data.frame(class = hc.cls)
+    rownames(annotation) <- rownames(hc.dat)
+  }
+  else {
+    annotation <- NA
+  }
+  plot_dims <- MetaboAnalystR:::get_pheatmap_dims(t(hc.dat), annotation, viewOpt,
+                                                  width)
+  h <- plot_dims$height
+  w <- plot_dims$width
+  if (grp.ave) {
+    w <- nrow(hc.dat) * 25 + 300
+    w <- round(w/72, 2)
+  }
+  if (border) {
+    border.col <- "grey60"
+  }
+  else {
+    border.col <- NA
+  }
+
+  p <- function(){
+    if (cls.type == "disc") {
+      cols <- MetaboAnalystR:::GetColorSchema(cls, palette == "gray")
+      uniq.cols <- unique(cols)
+      if (mSetObj$dataSet$type.cls.lbl == "integer") {
+        cls <- as.factor(as.numeric(levels(cls))[cls])
+      }
+      else {
+        cls <- cls
+      }
+      names(uniq.cols) <- unique(as.character(sort(cls)))
+      ann_colors <- list(class = uniq.cols)
+      pheatmap::pheatmap(t(hc.dat), annotation = annotation,
+                         annotation_colors = ann_colors, fontsize = 8, fontsize_row = 8,
+                         clustering_distance_rows = smplDist, clustering_distance_cols = smplDist,
+                         clustering_method = clstDist, border_color = border.col,
+                         cluster_rows = colV, cluster_cols = rowV, scale = scaleOpt,
+                         color = colors)
+    }
+    else {
+      heatmap(hc.dat, Rowv = rowTree, Colv = colTree, col = colors,
+              scale = "column")
+    }
+  }
+  if (export == TRUE){
+    if (format == "pdf") {
+      pdf(file = imgName, width = w, height = h, bg = "white",
+          onefile = FALSE)
+    }
+    else {
+      Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
+                   width = w, height = h, type = format, bg = "white")
+    }
+    p()
+    dev.off()
+  }
+  if (plot == TRUE){
+    p()
+  }
+
+  if(grp.ave == TRUE){
+    p(); mSetObj$imgSet$heatmap.avg.plot <- recordPlot()
+  } else {
+    p(); mSetObj$imgSet$heatmap.all.plot <- recordPlot()
+  }
+  return(mSetObj)
+}
+
+met.plot_volcano <- function (mSetObj = NA, grp1, grp2, paired = FALSE, log2fc.thresh = 1, nonpar = F,
+                              threshp = 0.05, test = "ttest", equal.var = TRUE, pval.type = "fdr",
+                              imgName = NULL, format = "png", add_names = TRUE, label_size = 3,
+                              dpi = 300, width = NA, plot = TRUE, export = FALSE, silent = FALSE,
+                              test_condition=FALSE)
+{
+  assertthat::assert_that(grp1 %in% levels(mSetObj$dataSet$cls),
+                          grp2 %in% levels(mSetObj$dataSet$cls),
+                          msg = paste0("'",grp1, "' or '", grp2, "' are not valid conditions in the dataset. Valid conditions are:\n",
+                                       paste(levels(mSetObj$dataSet$cls), collapse = ", ")))
+
+  if(test=="ttest"){
+    mSetObj <- met.Ttests.Anal(mSetObj, grp1 = grp1, grp2 = grp2, nonpar, threshp, paired,
+                               equal.var, pval.type, silent = silent)
+    p.value <- mSetObj$analSet$tt[[paste0(grp1,"_vs_",grp2)]][["p.value"]]
+    if (pval.type == "fdr") {
+      p.value <- p.adjust(p.value, "fdr")
+    }
+  } else if(test=="anova"&&!is.null(mSetObj$analSet$aov)){
+    p.value <- setNames(mSetObj$analSet$aov$post.hoc.all[,'p.adj'], rownames(mSetObj$analSet$aov$post.hoc.all))
+    p.value <- sapply(1:length(p.value), function (x) str_split(p.value[x], "; "), simplify = TRUE)
+    p.value <-
+      setNames(as.numeric(sapply(p.value, "[", match(
+        x = paste0(grp2, "-", grp1), table = unlist(str_split(
+          mSetObj$analSet$aov$post.hoc.all$contrasts[1], "; "
+        ))
+      ))),
+      rownames(mSetObj$analSet$aov$post.hoc.all))
+
+  } else if(test=="anova"&&is.null(mSetObj$analSet$aov)){
+    stop("Please perform 'met.ANOVA.Anal()' on your mSet before running 'met.plot_volcano' with 'test = \"anova\"'.")
+  }
+  inx.p <- p.value <= threshp
+  p.log <- -log10(p.value)
+  mSetObj <- met.FC.Anal(mSetObj, log2fc.thresh = log2fc.thresh, grp1 = grp1, grp2 = grp2)
+  max.xthresh <- log2fc.thresh
+  min.xthresh <- -log2fc.thresh
+  fc.log <- mSetObj$analSet$fc[[paste0(grp1,"_vs_",grp2)]][["fc.log"]]
+  fc.all <- mSetObj$analSet$fc[[paste0(grp1,"_vs_",grp2)]][["fc.all"]]
+  inx.up <- mSetObj$analSet$fc[[paste0(grp1,"_vs_",grp2)]][["inx.up"]]
+  inx.down <- mSetObj$analSet$fc[[paste0(grp1,"_vs_",grp2)]][["inx.down"]]
+  keep.inx <- names(inx.p) %in% names(inx.up)
+  inx.p <- inx.p[keep.inx]
+  p.log <- p.log[keep.inx]
+  inx.imp <- (inx.up | inx.down) & inx.p
+  sig.var <- cbind(fc.all[inx.imp, drop = F], fc.log[inx.imp,
+                                                     drop = F], p.value[inx.imp, drop = F], p.log[inx.imp,
+                                                                                                  drop = F])
+  if (pval.type == "fdr") {
+    colnames(sig.var) <- c("FC", "log2(FC)",
+                           "p.ajusted", "-log10(p)")
+  }
+  else {
+    colnames(sig.var) <- c("FC", "log2(FC)",
+                           "raw.pval", "-log10(p)")
+  }
+  ord.inx <- order(sig.var[, 4], abs(sig.var[, 2]), decreasing = T)
+  sig.var <- sig.var[ord.inx, , drop = F]
+  sig.var <- signif(sig.var, 5)
+  fileName <- "volcano.csv"
+  fast.write.csv(signif(sig.var, 5), file = fileName)
+  volcano <- list(pval.type = pval.type, raw.threshx = log2fc.thresh,
+                  raw.threshy = threshp, paired = paired, max.xthresh = max.xthresh,
+                  min.xthresh = min.xthresh, thresh.y = -log10(threshp),
+                  fc.all = fc.all, fc.log = fc.log, inx.up = inx.up, inx.down = inx.down,
+                  p.log = p.log, inx.p = inx.p, sig.mat = sig.var)
+  if(!exists("volcano", mSetObj$analSet)){
+    mSetObj$analSet$volcano <- list()
+  }
+  mSetObj$analSet$volcano[[paste0(grp1, "_vs_", grp2)]] <- volcano
+
+  if(!is.character(imgName)){
+    imgName <- paste0("Plots/Volcano_", grp1, "_vs_", grp2)
+  }
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 9
+  }
+  else if (width == 0) {
+    w <- 8
+  }
+  else {
+    w <- width
+  }
+  h <- w * 5.5/6.5
+  if(!exists("volcano", mSetObj$imgSet)){
+    mSetObj$imgSet$volcano <- list()
+  }
+  mSetObj$imgSet$volcano[[paste0(grp1, "_vs_", grp2)]] <- imgName
+  if (export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
+                 width = w, height = h, type = format, bg = "white")
+  }
+  vcn <- mSetObj$analSet$volcano[[paste0(grp1, "_vs_", grp2)]]
+  imp.inx <- (vcn$inx.up | vcn$inx.down) & vcn$inx.p
+  de <- data.frame(cbind(vcn$fc.log, vcn$p.log))
+  de$Status <- "Non-SIG"
+  de$Status[vcn$inx.p & vcn$inx.up] <- "UP"
+  de$Status[vcn$inx.p & vcn$inx.down] <- "DOWN"
+  de$Status <- as.factor(de$Status)
+  mycols <- levels(de$Status)
+  mycols[mycols == "UP"] <- "#e31f26"
+  mycols[mycols == "DOWN"] <- "#387fb9"
+  mycols[mycols == "Non-SIG"] <- "#525352"
+  de$delabel <- NA
+  de$delabel[imp.inx] <- rownames(de)[imp.inx]
+  if (pval.type == "fdr") {
+    de$shape <- ifelse(de[,2] > 5.9, "triangle", "circle")
+  } else {
+    de$shape <- "circle"
+  }
+  if (pval.type == "fdr") {
+    if (max(de[,2]) > 6.0) {
+      de[,2][de[,2] > 5.9] <- 5.9
+    }
+  }
+  require(ggplot2)
+  require(ggh4x)
+  title_text <- paste0(grp1, " vs. ", grp2, if_else(
+    test_condition == TRUE,
+    paste0(
+      "\n(",
+      str_replace(mSetObj[["dataSet"]][["trans.method"]], "N/A", "none"),
+      "/",
+      str_replace(mSetObj[["dataSet"]][["scale.method"]], "N/A", "none"),
+      ")"
+    ),
+    "")
+  )
+  p <- ggplot(data = de, aes(x = de[, 1], y = de[, 2],
+                             col = Status, label = delabel)) +
+    geom_point(aes(shape = shape), size = 2.5, alpha = 0.6) +
+    scale_shape(guide = "none") +   # Hide shapes from legend
+    scale_color_manual(labels = c("Upregulated", "Not significant", "Downregulated"),
+                       values = mycols) +
+    geom_vline(xintercept = c(-vcn$raw.threshx, vcn$raw.threshx),
+               linetype = "longdash", alpha = 0.4) +
+    geom_hline(yintercept = -log10(vcn$raw.threshy), linetype = "longdash",
+               alpha = 0.4) +
+    labs(title =  title_text) +
+    labs(x = "log2(fold change)", y = "-log10(p)") +
+    theme_bw(base_size = 20) +
+    theme(legend.position = "bottom",title = element_text(size = exp(-nchar(paste0(grp1, " vs. ", grp2))/40)*if_else(
+      test_condition == TRUE, 25, 30)),
+      axis.title = element_text(size = 22), legend.title = element_text(size = 22), plot.title = element_text(hjust = 0.5)) +
+    force_panelsizes(rows = unit(if_else(test_condition==TRUE, 0.57, 0.61)*w, "in"),
+                     cols = unit(if_else(test_condition==TRUE, 0.67, 0.72)*w, "in")) +
+    coord_cartesian(xlim = c(-max(abs(de[, 1])) - 0.05*max(abs(de[, 1])),
+                             max(abs(de[, 1])) + 0.05*max(abs(de[, 1]))),
+                    expand = TRUE)
+  # scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(de[,1])) + 1))
+  if (add_names) {
+    p <- p + ggrepel::geom_text_repel(
+      aes(label = delabel),
+      size = label_size,
+      box.padding = unit(0.25,
+                         "lines"),
+      point.padding = unit(0.1, "lines"),
+      segment.size = 0.5,
+      show.legend = FALSE,
+      max.overlaps = 16
+    )
+  }
+  if (pval.type == "fdr") {
+    p <- p + labs(y = expression(-log[10] ~ "(adj. p-value)"))
+  }
+  if (export == TRUE){
+    print(p)
+    dev.off()
+  }
+  mSetObj$imgSet$volcano[[paste0(grp1, "_vs_", grp2)]] <- p
+  if (plot == TRUE){
+    print(p)
+  }
+  return(mSetObj)
+}
+
+met.plot_PCA3DLoading <- function (mSetObj = NA, imgName, format = "json", inx1=1,
+                                   inx2=2, inx3=3, export=F)
+{
+  cls <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  cls.class <- mSetObj$dataSet$type.cls.lbl
+  pca <- mSetObj$analSet$pca
+  pca3d <- list()
+  pca3d$loading$axis <- paste("Loading PC", c(inx1, inx2,
+                                              inx3), sep = "")
+  coords <- data.frame(t(signif(pca$rotation[, 1:3], 5)))
+  dists <- MetaboAnalystR:::GetDist3D(coords)
+  pca3d$loading$cols <- MetaboAnalystR:::GetRGBColorGradient(dists)
+  cols_vectors <- str_replace_all(pca3d$loading$cols, "rgba\\(", "") %>% str_replace_all(., "\\)", "")
+  cols_vectors <- sapply(1:length(cols_vectors), function (x) str_split(cols_vectors[x], ","))
+  pca3d$loading$cols_hex <-
+    sapply(1:length(cols_vectors), function (x)
+      rgb(cols_vectors[[x]][1], cols_vectors[[x]][2], cols_vectors[[x]][3],
+          alpha = cols_vectors[[x]][4],
+          maxColorValue = 255
+      ))
+  colnames(coords) <- NULL
+  pca3d$loading$xyz <- coords
+  pca3d$loading$name <- rownames(pca$rotation)
+  pca3d$loading$entrez <- rownames(pca$rotation)
+  if (cls.class == "integer") {
+    clss <- as.character(sort(as.factor(as.numeric(levels(cls))[cls])))
+  }
+  else {
+    clss <- as.character(cls)
+  }
+  if (MetaboAnalystR:::all.numeric(clss)) {
+    clss <- paste("Group", clss)
+  }
+  pca3d$cls = clss
+  imgName = paste(imgName, ".", format, sep = "")
+  if(export==TRUE){
+    json.mat <- rjson::toJSON(pca3d)
+    sink(imgName)
+    cat(json.mat)
+    sink()
+  }
+  mSetObj$imgSet$pca.loading3d <- imgName
+  mSetObj$imgSet$pca.loading3d.plot <- pca3d
+  return(mSetObj)
+}
+
+met.plot_PCA3DScore <- function (mSetObj = NA, imgName, format = "json", inx1=1,
+                                 inx2=2, inx3=3, export=F)
+{
+  cls <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  cls.class <- mSetObj$dataSet$type.cls.lbl
+  pca <- mSetObj$analSet$pca
+  pca3d <- list()
+  pca3d$score$axis <- paste("PC", c(inx1, inx2, inx3),
+                            " (", 100 * round(mSetObj$analSet$pca$variance[c(inx1,
+                                                                             inx2, inx3)], 3), "%)", sep = "")
+  coords <- data.frame(t(signif(pca$x[, c(inx1, inx2, inx3)],
+                                5)))
+  colnames(coords) <- NULL
+  pca3d$score$xyz <- coords
+  pca3d$score$name <- rownames(mSetObj$dataSet$norm)
+  if (cls.class == "integer") {
+    cls <- as.character(sort(as.factor(as.numeric(levels(cls))[cls])))
+  }
+  else {
+    cls <- as.character(cls)
+  }
+  if (MetaboAnalystR:::all.numeric(cls)) {
+    cls <- paste("Group", cls)
+  }
+  pca3d$score$facA <- cls
+  cols <- unique(MetaboAnalystR:::GetColorSchema(as.factor(cls)))
+  pca3d$score$colors <- MetaboAnalystR:::my.col2rgb(cols)
+  imgName = paste(imgName, ".", format, sep = "")
+  if(export==TRUE){
+    json.obj <- rjson::toJSON(pca3d)
+    sink(imgName)
+    cat(json.obj)
+    sink()
+  }
+  mSetObj$imgSet$pca.score3d <- imgName
+  mSetObj$imgSet$pca.score3d.plot <- pca3d
+  return(mSetObj)
+}
+
+met.plot_PLS3DLoading <- function (mSetObj = NA, imgName, format = "json", inx1=1,
+                                   inx2=2, inx3=3, export=F)
+{
+  pls = mSetObj$analSet$plsr
+  coords <- signif(as.matrix(cbind(pls$loadings[, inx1], pls$loadings[,
+                                                                      inx2], pls$loadings[, inx3])), 5)
+  pls3d <- list()
+  pls3d$loading$axis <- paste("Loading Comp.", c(inx1, inx2,
+                                                 inx3), sep = "")
+  coords0 <- coords <- data.frame(t(signif(pls$loadings[, c(inx1,
+                                                            inx2, inx3)], 5)))
+  colnames(coords) <- NULL
+  pls3d$loading$xyz <- coords
+  pls3d$loading$name <- rownames(pls$loadings)
+  pls3d$loading$entrez <- rownames(pls$loadings)
+  dists <- MetaboAnalystR:::GetDist3D(coords0)
+  cols <- MetaboAnalystR:::GetRGBColorGradient(dists)
+  pls3d$loading$cols <- cols
+  cols_vectors <- str_replace_all(cols, "rgba\\(", "") %>% str_replace_all(., "\\)", "")
+  cols_vectors <- sapply(1:length(cols_vectors), function (x) str_split(cols_vectors[x], ","))
+  pls3d$loading$cols_hex <-
+    sapply(1:length(cols_vectors), function (x)
+      rgb(cols_vectors[[x]][1], cols_vectors[[x]][2], cols_vectors[[x]][3],
+          alpha = cols_vectors[[x]][4],
+          maxColorValue = 255
+      ))
+  if (mSetObj$dataSet$type.cls.lbl == "integer") {
+    cls <- as.character(sort(as.factor(as.numeric(levels(mSetObj$dataSet$cls))[mSetObj$dataSet$cls])))
+  }
+  else {
+    cls <- as.character(mSetObj$dataSet$cls)
+  }
+  if (MetaboAnalystR:::all.numeric(cls)) {
+    cls <- paste("Group", cls)
+  }
+  pls3d$cls = cls
+  imgName = paste(imgName, ".", format, sep = "")
+
+  if(export==TRUE){
+    json.mat <- rjson::toJSON(pls3d)
+    sink(imgName)
+    cat(json.mat)
+    sink()
+  }
+  mSetObj$imgSet$pls.loading3d <- imgName
+  mSetObj$imgSet$pls.loading3d.plot <- pls3d
+  return(mSetObj)
+}
+
+met.plot_PLS3DScore <- function (mSetObj = NA, imgName, format = "json", inx1=1,
+                                 inx2=2, inx3=3, export=F)
+{
+  cls1 <- mSetObj$dataSet$cls
+  cls.type <- mSetObj$dataSet$cls.type
+  cls.class <- mSetObj$dataSet$type.cls.lbl
+  pls3d <- list()
+  pls3d$score$axis <- paste("Component", c(inx1, inx2,
+                                           inx3), " (", round(100 * mSetObj$analSet$plsr$Xvar[c(inx1,
+                                                                                                inx2, inx3)]/mSetObj$analSet$plsr$Xtotvar, 1), "%)",
+                            sep = "")
+  coords <- data.frame(t(signif(mSetObj$analSet$plsr$score[,
+                                                           c(inx1, inx2, inx3)], 5)))
+  colnames(coords) <- NULL
+  pls3d$score$xyz <- coords
+  pls3d$score$name <- rownames(mSetObj$dataSet$norm)
+  if (mSetObj$dataSet$type.cls.lbl == "integer") {
+    cls <- as.character(sort(as.factor(as.numeric(levels(cls1))[cls1])))
+  }
+  else {
+    cls <- as.character(cls1)
+  }
+  if (MetaboAnalystR:::all.numeric(cls)) {
+    cls <- paste("Group", cls)
+  }
+  pls3d$score$facA <- cls
+  cols <- unique(MetaboAnalystR:::GetColorSchema(cls1))
+  pls3d$score$colors <- MetaboAnalystR:::my.col2rgb(cols)
+  imgName = paste(imgName, ".", format, sep = "")
+  if(export==TRUE){
+    json.obj <- rjson::toJSON(pls3d)
+    sink(imgName)
+    cat(json.obj)
+    sink()
+  }
+  mSetObj$imgSet$pls.score3d <- imgName
+  mSetObj$imgSet$pls.score3d.plot <- pls3d
+  return(mSetObj)
+}
+
+met.plot_PLS.Permutation <- function (mSetObj = NA, imgName, format = "png", dpi = 72,
+                                      width = NA, plot = TRUE, export = FALSE, title = FALSE)
+{
+  bw.vec <- mSetObj$analSet$plsda$permut
+  len <- length(bw.vec)
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 8
+  }
+  else if (width == 0) {
+    w <- 7
+  }
+  else {
+    w <- width
+  }
+  h <- w * 6/8
+  mSetObj$imgSet$pls.permut <- imgName
+  p <- function(){
+    par(mar = c(5, 5, if_else(title==TRUE, 3, 2), 4))
+    hst <- hist(
+      bw.vec,
+      breaks = "FD",
+      freq = T,
+      ylab = "Frequency",
+      xlab = paste0(
+        "Permutation test statistics",
+        if_else(
+          mSetObj[["analSet"]][["plsda"]][["permut.type"]] == "separation distance",
+          " (separation distance)",
+          " (prediction accuracy)"
+        )
+      ),
+      col = "#abd9e9",
+      main = ""
+    )
+    h <- max(hst$counts)
+    arrows(x0=bw.vec[1]+max(bw.vec)/20, y0=if_else(title==TRUE, h/1.45, h/5),
+           x1=bw.vec[1], y1=h/35, col ="#d73027", lwd=1.5, length=0.15, angle=25, xpd = T)
+    if(title==TRUE){
+      title(paste0("(",
+                   str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                   "/",
+                   str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                   ")"), line = 1, cex.main = 1.2)
+    }
+    text(x=bw.vec[1]+max(bw.vec)/20, y=if_else(title==TRUE, h/1.15, h/3.5), labels=paste("Observed \n statistic \n",
+                                                                                         mSetObj$analSet$plsda$permut.p), xpd = T, cex=0.95)
+  }
+  if(export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
+                 width = w, height = h, type = format, bg = "white")
+    p()
+    dev.off()
+  }
+  p(); mSetObj$imgSet$pls.permut.plot <- recordPlot()
+  dev.off()
+  if (plot == TRUE){
+    p()
+  }
+  return(mSetObj)
+}
+
+met.plot_PLS.Classification <- function (mSetObj = NA, imgName, format = "pdf", dpi = 72,
+                                         width = NA, export = FALSE, title = FALSE)
+{
+  mSetObj <- mSetObj
+  res <- mSetObj$analSet$plsda$fit.info
+  colnames(res) <- 1:ncol(res)
+  best.num <- mSetObj$analSet$plsda$best.num
+  choice <- mSetObj$analSet$plsda$choice
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 7
+  }
+  else if (width == 0) {
+    w <- 7
+  }
+  else {
+    w <- width
+  }
+  h <- w * 5/6.7
+  mSetObj$imgSet$pls.crossvalidation <- imgName
+  p <- function(){
+    par(mar = c(5, 5, if_else(title==TRUE, 3, 2), 7))
+    barplot(res, beside = TRUE, col = c("lightblue", "mistyrose",
+                                        "lightcyan"), ylim = c(0, 1.05), xlab = "Number of components",
+            ylab = "Performance")
+    if (choice == "Q2") {
+      text((best.num - 1) * 3 + best.num + 2.5, res[3, best.num] +
+             0.02, labels = "*", cex = 2.5, col = "red")
+    }
+    else if (choice == "R2") {
+      text((best.num - 1) * 3 + best.num + 1.5, res[2, best.num] +
+             0.02, labels = "*", cex = 2.5, col = "red")
+    }
+    else {
+      text((best.num - 1) * 3 + best.num + 0.5, res[1, best.num] +
+             0.02, labels = "*", cex = 2.5, col = "red")
+    }
+    xpos <- ncol(res) * 3 + ncol(res) + 1
+    legend(xpos, 1, rownames(res), fill = c("lightblue",
+                                            "mistyrose", "lightcyan"), xpd = T)
+    if(title==TRUE){
+      title(paste0("(",
+                   str_replace(mSetObj[["dataSet"]][["trans.method"]],"N/A","none"),
+                   "/",
+                   str_replace(mSetObj[["dataSet"]][["scale.method"]],"N/A","none"),
+                   ")"), line = 1, cex.main = 1.2)
+    }
+  }
+  if(export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
+                 width = w, height = h, type = format, bg = "white")
+    p()
+    dev.off()
+  }
+  p(); mSetObj$imgSet$pls.crossvalidation.plot <- recordPlot()
+  dev.off()
+  return(mSetObj)
+}
