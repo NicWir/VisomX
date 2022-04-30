@@ -18,12 +18,15 @@ Description: This package represents a comprehensive suite of functions
 License: `use_gpl3_license()`
 URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
-Depends: 
-    methods,
-    R (>= 4.0),
-    MetaboAnalystR,
+Depends:
+    ggplot2,
     DEP,
-    fluctuator
+    fluctuator,
+    MetaboAnalystR,
+    magrittr,
+    dplyr,
+    methods,
+    R (>= 4.0)
 Imports: 
     assertthat,
     BiocParallel,
@@ -34,18 +37,20 @@ Imports:
     ComplexHeatmap,
     crmn,
     data.table,
-    dplyr,
-    dplyr,
+    devtools,
     DT,
     edgeR,
+    ellipse,
     fdrtool,
     fgsea,
-    fluctuator,
-    ggplot2,
-    ggplot2,
+    genefilter,
+    ggh4x,
+    ggnewscale,
     ggrepel,
     ggVennDiagram,
     glasso,
+    GlobalAncova,
+    globaltest,
     gplots,
     grid,
     gridExtra,
@@ -53,17 +58,19 @@ Imports:
     impute,
     imputeLCMD,
     jsonlite,
+    KEGGgraph,
     lattice,
     limma,
-    magrittr,
     markdown,
     MASS,
     MSnbase,
     MSnbase,
+    multtest,
     pcaMethods,
     plotly,
     pls,
     plyr,
+    preprocessCore,
     pROC,
     progress,
     purrr,
@@ -74,7 +81,9 @@ Imports:
     RColorBrewer,
     Rcpp,
     readr,
+    reshape,
     reshape2,
+    Rgraphviz,
     rlang,
     rmarkdown,
     Rserve,
@@ -83,11 +92,14 @@ Imports:
     shiny,
     shinydashboard,
     siggenes,
+    SSPA,
     stats,
     SummarizedExperiment,
+    sva,
     tibble,
     tibble,
     tidyr,
+    UpSetR,
     vctrs,
     vsn
 Suggests: 
@@ -95,9 +107,16 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
+    bioc::release/globaltest,
+    bioc::release/GlobalAncova,
+    bioc::release/Rgraphviz,
+    bioc::release/genefilter,
+    bioc::release/SSPA,
+    bioc::release/sva,
+    bioc::release/KEGGgraph,
+    bioc::release/DEP,
     github::NicWir/fluctuator,
-    github::NicWir/MetaboAnalystR,
-    bioc::release/DEP
+    github::NicWir/MetaboAnalystR
 biocViews: 
 Encoding: UTF-8
 GithubRepo: VisomX
