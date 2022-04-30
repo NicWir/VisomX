@@ -113,7 +113,7 @@ Remotes:
     bioc::release/globaltest,
     bioc::release/KEGGgraph,
     bioc::release/Rgraphviz,
-    bioc::release/SSPA,
+    bioc::2.10/SSPA,
     bioc::release/sva,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR
