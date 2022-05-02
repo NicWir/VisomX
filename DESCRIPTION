@@ -19,14 +19,11 @@ License: `use_gpl3_license()`
 URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
-    DEP,
     dplyr,
-    fluctuator,
-    ggplot2,
     magrittr,
-    MetaboAnalystR,
     methods,
-    R (>= 4.0)
+    R (>= 4.0),
+    stringr
 Imports: 
     assertthat,
     BiocParallel,
@@ -37,15 +34,18 @@ Imports:
     ComplexHeatmap,
     crmn,
     data.table,
+    DEP,
     devtools,
     DT,
     edgeR,
     ellipse,
     fdrtool,
     fgsea,
+    fluctuator,
     genefilter,
     ggh4x,
     ggnewscale,
+    ggplot2,
     ggrepel,
     ggVennDiagram,
     glasso,
@@ -63,7 +63,7 @@ Imports:
     limma,
     markdown,
     MASS,
-    MSnbase,
+    MetaboAnalystR,
     MSnbase,
     multtest,
     pcaMethods,
@@ -74,14 +74,11 @@ Imports:
     pROC,
     progress,
     purrr,
-    purrr,
     qs,
     RBGL,
     RColorBrewer,
-    RColorBrewer,
     Rcpp,
     readr,
-    reshape,
     reshape2,
     Rgraphviz,
     rlang,
@@ -96,7 +93,6 @@ Imports:
     stats,
     SummarizedExperiment,
     sva,
-    tibble,
     tibble,
     tidyr,
     UpSetR,
@@ -113,10 +109,10 @@ Remotes:
     bioc::release/globaltest,
     bioc::release/KEGGgraph,
     bioc::release/Rgraphviz,
-    bioc::2.10/SSPA,
     bioc::release/sva,
     github::NicWir/fluctuator,
-    github::NicWir/MetaboAnalystR
+    github::NicWir/MetaboAnalystR,
+    github::NicWir/SSPA
 biocViews: 
 Encoding: UTF-8
 GithubRepo: VisomX
