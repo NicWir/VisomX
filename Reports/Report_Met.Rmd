@@ -1,0 +1,523 @@
+---
+title: "Metabolomics analysis report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+geometry: margin=1.3cm
+urlcolor: blue
+mainfont: Arial
+output:
+  pdf_document:
+    toc: false
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+```{r setup, include=FALSE}
+library(rgl, quietly = TRUE)
+library(knitr)
+knitr::knit_hooks$set(webgl = hook_webgl)
+knitr::opts_knit$set(root.dir = str_replace_all(tempdir(), "\\\\", "/"))
+knitr::opts_chunk$set(dev = "pdf")
+```
+
+## Summary
+
+The dataset contains *`r length(mSetObj[["dataSet"]][["url.var.nms"]])`* metabolites.
+
+In total *`r length(mSetObj[["dataSet"]][["url.smp.nms"]])`* samples were detected:
+
+`r colFmt(names(mSetObj[["dataSet"]][["url.smp.nms"]]), 'blue')`
+
+Samples were grouped into *`r length(levels(mSetObj[["dataSet"]][["prenorm.cls"]]))`* conditions:
+
+`r colFmt(levels(mSetObj[["dataSet"]][["prenorm.cls"]]), 'blue')`
+
+Parameters used for the analysis:
+
+-   `r if_else(is.null(mSetObj[["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSetObj[["msgSet"]][["filter.msg"]], "Further feature filtering", "Metabolites were filtered"))`
+-   *`r colFmt(str_match_all(mSetObj[["msgSet"]][["missing.msg"]], "of\\s*(.*?)\\s* \\(")[[1]][2],'blue')`* `r str_replace(mSetObj[["msgSet"]][["replace.msg"]], "variable", "metabolite")`
+-   Data transformation method: `r colFmt(mSetObj[["dataSet"]][["trans.method"]],'blue')`
+-   Data scaling method: `r colFmt(mSetObj[["dataSet"]][["scale.method"]],'blue')`
+-   tested contrasts = `r colFmt(mSetObj[["analSet"]][["contrasts"]],'blue')`
+-   (adjusted) p-value \<= `r colFmt(args[['alpha']],'blue')`
+-   \|logFC\| >= `r colFmt(args[['lfc']],'blue')`
+-   Class order matters (i.e., implying consecutive time points, disease severity, etc.): `r colFmt(mSetObj[["analSet"]][["plsda"]][["class_order"]],'blue')` 
+-   PLS was performed on: `r if_else(mSetObj[["analSet"]][["plsda"]][["data.type"]]=="anova.sig", "significant features based on ANOVA\\.", "all features (including compounds that are non-significant according to ANOVA)\\.")`
+\pagebreak
+
+## Missing value imputations
+
+Too many zeroes or missing values will cause difficulties for downstream analysis. Several different methods are available for this purpose. The default method replaces all the missing and zero values with a small values (1/5 of the minimum positive values in the original data) assuming to be the detection limit. The assumption of this approach is that most missing values are caused by low abundance metabolites (i.e., below the detection limit). In addition, since zero values may cause problem for data normalization (i.e., log transformation), they are also replaced with this small value. User can also specify other methods, such as replace by mean/median, or use K-Nearest Neighbours (KNN), Probabilistic PCA (PPCA), the Bayesian PCA (BPCA) method, or the Singular Value Decomposition (SVD) method to impute the missing values \footnote{Stacklies W, Redestig H, Scholz M, Walther D, Selbig J. pcaMethods: a bioconductor package, providing PCA methods for incomplete data., Bioinformatics 2007 23(9):1164-1167}. To asses the type of missing data (random or not), the following heat map of missing values and density distributions of proteins with/without missing values provide a visual aid.\
+The scientific report by Wei et al. (and citations therein) provide assistance in choosing a method that is the most appropriate for your data \footnote{Wei R, Wang J, Su M, Jia E, Chen S, Chen T, Ni Y. \textit{Missing Value Imputation Approach for Mass Spectrometry-based Metabolomics Data.}, Scientific Reports 2018 8, 663}.
+
+```{r MissVal_Heatmap_plot, fig.width=7, echo=FALSE, fig.align='center'}
+if(!is.null(mSetObj[["imgSet"]][["missval_heatmap"]])){
+  print(mSetObj[["imgSet"]][["missval_heatmap"]])
+}
+```
+
+```{r MissVal_Density_plot, fig.width=7, echo=FALSE, fig.align='center'}
+if(!is.null(mSetObj[["imgSet"]][["missval_density"]])){
+  gridExtra::grid.arrange(mSetObj[["imgSet"]][["missval_density"]])
+}
+```
+
+\pagebreak
+
+## Data Filtering
+
+The purpose of the data filtering is to identify and remove variables that are unlikely to be of use when modeling the data. No phenotype information are used in the filtering process, so the result can be used with any downstream analysis. Data filtering is strongly recommended for datasets with a large number of variables (\> 250) or datasets that contain much noise (i.e., chemometrics data). This step usually improves the results \footnote{Hackstadt AJ, Hess AM. \textit{Filtering for increased power for microarray data analysis}, BMC Bioinformatics. 2009; 10: 11}.\
+`r if_else(is.null(mSetObj[["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSetObj[["msgSet"]][["filter.msg"]], "Further feature filtering", "Metabolites were filtered"))`
+
+## Data Transformation
+
+There are several reasons why it is often necessary to normalize metabolomics data before statistical analysis. First, normalization reduces systematic or technical bias. Second, metabolite concentrations span typically several orders of magnitude. Therefore, the variance of the most abundant metabolites tend to dominate the variance-covariance matrix and can mask quantatively small but significant signals. This can lead to lead to misidentification of or an inability to identify significant changes. Transformations are generally applied to correct for heteroscedasticity, to convert multiplicative relations into additive relations (relations between variables are not necessarily additive but can also be multiplicative), and to make skewed distributions (more) symmetric, a requirement for many statistical methods. The data is stored as a table with one sample per row and one variable (metabolite) per column. The normalization procedures implemented below are grouped into four categories. Sample specific normalization allows users to manually adjust concentrations based on biological inputs (i.e. volume, mass); row-wise normalization allows general-purpose adjustment for differences among samples; data transformation and scaling are two different approaches to make features more comparable. You can use one or combine both to achieve better results. However, it is not clear how the transformation and a scaling method influence each other with regard to the complex metabolomics data. For a detailed comparison of different data transformation and scaling techniques and advantages and disadvantages, see *van den Berg et al. (2006)*.\footnote{van den Berg RA, Hoefsloot HC, Westerhuis JA, Smilde AK, van der Werf MJ \textit{Centering, scaling, and transformations: improving the biological information content of metabolomics data.}, BMC Genomics. 2006;7:142}
+
+Normalization consists of the following options:
+
+```{=tex}
+\begin{enumerate}
+\item{Row-wise procedures (correct for systematic or technical biases between samples, e.g., due to different samples dilutions): }
+\begin{itemize}
+\item{Sample specific normalization (i.e. normalize by dry weight, volume) }
+\item{Normalization by the sum }
+\item{Normalization by the sample median }
+\item{Normalization by a reference sample (probabilistic quotient
+normalization)\footnote{Dieterle F, Ross A, Schlotterbeck G, Senn H. \textit{Probabilistic quotient normalization as robust
+method to account for dilution of complex biological mixtures}. Application in 1H NMR metabonomics, 2006,
+Anal Chem 78 (13);4281 - 4290}}
+\item{Normalization by a pooled or average sample from a particular group }
+\item{Normalization by a reference feature (i.e. creatinine, internal control) }
+\item{Quantile normalization }
+\end{itemize}
+\item{Data transformation : }
+\begin{itemize}
+\item{Log transformation (base 10)}
+\item{Square root transformation}
+\item{Cube root transformation}
+\end{itemize}
+\item{Data scaling: }
+\begin{itemize}
+\item{Mean centering (mean-centered only)}
+\item{Auto scaling (mean-centered and divided by standard deviation of each variable)}
+\item{Pareto scaling (mean-centered and divided by the square root of standard deviation of each variable)}
+\item{Range scaling (mean-centered and divided by the value range of each variable)}
+\end{itemize}
+\end{enumerate}
+```
+The effect of the chosen normalization procedures on the data can be visualized with the following diagnostic plots.
+
+### Feature summaries
+
+```{r FeatureNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
+dir.create("Plots", showWarnings = F)
+tmp_list <- met.plot_FeatureNormSummary(mSetObj, imgName = paste0("Plots/FeatureNormSummary"), 
+                                        plot = F, show_prenorm = T, export = T, format = "pdf")
+```
+
+```{r FeatureNormSummary_plot, echo=FALSE, fig.align='center'}
+knitr::include_graphics(paste0(getwd(),"/Plots/FeatureNormSummary.pdf"),dpi = 300)
+```
+
+\pagebreak
+
+### Sample summaries
+
+```{r SampleNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
+tmp_list <- met.plot_SampleNormSummary(mSetObj, imgName = paste0("Plots/SampleNormSummary"), 
+                                       plot = F, show_prenorm = T, export = T, format = "pdf")
+```
+
+```{r SampleNormSummary_plot, echo=FALSE, fig.align='center'}
+knitr::include_graphics(paste0(getwd(),"/Plots/SampleNormSummary.pdf"),dpi = 300)
+```
+
+\pagebreak
+
+## Univariate Analysis
+
+Univariate analysis methods are the most common methods used for exploratory data analysis. For data with only two groups, statistical differences are evaluated via the *Student's t-tests*. For multi-group analysis, *one-way analysis of variance (ANOVA)* with associated post-hoc analyses is used to identify compounds with significantly different abundance. Univariate analyses provide an initial overview of potentially important compounds that distinguish the conditions under study.
+
+### One-way ANOVA
+
+Since ANOVA only reveals whether the overall comparison is significant or not, it is usually followed by post hoc analyses to determine which two conditions differ. For this purpose, two of the most commonly used methods, *Fisher's Least Significant Difference (Fisher's LSD)* and *Tukey's Honest Significant Difference (Tukey's HSD)* are implemented. The individual analyses provide a first overview of the characteristics that are potentially relevant for distinguishing the conditions under study.
+
+```{r ANOVA_plot_create, echo=FALSE, results='hide'}
+dir.create("Plots/ANOVA", showWarnings = F)
+w = 7; h = 5
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/ANOVA/ANOVA-Plot.pdf"), width = w, height = h, bg = "white")
+print(mSetObj[["imgSet"]][["anova.plot"]])
+dev.off()
+```
+```{r ANOVA_plot_plot, echo=FALSE, fig.align='center', warning=FALSE}
+knitr::include_graphics(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/ANOVA/ANOVA-Plot.pdf"), dpi = 300)
+```
+\pagebreak
+### Volcano plots
+```{r Volcano_plot_create, echo=FALSE, results='hide', warning=FALSE}
+dir.create("Plots/Volcano", showWarnings = F)
+w = 9; h = w * 5.5/6.5
+for(i in 1:length(mSetObj$imgSet$volcano)){
+  pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/Volcano/Volcano-Plot_",i,".pdf"), width = w, height = h, bg = "white")
+  print(mSetObj[["imgSet"]][["volcano"]][[i]])
+  dev.off()
+}
+```
+```{r Volcano_plot_plot, out.width = "95%", echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/Volcano"), 
+                                pattern = "^Volcano-Plot(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+
+
+\pagebreak
+
+\pagebreak
+
+## Multivariate Analysis
+
+### Principle component analysis (PCA)
+
+To get a high-level overview of the data, *principal component analysis (PCA)* reduces the data dimensionality (i.e., number of compounds included in the analysis) while retaining most of the data information. PCA is an unsupervised method that combines or reduces the data by projecting it into a new coordinate system so that most of the variance in the data is found in the first few principal components (*PCs*), which represent the reduced dimensions. More specifically, PCA determines the best linear transformation for the set of data points so that the properties of that sample are most clearly represented along the coordinates (or axes). The goal is to extract the important information from the data and to express this information as a set of summary indices, the PCs. The *weights* for each original variable (i.e., compounds) when calculating the PC are called *loadings*. The overview provided by PCA may uncover the relationships between conditions and variables, and allows visual identification of sample patterns or clustering as well as smaple and feature outliers. An easily comprehensible introduction to PCA was written by Erdogan Taskesen and can be accessed at https://towardsdatascience.com/what-are-pca-loadings-and-biplots-9a7897f2e559.
+
+```{r PCAScree_create, echo=FALSE, results='hide'}
+dir.create(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA"), showWarnings = F)
+w = 6; h = 4.5
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA/PCAScree.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pca.scree.plot"]])
+dev.off()
+```
+```{r PCAScree_plot, out.width = "85%", echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA"), 
+                                pattern = "^PCAScree(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+\pagebreak
+#### PCA - Scores
+\
+```{r, message_3DPCAScores, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
+cat("A 3D PCA scores plot is available in the HTML version of this report.")
+```
+```{r PCAScores_create, echo=FALSE, results='hide'}
+w = 9; h = 7.5
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA/PCA2DScores_PC1_PC2.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pca.score2d_PC1_PC2.plot"]])
+dev.off()
+
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA/PCA2DScores_PC1_PC3.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pca.score2d_PC1_PC3.plot"]])
+dev.off()
+```
+```{r PCAScores_plot, out.width = "49%", fig.show='hold', echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA"), 
+                                pattern = "^PCA2DScores(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+```{r, PCAScores-3D, webgl=TRUE, echo=FALSE, eval = knitr::is_html_output()}
+cls <- mSetObj$dataSet$cls
+cls.type <- mSetObj$dataSet$cls.type
+cls.class <- mSetObj$dataSet$type.cls.lbl
+if (cls.class == "integer") {
+  cls <- as.character(sort(as.factor(as.numeric(levels(cls))[cls])))
+} else {
+  cls <- as.character(cls)
+}
+if (MetaboAnalystR:::all.numeric(cls)) {
+  cls <- paste("Group", cls)
+}
+colors <- MetaboAnalystR:::GetColorSchema(as.factor(cls))
+rgl::plot3d(x= mSetObj$imgSet$pca.score3d.plot$score$xyz[1,],
+       y= mSetObj$imgSet$pca.score3d.plot$score$xyz[3,],
+       z= mSetObj$imgSet$pca.score3d.plot$score$xyz[2,], 
+       col = colors,
+       xlab = mSetObj$imgSet$pca.score3d.plot$score$axis[1],
+       ylab = mSetObj$imgSet$pca.score3d.plot$score$axis[3],
+       zlab = mSetObj$imgSet$pca.score3d.plot$score$axis[2],
+       type="s" , size = 1.5)
+
+rgl::par3d(windowRect = c(0, 0, 512, 512))
+rgl::legend3d(
+  "right",
+  legend = levels(factor(
+    mSetObj$imgSet$pca.score3d.plot$score$facA
+  )),
+  col = unique(colors),
+  pch = 16
+)
+```
+`r rgl::close3d()`
+#### PCA - Loadings
+\
+```{r, message_3DPCALoadings, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
+cat("A 3D PCA Loadings plot is available in the HTML version of this report.")
+```
+```{r PCA_Loadings_create, echo=FALSE, results='hide'}
+w = 8; h = 7.5
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA/PCA-Loading_PC1_PC2.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pca.loading_PC1_PC2.plot"]])
+dev.off()
+
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA/PCA-Loading_PC1_PC3.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pca.loading_PC1_PC3.plot"]])
+dev.off()
+```
+```{r PCA_Loadings_plot, out.width = "49%", fig.show='hold', echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PCA"), 
+                                pattern = "^PCA-Loading(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+```{r, PCALoading-3D, webgl=TRUE, echo=FALSE, eval = knitr::is_html_output()}
+colors <- mSetObj$imgSet$pca.loading3d.plot$loading$cols_hex
+rgl::plot3d(x= mSetObj$imgSet$pca.loading3d.plot$loading$xyz[1,],
+       y= mSetObj$imgSet$pca.loading3d.plot$loading$xyz[3,],
+       z= mSetObj$imgSet$pca.loading3d.plot$loading$xyz[2,], 
+       col = colors,
+       xlab = mSetObj$imgSet$pca.loading3d.plot$loading$axis[1],
+       ylab = mSetObj$imgSet$pca.loading3d.plot$loading$axis[3],
+       zlab = mSetObj$imgSet$pca.loading3d.plot$loading$axis[2],
+       type="s" , size = 1.5)
+rgl::text3d(x=mSetObj$imgSet$pca.loading3d.plot$loading$xyz[1,],
+       y=mSetObj$imgSet$pca.loading3d.plot$loading$xyz[3,],
+       z=mSetObj$imgSet$pca.loading3d.plot$loading$xyz[2,],
+       mSetObj$imgSet$pca.loading3d.plot$loading$name, cex=0.6, adj = c(1.3, 1.1))
+```
+\pagebreak
+
+### Partial Least Squares-Discriminant Analysis (PLS-DA)
+ Partial Least-Squares Discriminant Analysis (PLS-DA) is a popular machine learning tool that is gaining increasing attention as a useful feature selector and classifier. It is a supervised method that uses multivariate regression techniques to extract the information that can predict the class membership (__Y__, a class vector) via linear combination of original x variables (stored in __X__, a numeric matrix of predictors). PLS-DA can be thought of as a “supervised” version of PCA in the sense that it achieves dimensionality reduction but with full awareness of the class labels. PLS-DA is prone to overfitting (it will try to separate classes even when there is no real difference between them). Therefore, cross-validation is an essential step in using this method as a feature selector, classifier or even just for visualization \footnote{Ruiz-Perez D, Guan H, Madhivanan P, Mathee K, and Narasimhan G. \textit{So you think you can PLS-DA?}, BMC Bioinformatics 21, 2 (2020)}. Before the analysis, the variables are often transformed to make their distributions be fairly symmetrical.
+
+#### PLS-DA - Scores
+\
+```{r, message_3DPLSScores, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
+cat("A 3D PLS-DA Scores plot is available in the HTML version of this report.")
+``` 
+```{r PLSDAScores_create, echo=FALSE, results='hide'}
+dir.create(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), showWarnings = F)
+w = 9; h = 7.5
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLS2DScores_PC1_PC2.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.score2d_PC1_PC2.plot"]])
+dev.off()
+
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLS2DScores_PC1_PC3.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.score2d_PC1_PC3.plot"]])
+dev.off()
+```
+```{r PLSDAScores_plot, out.width = "49%", fig.show='hold', echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                                pattern = "^PLS2DScores(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+```{r, PLSDAScores-3D, webgl=TRUE, echo=FALSE, eval = knitr::is_html_output()}
+cls <- mSetObj$dataSet$cls
+cls.type <- mSetObj$dataSet$cls.type
+cls.class <- mSetObj$dataSet$type.cls.lbl
+if (cls.class == "integer") {
+  cls <- as.character(sort(as.factor(as.numeric(levels(cls))[cls])))
+} else {
+  cls <- as.character(cls)
+}
+if (MetaboAnalystR:::all.numeric(cls)) {
+  cls <- paste("Group", cls)
+}
+colors <- MetaboAnalystR:::GetColorSchema(as.factor(cls))
+rgl::plot3d(x= mSetObj$imgSet$pls.score3d.plot$score$xyz[1,],
+       y= mSetObj$imgSet$pls.score3d.plot$score$xyz[3,],
+       z= mSetObj$imgSet$pls.score3d.plot$score$xyz[2,], 
+       col = colors,
+       xlab = mSetObj$imgSet$pls.score3d.plot$score$axis[1],
+       ylab = mSetObj$imgSet$pls.score3d.plot$score$axis[3],
+       zlab = mSetObj$imgSet$pls.score3d.plot$score$axis[2],
+       type="s" , size = 1.5)
+
+rgl::par3d(windowRect = c(0, 0, 512, 512))
+rgl::legend3d(
+  "right",
+  legend = levels(factor(
+    mSetObj$imgSet$pls.score3d.plot$score$facA
+  )),
+  col = unique(colors),
+  pch = 16
+)
+```
+`r rgl::close3d()`
+#### Partial Least Squares-Discriminant Analysis (PLS-DA) - Loadings
+\
+```{r, message_3DPLSLoadings, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
+cat("A 3D PLS-DA Loadings plot is available in the HTML version of this report.")
+``` 
+```{r PLSDA_Loadings_create, echo=FALSE, results='hide'}
+w = 9; h = 7.9
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-Loading_PC1_PC2.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.loading_PC1_PC2.plot"]])
+dev.off()
+
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-Loading_PC1_PC3.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.loading_PC1_PC3.plot"]])
+dev.off()
+```
+```{r PLSDA_Loadings_plot, out.width = "49%", fig.show='hold', echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                                pattern = "^PLSDA-Loading(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list, dpi = 300, error = F)
+```
+```{r, PLSDALoading-3D, webgl=TRUE, echo=FALSE, eval = knitr::is_html_output()}
+colors <- mSetObj$imgSet$pls.loading3d.plot$loading$cols_hex
+rgl::plot3d(x= mSetObj$imgSet$pls.loading3d.plot$loading$xyz[1,],
+       y= mSetObj$imgSet$pls.loading3d.plot$loading$xyz[3,],
+       z= mSetObj$imgSet$pls.loading3d.plot$loading$xyz[2,], 
+       col = colors,
+       xlab = mSetObj$imgSet$pls.loading3d.plot$loading$axis[1],
+       ylab = mSetObj$imgSet$pls.loading3d.plot$loading$axis[3],
+       zlab = mSetObj$imgSet$pls.loading3d.plot$loading$axis[2],
+       type="s" , size = 1.5)
+rgl::text3d(x=mSetObj$imgSet$pls.loading3d.plot$loading$xyz[1,],
+       y=mSetObj$imgSet$pls.loading3d.plot$loading$xyz[3,],
+       z=mSetObj$imgSet$pls.loading3d.plot$loading$xyz[2,],
+       mSetObj$imgSet$pls.loading3d.plot$loading$name, cex=0.6, adj = c(1.3, 1.1))
+# rgl::close3d()
+```
+\pagebreak
+#### Partial Least Squares-Discriminant Analysis (PLS-DA) - Important Features
+ There are two variable importance measures in PLS-DA. The first, Variable Importance in Projection (or Variable Influence in Projectio, _VIP_) is a weighted sum of squares of the PLS loadings taking into account the amount of explained Y-variation in each dimension (i.e., for each PLS component)\footnote{Andersen C. M., and Bro R. \textit{Variable selection in regression-a tutorial}, Journal of Chemometrics, 24(11-12), 728–737 (2010)}. A variable with a VIP Score close to or greater than 1 can be considered important in a given model. The other importance measure is based on the weighted sum of PLS-regression. The weights are a function of the reduction of the sums of squares across the number of PLS components. For analyses with more than two groups, the same number of predictors will be built for each group. Therefore, the coefficient of each feature will be different depending on which group you want to predict. The average of the feature coefficients are used to indicate the overall coefficient-based importance.
+  You can have a high VIP if feature x explains a large part of the variability in the data (__X__), and at the same time have low coefficients for x if it has a small effect on the response variable y. Wold et al. 2001 use the VIP as well as the coefficients to prune the model to eliminate unimportant variables. They do this by eliminating the x variables with low VIP and low coefficients\footnote{Svante Wold S., Sjöström M., Eriksson L. \textit{PLS-regression: a basic tool of chemometrics}, Chemometrics and Intelligent Laboratory Systems, 58:2, 109-130 (2001)}.
+  
+##### VIP Scores
+```{r PLS_VIP_plot, out.width = "48%", fig.show='hold', echo=FALSE, fig.align='center', warning=F, message=F}
+w = 8; h = w*0.95
+for(i in 1:length(names(mSetObj[['imgSet']][grep("imp_vip_Comp.+plot", names(mSetObj[['imgSet']]))]))) {
+  pdf(
+    file = paste0(
+      str_replace_all(tempdir(), "\\\\", "/"),
+      "/Plots/PLSDA/PLS-VIP_",
+      i,
+      "_",
+      gsub("imp_vip_", "", names(mSetObj[['imgSet']][grep("imp_vip_Comp.+plot", names(mSetObj[['imgSet']]))][i])),
+      ".pdf"
+    ),
+    width = w,
+    height = h,
+    bg = "white",
+    onefile = FALSE
+  )
+  print(mSetObj[["imgSet"]][[names(mSetObj[['imgSet']][grep("imp_vip_Comp.+plot", names(mSetObj[['imgSet']]))])[i]]])
+  dev.off()
+}
+
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                     pattern = "^PLS-VIP(.*).pdf$",
+                     full.names = TRUE)
+knitr::include_graphics(Files_list,dpi = 300)
+```
+\pagebreak
+##### Regression coefficients
+```{r PLS_COEF_plot, out.width = "48%", fig.show='hold', echo=FALSE, fig.align='center', warning=F, message=F}
+w = 7.2; h = w*1.0
+for(i in 1:length(names(mSetObj[['imgSet']][grep("pls.imp_coef_.+plot", names(mSetObj[['imgSet']]))]))) {
+  pdf(
+    file = paste0(
+      str_replace_all(tempdir(), "\\\\", "/"),
+      "/Plots/PLSDA/PLS-COEF_",
+      i,
+      "_",
+      gsub("imp_vip_", "", names(mSetObj[['imgSet']][grep("pls.imp_coef_.+plot", names(mSetObj[['imgSet']]))][i])),
+      ".pdf"
+    ),
+    width = w,
+    height = h,
+    bg = "white",
+    onefile = FALSE
+  )
+  print(mSetObj[["imgSet"]][[names(mSetObj[['imgSet']][grep("pls.imp_coef_.+plot", names(mSetObj[['imgSet']]))])[i]]])
+  dev.off()
+}
+
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                     pattern = "^PLS-COEF(.*).pdf$",
+                     full.names = TRUE)
+knitr::include_graphics(Files_list,dpi = 300)
+```
+\pagebreak
+##### Comparison: Regression coefficients vs. VIP scores
+```{r PLS_ImpScatter_plot, out.width = "48%", fig.show='hold', echo=FALSE, fig.align='center', warning=F, message=F}
+w = 7.2; h = w*1.0
+for(i in 1:length(names(mSetObj[['imgSet']][grep("pls\\.ImpScatter_plot", names(mSetObj[['imgSet']]))]))) {
+  pdf(
+    file = paste0(
+      str_replace_all(tempdir(), "\\\\", "/"),
+      "/Plots/PLSDA/PLS-ImpScatter_",
+      i,
+      "_",
+      gsub("pls.ImpScatter_plot_", "", names(mSetObj[['imgSet']][grep("pls\\.ImpScatter_plot", names(mSetObj[['imgSet']]))][i])),
+      ".pdf"
+    ),
+    width = w,
+    height = h,
+    bg = "white",
+    onefile = FALSE
+  )
+  print(mSetObj[["imgSet"]][[names(mSetObj[['imgSet']][grep("pls\\.ImpScatter_plot", names(mSetObj[['imgSet']]))])[i]]])
+  dev.off()
+}
+
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                     pattern = "^PLS-ImpScatter(.*).pdf$",
+                     full.names = TRUE)
+knitr::include_graphics(Files_list,dpi = 300)
+```
+\pagebreak
+
+#### Partial Least Squares-Discriminant Analysis (PLS-DA) – Cross Validation
+
+Q2 is an estimate of the predictive ability of the model, and is calculated via cross-validation (CV), where a fraction of data is held back, and the model trained on the rest. In each CV, the predicted data are compared with the original data, and the sum of squared errors is calculated. The prediction error is then summed over all samples (Predicted Residual Sum of Squares or PRESS). For convenience, the PRESS is divided by the initial sum of squares and subtracted from 1 to resemble the scale of the R2. Good predictions will have low PRESS or high Q2. Generally speaking, a model with an R2 (and Q2) value above 0.7 can be considered predictive. It is possible to have negative Q2, which means that your model is not at all predictive or is overfitted. For more details, refer to an excellent paper by Szymańska, et al\footnote{Szymańska E, Saccenti E, Smilde AK, Westerhuis JA. \textit{Double-check: validation of diagnostic statistics for PLS-DA models in metabolomics studies}, Metabolomics. 2012 Jun;8(Suppl 1):3-16.}.
+```{r PLS_CrossValidation_create, echo=FALSE, results='hide'}
+w = 6.8; h = w * 5/7
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-CrossValidation.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.crossvalidation.plot"]])
+dev.off()
+```
+```{r PLS_CrossValidation_plot, out.width="85%", echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                                pattern = "^PLSDA-CrossValidation(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list,dpi = 300)
+```
+\pagebreak
+
+#### Partial Least Squares-Discriminant Analysis (PLS-DA) – Permutation Test
+
+ Permutation test is a technique for testing a hypothesis of no effect, when the distribution of the test statistic is unknown. The objective of this test is to confirm that the initial model is superior to other models obtained by permuting the class labels and randomly assigning them to different individuals or, in other words, to answer the question "what is the model's performance if the groups are formed randomly". In each permutation, a PLS-DA model is built between the data (X) and the permuted class labels (Y) using the optimal number of components determined by cross validation for the model based on the original class assignment. The initial model is statistically compared to all the other randomly-assigned models. The indicated test statistic is based on prediction accuracy during training. If the observed test statistic is part of the distribution based on the permuted class assignments, the class discrimination cannot be considered significant from a statistical point of view. The further away it is to the right of the distribution, the more significant the separation between the groups is. The p-value is calculated as the proportion of the times that class separation based on randomly labeled sample is at least as good as the one based on the original data (one-sided p value).
+
+A relatively large sample size is required in order to reliably estimate the empirical p values. When your sample size is small, it is better to use unsupervised methods (such as PCA) and simple but more robust statistical tests (such as t-tests or ANOVA), due to the tendency of supervised methods (such as PLS-DA) to overfitting.
+```{r PLS_Permutation_create, echo=FALSE, results='hide'}
+w = 8; h = w * 6/8
+pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-Permutation.pdf"), width = w, height = h, bg = "white", onefile = FALSE)
+print(mSetObj[["imgSet"]][["pls.permut.plot"]])
+dev.off()
+```
+```{r PLS_Permutation_plot, out.width = "85%", fig.show='hold', echo=FALSE, fig.align='center'}
+Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
+                                pattern = "^PLSDA-Permutation(.*).pdf$",
+                                full.names = TRUE)
+knitr::include_graphics(Files_list,dpi = 300)
+
+```
+\pagebreak
+`r rgl::rgl.quit()`
+
+
+
+
+
+
+
+
+
+
