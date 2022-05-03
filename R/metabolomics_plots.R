@@ -6,7 +6,7 @@
 #' @param mSetObj Input name of the created mSet object,
 #' Data container with missing values.
 #' @param plot (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?
 #' @param fontsize (Numeric) Font sized used in the plot.
@@ -70,7 +70,7 @@ met.plot_missval <- function (mSetObj, plot = TRUE, imgName = "MissValPlot", for
 #' @param mSetObj Input name of the created mSet object,
 #' Data container with missing values.
 #' @param plot (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?
 #' @param basesize (Numeric) Font sized used in the plot.
@@ -198,7 +198,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after ANOVA analysis (\code{\link[VisomX]{met.ANOVA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -266,14 +266,16 @@ met.plot_ANOVA <- function (mSetObj = NA, imgName = "ANOVA_plot", format = "pdf"
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after normalization (\code{\link[VisomX]{met.normalize}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?
 #' @param plot (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?
 #' @param show_prenorm (Logical, \code{TRUE} or \code{FALSE}) Shall density distributions before normalization be displayed?
-#' @return The input mSet object with added plot: the top is a density plot and the bottom is a box plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_sample.plot)}.
+#' @return The input mSet object with added plot: the top is a density plot and the bottom is a box plot.
+#' In a boxplot, the bottom and top of the box are always the 25th and 75th percentile (the lower and upper quartiles, or Q1 and Q3, respectively), and the band near the middle of the box is always the 50th percentile (the median or Q2). The upper whisker is located at the smaller of the maximum x value and Q3 + 1.5 x IQR (Interquantile Range), whereas the lower whisker is located at the larger of the smallest x value and Q1 - 1.5 x IQR.
+#' The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_sample.plot)}.
 #' @export
 met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSummary", format = "png", dpi = NULL,
                                         width = NA, show_prenorm = TRUE, export = TRUE, plot=TRUE)
@@ -409,7 +411,7 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after normalization (\code{\link[VisomX]{met.normalize}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param pre.inx (Numeric vector, or \code{NULL}) Provide index of compounds in your data set that shall be diplayed with box plots. If \code{NULL}, the compounds with minimum and maximum values as well as up to 50 additional features are selected automatically.
@@ -417,8 +419,10 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?
 #' @param show_prenorm (Logical, \code{TRUE} or \code{FALSE}) Shall density distributions before normalization be displayed?
 #' @param plot (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?
-#' @return The input mSet object with added plot: the top is a density plot and the bottom is a box plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_feature.plot)}.
-#' @export
+#' @return The input mSet object with added plot: the top is a density plot and the bottom is a box plot.
+#' In a boxplot, the bottom and top of the box are always the 25th and 75th percentile (the lower and upper quartiles, or Q1 and Q3, respectively), and the band near the middle of the box is always the 50th percentile (the median or Q2). The upper whisker is located at the smaller of the maximum x value and Q3 + 1.5 x IQR (Interquantile Range), whereas the lower whisker is located at the larger of the smallest x value and Q1 - 1.5 x IQR.
+#' The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_feature.plot)}.
+#' #' @export
 met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName = "FeatureNormSummary", format = "pdf", dpi = NULL, pre.inx = NULL,
                                          width = NA, show_prenorm = TRUE, export = TRUE, plot = TRUE)
 {
@@ -597,7 +601,7 @@ met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName = "FeatureNormSum
 #' \code{met.plot_CorrHeatMap_Samples} visualizes the correlations between samples.
 #'
 #' @param mSetObj Input name of the created mSet object.
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -776,7 +780,7 @@ met.plot_CorrHeatMap_Samples <- function (mSetObj = NA, imgName = "correlation_s
 #' \code{met.plot_CorrHeatMap_Features} visualizes the correlations between features.
 #'
 #' @param mSetObj Input name of the created mSet object.
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -956,7 +960,7 @@ met.plot_CorrHeatMap_Features <- function (mSetObj = NA, imgName = "correlation_
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -1043,7 +1047,7 @@ met.plot_PCAScree <- function (mSetObj = NA, imgName = "PCA_ScreePlot", format =
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param subtitle (Logical, \code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?
@@ -1249,7 +1253,7 @@ met.plot_PCA2DScore <- function (mSetObj = NA, imgName = "PCA_2DScores", format 
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param subtitle (Logical, \code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?
@@ -1359,14 +1363,14 @@ met.plot_PCA2DLoading <- function (mSetObj = NA, imgName = "PCA_2DLoadings", for
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param subtitle (Logical, \code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
 #' @param inx1 (Numeric) Indicate the number of the principal component for the x-axis of the loading plot.
 #' @param inx2 (Numeric) Indicate the number of the principal component for the y-axis of the loading plot.
-#' @param reg (Numeric) Input a number between 0 and 1, 0.95 will display the 95 percent confidence regions, and 0 will not.
+#' @param reg (Numeric) Enter a number between 0 and 1, 0.95 will display the 95 percent confidence regions, and 0 will not.
 #' @param show Display sample names, \code{1} = show names, \code{0} = do not show names.
 #' @param grey.scale Use grey-scale colors, \code{1} = grey-scale, \code{0} = not grey-scale.
 #' @param use.sparse (Logical) Use a sparse algorithm (\code{TRUE}) or not (\code{FALSE}).
@@ -1559,7 +1563,7 @@ met.plot_PLS2DScore <- function (mSetObj = NA, imgName = "PLSDA_2DScore", format
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param subtitle (Logical, \code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?
@@ -1688,7 +1692,7 @@ met.plot_PLS2DLoading <- function (mSetObj = NA, imgName = "PLSDA_2DLoadings", f
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -1874,7 +1878,7 @@ met.plot_ImpVar <- function (mSetObj = NA, imp.vec, xlbl, feat.num = 15, color.B
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -1952,14 +1956,14 @@ met.plot_PLS_ImpScatter <- function(mSetObj, imgName = "PLS_ImpScatter", format 
 #' \code{met.plot_heatmap} Plot a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
 #'
 #' @param mSetObj Input name of the created mSet object.
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
 #' @param dataOpt (Character) Set data options. Choose \code{"norm"} to use data after normalization or any other string to use original values.
 #' @param scaleOpt (Character) Set value standardization option. \code{"row"} for autoscaling of features, \code{"column"} for autoscaling of samples, \code{"none"} for no autoscaling.
-#' @param smplDist (Character) Input the sample distance method: \code{"euclidean"} for Euclidean distance, \code{"correlation"} for Pearson distance, or \code{"minkowski"} for Minkowski method.
-#' @param clstDist (Character) Input the feature clustering method: \code{"ward.d"}, \code{"average"}, \code{"complete"}, or \code{"single"}.
+#' @param smplDist (Character) Enter the sample distance method: \code{"euclidean"} for Euclidean distance, \code{"correlation"} for Pearson distance, or \code{"minkowski"} for Minkowski method.
+#' @param clstDist (Character) Enter the feature clustering method: \code{"ward.d"}, \code{"average"}, \code{"complete"}, or \code{"single"}.
 #' @param palette Input color palette choice: \code{"bwm"} for Blue-White-Red, \code{"gbr"} for Green-Black-Red, \code{"heat"} for Red-Yellow, \code{"topo"} for topological colors, \code{"gray"} for gray-scale.
 #' @param viewOpt Set view options, choose \code{"detail"} or \code{"overview"}.
 #' @param rowV (Logical) Shall clustering be applied to samples?
@@ -2126,16 +2130,16 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
 #'
 #' @param mSetObj Input name of the created mSet object,
 #' Data container after ANOVA analysis (\code{\link[VisomX]{met.ANOVA.Anal}}) if \code{test = "anova"}.
-#' @param grp1 (Character) Name of the first group in the contrast \emph{grp1 vs. grp 2}.
-#' @param grp2 (Character) Name of the second group in the contrast \emph{grp1 vs. grp 2}.
+#' @param grp1 (Character) Enter name of the first group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.
+#' @param grp2 (Character) Enter name of the second group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.
 #' @param test (Character) Choose a statistical tests. For \code{test = "ttest"}, \code{met.plot_volcano} runs \code{\link[VisomX]{met.Ttests.Anal}} with the chosen test parameters.
 #' For \\code{test = "anova"}, \code{\link[VisomX]{met.ANOVA.Anal}} must have been applied previously on the mSetObj.
 #' @param paired (Logical) Is the data paired (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.
 #' @param nonpar (Logical) Use a non-parametric test (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.
-#' @param log2fc.thresh (Numeric) Input a relevance threshold for log2 fold changes, highlighted in the plot by vertical lines and colored compounds
-#' @param threshp (Numeric) Input a significance threshold for features based on T-test or ANOVA test results, highlighted in the plot by an horizontal line and colored compounds
+#' @param log2fc.thresh (Numeric) Enter a relevance threshold for log2 fold changes, highlighted in the plot by vertical lines and colored compounds
+#' @param threshp (Numeric) Enter a significance threshold for features based on T-test or ANOVA test results, highlighted in the plot by an horizontal line and colored compounds
 #' @param pval.type (Character) Display and apply significance threshold to \code{"raw"} p values or adjusted p values (\code{"fdr"}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}). If \code{NULL}, the name \code{Plots/Volcano_\strong{\emph{grp1}}_vs_\strong{\emph{grp2}}} is assigned.
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}). If \code{NULL}, the name \code{Plots/Volcano_\strong{\emph{grp1}}_vs_\strong{\emph{grp2}}} is assigned.
 #' @param format (\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param add_names (Logical) Display labels of significant features (\code{TRUE}) or not (\code{FALSE}).
 #' @param label_size (Numeric) Font size for feature labels (if \code{add_names = TRUE}).
@@ -2152,10 +2156,16 @@ met.plot_volcano <- function (mSetObj = NA, grp1, grp2, test = "ttest", paired =
                               add_names = TRUE, label_size = 3, dpi = NULL, width = NA, plot = TRUE, export = TRUE,
                               silent = FALSE, test_condition = FALSE)
 {
-  assertthat::assert_that(grp1 %in% levels(mSetObj$dataSet$cls),
-                          grp2 %in% levels(mSetObj$dataSet$cls),
-                          msg = paste0("'",grp1, "' or '", grp2, "' are not valid conditions in the dataset. Valid conditions are:\n",
-                                       paste(levels(mSetObj$dataSet$cls), collapse = ", ")))
+  if(!is.null(grp1) && !is.null(grp2)){
+    assertthat::assert_that(grp1 %in% levels(mSetObj$dataSet$cls),
+                            grp2 %in% levels(mSetObj$dataSet$cls),
+                            msg = paste0("'",grp1, "' or '", grp2, "' are not valid conditions in the dataset. Valid conditions are:\n",
+                                         paste(levels(mSetObj$dataSet$cls), collapse = ", ")))
+  }
+  if(is.null(grp1) && is.null(grp2)){
+    grp1 <- unique(levels(mSetObj$dataSet$cls))[1]
+    grp2 <- unique(levels(mSetObj$dataSet$cls))[2]
+  }
 
   if(test=="ttest"){
     mSetObj <- met.Ttests.Anal(mSetObj, grp1 = grp1, grp2 = grp2, nonpar, threshp, paired,
@@ -2327,7 +2337,7 @@ met.plot_volcano <- function (mSetObj = NA, grp1, grp2, test = "ttest", paired =
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format format.
 #' @param inx1 (Numeric) Indicate the number of the principal component for the x-axis of the loading plot.
 #' @param inx2 (Numeric) Indicate the number of the principal component for the y-axis of the loading plot.
@@ -2413,7 +2423,7 @@ met.print_PCA3DLoading <- function (mSetObj = NA){
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format format.
 #' @param inx1 (Numeric) Indicate the number of the principal component for the x-axis of the score plot.
 #' @param inx2 (Numeric) Indicate the number of the principal component for the y-axis of the score plot.
@@ -2498,7 +2508,7 @@ met.print_PCA3DScore <- function (mSetObj = NA){
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format format.
 #' @param inx1 (Numeric) Indicate the number of the principal component for the x-axis of the loading plot.
 #' @param inx2 (Numeric) Indicate the number of the principal component for the y-axis of the loading plot.
@@ -2586,7 +2596,7 @@ met.print_PLS3DLoading <- function (mSetObj = NA){
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format format.
 #' @param inx1 (Numeric) Indicate the number of the principal component for the x-axis of the score plot.
 #' @param inx2 (Numeric) Indicate the number of the principal component for the y-axis of the score plot.
@@ -2671,7 +2681,7 @@ met.print_PLS3DScore <- function (mSetObj = NA){
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
@@ -2750,7 +2760,7 @@ met.plot_PLS.Permutation <- function (mSetObj = NA, imgName = "PLSDA-Permutation
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
-#' @param imgName (Character) Input a name for the image file (if \code{export = TRUE}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
 #' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
 #' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).

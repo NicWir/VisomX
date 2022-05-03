@@ -58,6 +58,7 @@ Imports:
     impute,
     imputeLCMD,
     jsonlite,
+    kableExtra,
     KEGGgraph,
     lattice,
     limma,
