@@ -106,3 +106,28 @@ move.file <- function(from, to) {
   if (!isTRUE(file.info(todir)$isdir)) dir.create(todir)
   file.rename(from = from,  to = to)
 }
+
+#' Multiple set version of union
+#'
+#' @param x A list
+#' @export
+prot.get_kegg_pathways <- function(organism){
+  assertthat::assert_that(is.character(organism))
+  # Get gene sets from KEGG
+  kegg <- download_KEGG(organism)
+  # replace KEGG pathway numbers with names
+  kegg$KEGGPATHID2EXTID$from <- kegg$KEGGPATHID2NAME[match(kegg$KEGGPATHID2EXTID$from,
+                                                           kegg$KEGGPATHID2NAME$from), 2]
+  # Create list of KEGG gene sets
+  kegg.gs <- split(kegg$KEGGPATHID2EXTID[, 2], kegg$KEGGPATHID2EXTID[, 1])
+
+  return(kegg.gs)
+}
+
+####____prot.get_pathway_genes____####
+prot.get_pathway_genes <- function(pathway_name, pathway_table, colid_pathways, colid_genes, gene_sep = ", "){
+  genes <- unlist(str_split(pathway_table[match(pathway_name, pathway_table[[colid_pathways]]),
+                                          colid_genes], gene_sep))
+
+  return(genes)
+}

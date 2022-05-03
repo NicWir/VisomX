@@ -1,0 +1,1187 @@
+####____prot.filter_missing___####
+prot.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
+                                 thr = NULL, min = NULL)
+{
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"))
+  type <- match.arg(type)
+  if (any(!c("name", "ID") %in% colnames(rowData(se,
+                                                 use.names = FALSE)))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(!c("label", "condition", "replicate") %in%
+          colnames(colData(se)))) {
+    stop("'label', 'condition' and/or 'replicate' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (!is.null(type)){
+    if (type == "complete") {
+      keep <- !apply(assay(se), 1, function(x) any(is.na(x)))
+      filtered <- se[keep, ]
+    }
+    if (type == "condition") {
+      assertthat::assert_that(is.numeric(thr), length(thr) ==
+                                1)
+      max_repl <- max(colData(se)$replicate)
+      if (thr < 0 | thr > max_repl) {
+        stop("invalid filter threshold 'thr' applied",
+             "\nRun filter() with a threshold ranging from 0 to ",
+             max_repl)
+      }
+      filtered <- filter_missval(se, thr = thr)
+    }
+    if (type == "fraction") {
+      assertthat::assert_that(is.numeric(min), length(min) ==
+                                1)
+      if (min < 0 | min > 1) {
+        stop("invalid filter threshold 'min' applied",
+             "\nRun filter() with a percent ranging from 0 to 1")
+      }
+      bin_data <- assay(se)
+      idx <- is.na(assay(se))
+      bin_data[!idx] <- 1
+      bin_data[idx] <- 0
+      keep <- bin_data %>% as.data.frame() %>% rownames_to_column() %>%
+        gather(ID, value, -rowname) %>% group_by(rowname) %>%
+        summarize(n = n(), valid = sum(value), frac = valid/n) %>%
+        filter(frac >= min)
+      filtered <- se[keep$rowname, ]
+    }
+  } else {
+    filtered <- se
+  }
+  if( (nrow(assay(se)) - nrow(assay(filtered))) != 0 ){
+    number_removed <- nrow(assay(se)) - nrow(assay(filtered))
+    cat(paste0(number_removed, " out of ",
+               nrow(assay(se)), " proteins were removed from the dataset due to missing values.\n\n"))
+    filtered@metadata$n.filtered <- number_removed
+  }
+  filtered@metadata$filt_type <- type
+  filtered@metadata$n.pre_filt <- nrow(assay(se))
+  return(filtered)
+}
+####____prot.read_data____####
+prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containing proteomics data
+                            expdesign = NULL, # Experimental design as file path or data frame, if made previously
+                            csvsep = ";", # optional: delimiter if reading CSV file
+                            filter = c("Reverse", "Potential contaminant"),
+                            name = 'Gene Symbol', # Header of column containing primary protein IDs
+                            id = 'Ensembl Gene ID', # Header of column containing alternative protein IDs
+                            pfx = "abundances.", # Prefix in headers of columns containing protein abundances
+                            filt_type = "condition",
+                            filt_thr = 3, # keep proteins that have a maximum of 'filt_thr' missing values in at least one condition.
+                            filt_min = NULL # Sets the threshold for the minimum fraction of valid values allowed for any protein if type = "fraction".
+) {
+  assertthat::assert_that(is.character(name),
+                          length(name) == 1,
+                          is.character(id),
+                          length(id) == 1)
+  if (is.character(data)) {
+    # Read table file
+    if (file.exists(data)) {
+      if (str_replace_all(data, ".{1,}\\.", "") == "csv") {
+        prot <-
+          read.csv(
+            data,
+            sep = csvsep,
+            header = T,
+            stringsAsFactors = F,
+            fill = T,
+            na.strings = "",
+            quote = "",
+            comment.char = "",
+            check.names = F
+          )
+      } else if (str_replace_all(data, ".{1,}\\.", "") == "xls" |
+                 str_replace(data, ".{1,}\\.", "") == "xlsx") {
+        prot <- read_excel(data)
+      } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
+        prot <-
+          read.csv(
+            data,
+            sep = "\t",
+            header = T,
+            stringsAsFactors = F,
+            fill = T,
+            na.strings = "",
+            quote = "",
+            comment.char = "",
+            check.names = F
+          )
+      } else if (str_replace_all(data, ".{1,}\\.", "") == "txt") {
+        prot <-
+          read.table(
+            data,
+            sep = "\t",
+            header = T,
+            stringsAsFactors = F,
+            fill = T,
+            na.strings = "",
+            quote = "",
+            comment.char = "",
+            check.names = F
+          )
+      } else {
+        stop(
+          "No compatible file format provided.
+             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
+        )
+      }
+    } else {
+      stop(paste0("File \"", data, "\" does not exist."), call. = F)
+    }
+  } else {
+    prot <- data
+  }
+
+  # Test for occurence of prefix for abundance columns.
+  if (!(any(grepl(pfx, colnames(prot))))) {
+    stop(paste0("The prefix '", pfx, "' does not exist in any column of '",
+                data, "'. Please provide a valid prefix to identify columns with protein abundances."), call. = F)
+  }
+
+  # Filter out the positive proteins (indicated by '+')
+  # in the pre-defined "filter" columns
+  cols_filt <- grep(paste("^", filter, "$", sep = "", collapse = "|"),  # The columns to filter on
+                    colnames(prot))
+  if (!is.null(cols_filt)) {
+    if (length(cols_filt) == 1) {
+      rows <- which(prot[, cols_filt] == "+")
+      if(length(rows) > 0) prot <- prot[-rows,]
+    } else {
+      rows <- which(apply(prot[, cols_filt] == "+", 1, any))
+      if(length(rows) > 0) prot <- prot[-rows,]
+    }
+  }
+
+  # Make unique names using the annotations in the as name and id defined columns as primary and
+  # secondary names, respectively.
+  if (any(colnames(prot) %in% name) && any(colnames(prot) %in% id)) {
+    # Remove rows that have 'NA' in both specified name and id columns
+    row.rm <- which(is.na(prot[name]) & is.na(prot[id]), arr.ind = T)
+    if (length(row.rm) > 1) {
+      prot.rm <- prot[-c(row.rm),]
+      message(
+        paste0(
+          "Removing proteins with no defined name in column \"",
+          name,
+          "\" or \"",
+          id,
+          "\". (Removed: ",
+          (nrow(prot) - nrow(prot.rm)),
+          " proteins)"
+        )
+      )
+    }
+
+
+    if (length(row.rm) > 1) {
+      prot_unique <- make_unique(proteins = prot.rm, names = name, ids = id, delim = ";")
+    } else {
+      prot_unique <- make_unique(proteins = prot, names = name, ids = id, delim = ";")
+    }
+
+  } else if (!any(colnames(prot) %in% name) && !any(colnames(prot) %in% id)) {
+    stop("\"", name, "\" and \"", id, "\" are not columns in \"", data, "\".", "Please provide valid column names with protein identifiers as \"name= \" and \"id= \".",
+         call. = F)
+  } else if (!any(colnames(prot) %in% name)) {
+    stop("\"", name, "\" is not a column in \"", data, "\".", "Please provide a valid column name with protein names as \"name= \".",
+         call. = F)
+  } else if (!any(colnames(prot) %in% id)) {
+    stop("\"", id, "\" is not a column in \"", data, "\".", "Please provide a valid column name with protein identifiers as \"id= \".",
+         call. = F)
+  }
+
+
+  if (is.null(expdesign)) {
+    # Create experimental design based on column names if neither file nor data frame is provided
+    label <- prot_unique %>%
+      select(., contains(pfx)) %>%
+      colnames() %>%
+      gsub(pfx, "", .)
+
+    condition <- prot_unique %>%
+      select(., contains(pfx)) %>%
+      colnames() %>%
+      gsub(pfx, "", .) %>%
+      gsub(".[[:digit:]]+$", "", .)  # Remove prefix and replicate number from sample name
+
+    replicate <- prot_unique %>%
+      select(., contains(pfx)) %>%
+      colnames() %>%
+      str_extract(., "[:digit:]{1,}$")  # Remove string before replicate number
+
+    experimental_design <- data.frame(label, condition, replicate, check.names = FALSE)
+    message(paste0(
+      "Writing experimental design file to: " ,
+      getwd(),
+      "/experimental_design.txt"
+    ))
+    write.table(
+      experimental_design,
+      file = "experimental_design.txt",
+      sep = "\t",
+      row.names = F
+      #col.names = NA
+    )
+
+  } else if (is.list(expdesign)) {
+    experimental_design <- expdesign
+  } else if (is.character(expdesign) && file.exists(expdesign)) {
+    if (str_replace_all(expdesign, ".{1,}\\.", "") == "csv") {
+      experimental_design <- read.csv( expdesign, sep = csvsep, header = T,
+                                       stringsAsFactors = F, fill = T, na.strings = "",
+                                       quote = "", comment.char = "", check.names=FALSE )
+    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "xls" |
+               str_replace_all(expdesign, ".{1,}\\.", "") == "xlsx") {
+      experimental_design <- read_excel(expdesign)
+    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "tsv") {
+      experimental_design <- read.csv(expdesign, sep = "\t", header = T,
+                                      stringsAsFactors = F, fill = T, na.strings = "",
+                                      quote = "", comment.char = "", check.names=FALSE )
+    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "txt") {
+      experimental_design <- read.table(expdesign, sep = "\t", header = T, stringsAsFactors = F,
+                                        fill = T, na.strings = "", comment.char = "", check.names=FALSE )
+    } else {
+      stop(
+        "No compatible file format for experimental design provided.
+             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
+      )
+    }
+  } else {
+    stop(paste0("File \"", expdesign, "\" does not exist."), call. = F)
+  }
+
+  # Generate a SummarizedExperiment object using an experimental design
+  abundance_columns <- grep(pfx, colnames(prot_unique))  # get abundance column numbers
+  message("Generating SummarizedExperiment.")
+  prot_se <- make_se(prot_unique, abundance_columns, experimental_design)
+
+  ## Drop proteins with missing values based on defined type filter "filt_thr"
+  prot_se <- prot.filter_missing(prot_se, type = filt_type, thr = filt_thr, min = filt_min)
+
+  cat(paste0("Identified conditions:\n ", paste(str_c(unique(prot_se$condition), collapse = ", ")), "\n"))
+
+  return(prot_se)
+}
+
+####____prot.workflow____####
+prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
+                          imp_fun = c("man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
+                                      "MinProb", "min", "zero", "mixed", "nbavg", "SampMin"),
+                          q = 0.01, # q value for imputing missing values with method "fun = 'MinProb'".
+                          knn.rowmax = 0.5, # The maximum percent missing data allowed in any row (default 50%).
+                          # For any rows with more than rowmax% missing are imputed using the overall mean per sample.
+                          type = c("all", "control", "manual"), # Type of differential analysis to perform.
+                          control = NULL, # Control condition; required if type = "control".
+                          contrast = NULL, # Defined test for differential analysis "A_vs_B"; required if type = "manual".
+                          alpha = 0.05, # Significance threshold for adj. p values.
+                          alpha_pathways = 0.1,
+                          lfc = 1, # Relevance threshold for log2(fold change) values.
+                          heatmap.show_all = TRUE, # Shall all samples be displayed in the heatmap or only the samples contained in the defined "contrast"?
+                          # (only applicable for type = "manual")
+                          heatmap.kmeans = F, # Shall the proteins be clustered in the heat map?
+                          k = 6, # Number of protein clusters in heat map if kmeans = TRUE.
+                          heatmap.col_limit = NA, # Define the breaks in the heat map legends.
+                          heatmap.show_row_names = TRUE, # Show protein names in heat map?
+                          heatmap.row_font_size = 6, # Font size of protein names if show_row_names = TRUE.
+                          volcano.add_names = FALSE, # Display names next to symbols in volcano plot.
+                          volcano.label_size = 2.5, # Size of labels in volcano plot if
+                          volcano.adjusted = TRUE, # Display adjusted p-values on y axis of volcano plot?
+                          plot = FALSE, # Shall plots be returned in the Plots pane?
+                          export = FALSE, # Shall plots be exported as PDF and PNG files?
+                          report = TRUE, # Shall a report (HTML and PDF) be created?
+                          report.nm = NULL, # Folder name for created report (if report = TRUE)
+                          pathway_enrichment = FALSE, # Perform pathway over-representation analysis for each tested contrast
+                          pathway_kegg = FALSE, # Perform pathway over-representation analysis with gene sets in the KEGG database
+                          kegg_organism = NULL, # Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
+                          custom_pathways = NULL) # Dataframe providing custom pathway annotations
+{
+  # Show error if inputs are not the required classes
+  if(is.integer(alpha)) alpha <- as.numeric(alpha)
+  if(is.integer(lfc)) lfc <- as.numeric(lfc)
+  assertthat::assert_that(is.character(imp_fun),
+                          is.character(type),
+                          is.numeric(alpha),
+                          length(alpha) == 1,
+                          is.numeric(lfc),
+                          length(lfc) == 1)
+
+  # Show error if inputs are not valid
+  if (!type %in% c("all", "control", "manual")) {
+    stop("run workflow_proteomics() with a valid type",
+         "\nValid types are: 'all', 'control' and 'manual'.",
+         call. = FALSE)
+  }
+  if (export == TRUE){
+    dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
+  }
+  # Variance stabilization
+  prot_norm <- suppressMessages(prot.normalize_vsn(se, plot = plot, export = export))
+  # Impute missing values
+  if (imp_fun == "MinProb"){
+    prot_imp <- prot.impute(prot_norm, fun = imp_fun, q = q)
+  } else if (imp_fun == "knn"){
+    prot_imp <- prot.impute(prot_norm, fun = imp_fun, rowmax = knn.rowmax)
+  } else {
+    prot_imp <- prot.impute(prot_norm, fun = imp_fun)
+  }
+  # Perform PCA Analysis
+  prot_pca <- prot.pca(assay(prot_imp))
+  # Test for differential expression by empirical Bayes moderation
+  # of a linear model and defined contrasts
+  prot_diff <- prot.test_diff(prot_imp, type = type, control = control, test = contrast)
+  # Denote significantly differentially expressed proteins
+  prot_dep <- prot.add_rejections(prot_diff, alpha = alpha, lfc = lfc)
+  contrasts <- rowData(prot_dep) %>%
+    data.frame(check.names = FALSE) %>%
+    select(ends_with("_diff")) %>%
+    colnames() %>% str_replace_all("_diff", "")
+  # Generate a results table
+  results <- prot.get_results(prot_dep)
+  n_significant <- results %>% filter(significant) %>% nrow()
+
+  message(paste0(n_significant,
+                 " proteins were found to be differentially expressed with ",
+                 expression(alpha),
+                 " = ", alpha,
+                 " and |log2(fold change)| > ",
+                 lfc, "."))
+  if (pathway_enrichment) {
+    ls.significant_df <- list()
+    ls.significant_up <- list()
+    ls.significant_dn <- list()
+
+    for (i in 1:length(contrasts)) {
+      ls.significant_df[[i]] <-
+        rowData(prot_dep[rowData(prot_dep)[[paste0(contrasts[i], "_significant")]],]) %>% data.frame()
+      ls.significant_up[[i]] <-
+        ls.significant_df[[i]][ls.significant_df[[i]][paste0(contrasts[i], "_diff")] > 0,]
+      ls.significant_dn[[i]] <-
+        ls.significant_df[[i]][ls.significant_df[[i]][paste0(contrasts[i], "_diff")] < 0,]
+    }
+    if(!pathway_kegg && is.null(custom_pathways)) {
+      stop(
+        "Cannot perform custom pathway over-representation analysis without a table of pathways and corresponding genes.\nPlease provide a dataframe containing 'Pathway' and 'Accession' columns in the 'custom_pathways =' argument. Alternatively, choose 'pathway_kegg = TRUE' and a valid KEGG organism identifier in the 'kegg_organism = ' argument."
+      )
+    }
+    if (pathway_kegg) {
+      if (is.null(kegg_organism)) {
+        stop(
+          "Cannot perform KEGG pathway over-representation analysis without specifying a valid KEGG organism id in the 'kegg_organism' argument."
+        )
+      } else {
+
+        ls.pora_kegg_up <- rep(list(0), length(contrasts))
+        kegg_pathway_up <- function(x) {
+          prot.pathway_enrich(
+            gene = ls.significant_up[[x]]$ID,
+            organism = kegg_organism,
+            keyType = 'kegg',
+            pvalueCutoff = alpha_pathways,
+            pAdjustMethod = "BH",
+            minGSSize = 2)
+        }
+        ls.pora_kegg_up <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_up))
+
+        ls.pora_kegg_dn <- rep(list(0), length(contrasts))
+        kegg_pathway_dn <- function(x) {
+          prot.pathway_enrich(
+            gene = ls.significant_dn[[x]]$ID,
+            organism = kegg_organism,
+            keyType = 'kegg',
+            pvalueCutoff = alpha_pathways,
+            pAdjustMethod = "BH",
+            minGSSize = 2)
+        }
+        ls.pora_kegg_dn <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_dn))
+
+        for (i in 1:length(contrasts)) {
+
+          if(is.null(nrow(ls.pora_kegg_up[[i]]))){
+            cat(paste0("No significantly upregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
+          }
+          if(is.null(nrow(ls.pora_kegg_dn[[i]]))){
+            cat(paste0("No significantly downregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
+          }
+
+        }
+        names(ls.pora_kegg_up) <- contrasts
+        names(ls.pora_kegg_dn) <- contrasts
+      }
+    }
+    if (!is.null(custom_pathways)) {
+
+      ls.pora_custom_up <- rep(list(0), length(contrasts))
+      custom_pathway_up <- function(x) {
+        prot.pathway_enrich(
+          gene = ls.significant_up[[x]]$ID,
+          pvalueCutoff = alpha_pathways,
+          pAdjustMethod = "BH",
+          custom_gene_sets = T,
+          custom_pathways = custom_pathways,
+          minGSSize = 2)
+      }
+      ls.pora_custom_up <- suppressMessages(lapply(1:length(contrasts), custom_pathway_up))
+
+      ls.pora_custom_dn <- rep(list(0), length(contrasts))
+      custom_pathway_dn <- function(x) {
+        prot.pathway_enrich(
+          gene = ls.significant_dn[[x]]$ID,
+          pvalueCutoff = alpha_pathways,
+          pAdjustMethod = "BH",
+          custom_gene_sets = T,
+          custom_pathways = custom_pathways,
+          minGSSize = 2)
+      }
+      ls.pora_custom_dn <- suppressMessages(lapply(1:length(contrasts), custom_pathway_dn))
+
+      for (i in 1:length(contrasts)) {
+        if(is.null(nrow(ls.pora_custom_up[[i]]))){
+          cat(paste0("No significantly upregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+        }
+        if(is.null(nrow(ls.pora_custom_dn[[i]]))){
+          cat(paste0("No significantly downregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+        }
+      }
+      names(ls.pora_custom_up) <- contrasts
+      names(ls.pora_custom_dn) <- contrasts
+    }
+  }
+
+  suppress_ggrepel <- function(w) {
+    if (any(grepl("ggrepel", w)))
+      invokeRestart("muffleWarning")
+  }
+
+  if (export == TRUE |
+      plot == TRUE) {
+    if (export == TRUE){
+      message(paste0("Rendering and exporting figures to:\n",
+                     getwd(), "/Plots."))
+    }
+    suppressMessages(
+      prot.boxplot_intensity(se, prot_norm, prot_imp, plot = plot, export = export)
+    )
+    try(suppressMessages(
+      prot.plot_missval(prot_norm, plot = plot, export = export)
+    ))
+    try(suppressMessages(
+      prot.plot_detect(prot_norm, basesize = 10, plot = plot, export = export)
+    ))
+    suppressMessages(
+      prot.plot_imputation(se, prot_norm, prot_imp, plot = plot, export = export, basesize = 12)
+    )
+    suppressMessages(
+      suppressWarnings(
+        prot.plot_screeplot(prot_pca, axisLabSize = 18, titleLabSize = 22, plot = plot, export = export)
+      ) )
+    withCallingHandlers(suppressMessages(
+      prot.plot_loadings(prot_pca,labSize = 3, plot = plot, export = export)
+    ) , warning = suppress_ggrepel)
+    suppressMessages(
+      prot.plot_pca(prot_imp,x = 1, y = 2, point_size = 4, basesize = 14, title = "PC Scores - PC2 vs. PC1",
+                    plot = plot,export = export)
+    )
+    suppressMessages(
+      prot.plot_pca(prot_imp,x = 1, y = 3, point_size = 4, basesize = 14, title = "PC Scores - PC3 vs. PC1",
+                    plot = plot,export = export)
+    )
+    suppressMessages(
+      prot.plot_heatmap(prot_dep, type = "centered", kmeans = heatmap.kmeans, show_all = heatmap.show_all, contrast = contrast,
+                        k = k, col_limit = heatmap.col_limit,show_row_names = heatmap.show_row_names,
+                        row_font_size = heatmap.row_font_size, indicate = c("condition"),
+                        plot = plot, export = export)
+    )
+    suppressMessages(
+      prot.plot_heatmap(prot_dep, type = "contrast", contrast = contrast,  kmeans = heatmap.kmeans, k = k, col_limit = heatmap.col_limit,
+                        show_row_names = heatmap.show_row_names, row_font_size = heatmap.row_font_size,
+                        plot = plot, export = export)
+    )
+
+    for (i in 1:length(contrasts)){
+      suppressMessages(
+        suppressWarnings(
+          prot.plot_volcano(prot_dep, contrast = contrasts[i],
+                            add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+                            plot = plot, export = export, lfc = lfc, alpha = alpha)
+        ) )
+    }
+    if (pathway_kegg) {
+      for (i in 1:length(contrasts)) {
+        if(!(nrow(as.data.frame(ls.pora_kegg_up[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(ls.pora_kegg_up[[i]], title = paste0("Upregulated pathways", " - KEGG"),
+                                   subtitle =  str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
+            ) )
+        }
+        if(!(nrow(as.data.frame(ls.pora_kegg_dn[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(ls.pora_kegg_dn[[i]], title = paste0("Downregulated pathways", " - KEGG"),
+                                   subtitle = str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
+            ) )
+        }
+      }
+    }
+    if(!is.null(custom_pathways)){
+      for (i in 1:length(contrasts)) {
+        if(!(nrow(as.data.frame(ls.pora_custom_up[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(ls.pora_custom_up[[i]], title = "Upregulated pathways",
+                                   subtitle =  str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
+            ) )
+        }
+        if(!(nrow(as.data.frame(ls.pora_custom_dn[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(ls.pora_custom_dn[[i]], title = "Downregulated pathways",
+                                   subtitle = str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
+            ) )
+        }
+      }
+    }
+  }
+
+
+
+
+
+  param <- data.frame(type, alpha, lfc, check.names = FALSE)
+  results <- list(data = rowData(se), se = se, norm = prot_norm,
+                  imputed = prot_imp, pca = prot_pca, diff = prot_diff, dep = prot_dep,
+                  results = results, param = param)
+  if (pathway_enrichment == T && pathway_kegg) {
+    results <- c(results, pora_kegg_up = list(ls.pora_kegg_up), pora_kegg_dn = list(ls.pora_kegg_dn))
+  }
+  if (pathway_enrichment == T && !is.null(custom_pathways)) {
+    results <- c(results, pora_custom_up = list(ls.pora_custom_up), pora_custom_dn = list(ls.pora_custom_dn))
+  }
+
+  if(report == TRUE){
+    prot.report(results,
+                volcano.adjusted = volcano.adjusted,
+                pathway_enrichment = pathway_enrichment,
+                heatmap.show_all = heatmap.show_all,
+                heatmap.kmeans = heatmap.kmeans,
+                k = k,
+                report.nm = report.nm)
+  }
+  return(results)
+}
+
+
+####____prot.impute____####
+prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
+                                     "MLE", "MinDet", "MinProb", "man",
+                                     "min", "zero", "mixed", "nbavg", "SampMin"), ...)
+{
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"),
+                          is.character(fun))
+  fun <- match.arg(fun)
+  if (any(!c("name", "ID") %in% colnames(rowData(se,
+                                                 use.names = FALSE)))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (!any(is.na(assay(se)))) {
+    warning("No missing values in '", deparse(substitute(se)),
+            "'. ", "Returning the unchanged object.",
+            call. = FALSE)
+    return(se)
+  }
+  rowData(se)$imputed <- apply(is.na(assay(se)), 1, any)
+  rowData(se)$num_NAs <- rowSums(is.na(assay(se)))
+  if (fun == "man") {
+    se <- manual_impute(se, ...)
+  } else if (fun == "SampMin"){
+    assay(se) <- assay(se) %>% data.frame() %>%
+      mutate_if(is.numeric, function(x) ifelse(is.na(x), min(x, na.rm = T), x)) %>%
+      as.matrix()
+  } else {
+    MSnSet_data <- as(se, "MSnSet")
+    MSnSet_imputed <- MSnbase::impute(MSnSet_data, method = fun,
+                                      ...)
+    assay(se) <- MSnbase::exprs(MSnSet_imputed)
+  }
+  metadata(se)$imp_fun <- fun
+  return(se)
+}
+
+####____prot.normalize_vsn____####
+# Modified normalize_vsn function from package DEP; automatically prints and exports meanSDPlot
+prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
+  # Normalize the data (including log2 transformation)
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"))
+  se_vsn <- se
+  vsn.fit <- suppressMessages(vsn::vsnMatrix(2^assay(se_vsn)), classes = "message") # Fit the vsn model
+  assay(se_vsn) <- vsn::predict(vsn.fit, 2^assay(se_vsn)) #Apply the vsn transformation to data
+
+  # Verify the variance stabilisation.
+  # "The aim of these plots is to see whether there is a systematic trend in the standard
+  # deviation of the data as a function of overall expression. The assumption that
+  # underlies the usefulness of these plots is that most genes are not differentially
+  # expressed, so that the running median is a reasonable estimator of the standard
+  # deviation of feature level data conditional on the mean. After variance stabilisation,
+  # this should be approximately a horizontal line. It may have some random fluctuations,
+  # but should not show an overall trend. If this is not the case, that usually indicates a
+  # data quality problem, or is a consequence of inadequate prior data preprocessing."
+  # (source: https://bioconductor.org/packages/release/bioc/vignettes/vsn/inst/doc/A-vsn.html )
+  if (export == TRUE){
+    dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
+    pdf("Plots/meanSDPlot.pdf")
+    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    dev.off()
+
+    png("Plots/meanSDPlot.png",
+        width = 6, height = 6, units = 'in', res = 300)
+    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    dev.off()
+    message(paste0("Exporting meanSdPlot to:\n\"", getwd(), "\"/Plots/meanSdPlot.pdf\" and \".../meanSdPlot.png\""))
+  }
+
+  if (plot == TRUE){
+    meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD")
+  }
+
+
+  return(se_vsn)
+}
+####____prot.pca____####
+ExactParam <- function (deferred = FALSE, fold = Inf)
+{
+  new("ExactParam", deferred = as.logical(deferred),
+      fold = as.numeric(fold))
+}
+
+prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
+                      rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam())
+{
+  if (is.data.frame(mat)) {
+    mat <- as.matrix(mat)
+  }
+  if (!transposed) {
+    mat <- t(mat)
+  }
+  if (!is.null(metadata)) {
+    if (!identical(rownames(mat), rownames(metadata))) {
+      stop("'colnames(mat)' is not identical to 'rownames(metadata)'")
+    }
+  }
+  .center <- if (center)
+    NULL
+  else 0
+  vars <- colVars(DelayedArray::DelayedArray(mat), center = .center)
+  if (!is.null(removeVar)) {
+    message("-- removing the lower ", removeVar * 100,
+            "% of variables based on variance")
+    varorder <- order(vars, decreasing = TRUE)
+    keep <- head(varorder, max(1, ncol(mat) * (1 - removeVar)))
+    mat <- mat[, keep, drop = FALSE]
+    vars <- vars[keep]
+  }
+  if (is.null(rank)) {
+    if (is(BSPARAM, "ExactParam")) {
+      rank <- min(dim(mat))
+    }
+    else {
+      stop("'rank' must be specified for approximate PCA methods")
+    }
+  }
+  pcaobj <- BiocSingular::runPCA(mat, center = center, scale = scale, rank = rank,
+                                 BSPARAM = BSPARAM)
+  if (scale) {
+    total.var <- length(vars)
+  }
+  else {
+    total.var <- sum(vars)
+  }
+  proportionvar <- (pcaobj$sdev^2)/total.var * 100
+  pcaobj <- list(rotated = data.frame(pcaobj$x), loadings = data.frame(pcaobj$rotation),
+                 variance = proportionvar, sdev = pcaobj$sdev, metadata = metadata,
+                 xvars = colnames(mat), yvars = rownames(mat), components = colnames(pcaobj$x))
+  rownames(pcaobj$rotated) <- pcaobj$yvars
+  rownames(pcaobj$loadings) <- pcaobj$xvars
+  names(pcaobj$variance) <- pcaobj$components
+  class(pcaobj) <- "pca"
+  return(pcaobj)
+}
+####____prot.test_diff____####
+prot.test_diff <- function (se, type = c("control", "all", "manual"),
+                            control = NULL, test = NULL, design_formula = formula(~0 +
+                                                                                    condition))
+{
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"),
+                          is.character(type), class(design_formula) == "formula")
+  type <- match.arg(type)
+  col_data <- colData(se)
+  raw <- assay(se)
+  if (any(!c("name", "ID") %in% colnames(rowData(se,
+                                                 use.names = FALSE)))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(!c("label", "condition", "replicate") %in%
+          colnames(col_data))) {
+    stop("'label', 'condition' and/or 'replicate' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(is.na(raw))) {
+    warning("Missing values in '", deparse(substitute(se)),
+            "'")
+  }
+  if (!is.null(control)) {
+    assertthat::assert_that(is.character(control), length(control) ==
+                              1)
+    if (!control %in% unique(col_data$condition)) {
+      stop("run test_diff() with a valid control.\nValid controls are: '",
+           paste0(unique(col_data$condition), collapse = "', '"),
+           "'", call. = FALSE)
+    }
+  }
+  variables <- terms.formula(design_formula) %>% attr(., "variables") %>%
+    as.character() %>% .[-1]
+  if (any(!variables %in% colnames(col_data))) {
+    stop("run make_diff() with an appropriate 'design_formula'")
+  }
+  if (variables[1] != "condition") {
+    stop("first factor of 'design_formula' should be 'condition'")
+  }
+  for (var in variables) {
+    temp <- factor(col_data[[var]])
+    assign(var, temp)
+  }
+  design <- model.matrix(design_formula, data = environment())
+  colnames(design) <- gsub("condition", "", colnames(design))
+  conditions <- as.character(unique(condition))
+  if (type == "all") {
+    cntrst <- apply(utils::combn(conditions, 2), 2, paste,
+                    collapse = " - ")
+    if (!is.null(control)) {
+      flip <- grep(paste("^", control, sep = ""),
+                   cntrst)
+      if (length(flip) >= 1) {
+        cntrst[flip] <- cntrst[flip] %>% gsub(paste(control,
+                                                    "- ", sep = " "), "", .) %>%
+          paste(" - ", control, sep = "")
+      }
+    }
+  }
+  if (type == "control") {
+    if (is.null(control))
+      stop("run test_diff(type = 'control') with a 'control' argument")
+    cntrst <- paste(conditions[!conditions %in% control],
+                    control, sep = " - ")
+  }
+  if (type == "manual") {
+    if (is.null(test)) {
+      stop("run test_diff(type = 'manual') with a 'test' argument")
+    }
+    assertthat::assert_that(is.character(test))
+    if (any(!unlist(strsplit(test, "_vs_")) %in% conditions)) {
+      stop("run test_diff() with valid contrasts in 'test'",
+           ".\nValid contrasts should contain combinations of: '",
+           paste0(conditions, collapse = "', '"),
+           "', for example '", paste0(conditions[1],
+                                      "_vs_", conditions[2]), "'.", call. = FALSE)
+    }
+    cntrst <- gsub("_vs_", " - ", test)
+  }
+  cat("Tested contrasts: ", paste(gsub(" - ",
+                                       "_vs_", cntrst), collapse = ", "), "\n")
+  fit <- limma::lmFit(raw, design = design)
+  made_contrasts <- limma::makeContrasts(contrasts = cntrst, levels = design)
+  contrast_fit <- limma::contrasts.fit(fit, made_contrasts)
+  if (any(is.na(raw))) {
+    for (i in cntrst) {
+      covariates <- strsplit(i, " - ") %>% unlist
+      single_contrast <- makeContrasts(contrasts = i, levels = design[,
+                                                                      covariates])
+      single_contrast_fit <- contrasts.fit(fit[, covariates],
+                                           single_contrast)
+      contrast_fit$coefficients[, i] <- single_contrast_fit$coefficients[,
+                                                                         1]
+      contrast_fit$stdev.unscaled[, i] <- single_contrast_fit$stdev.unscaled[,
+                                                                             1]
+    }
+  }
+  eB_fit <- limma::eBayes(contrast_fit)
+  retrieve_fun <- function(comp, fit = eB_fit) {
+    res <- limma::topTable(fit, sort.by = "t", coef = comp,
+                           number = Inf, confint = TRUE)
+    res <- res[!is.na(res$t), ]
+    fdr_res <- fdrtool::fdrtool(res$t, plot = FALSE, verbose = FALSE)
+    res$qval <- fdr_res$qval
+    res$lfdr <- fdr_res$lfdr
+    res$comparison <- rep(comp, dim(res)[1])
+    res <- rownames_to_column(res)
+    return(res)
+  }
+  limma_res <- map_df(cntrst, retrieve_fun)
+  table <- limma_res %>% select(rowname, logFC, CI.L, CI.R,
+                                P.Value, qval, comparison) %>% mutate(comparison = gsub(" - ",
+                                                                                        "_vs_", comparison)) %>% gather(variable, value,
+                                                                                                                        -c(rowname, comparison)) %>% mutate(variable = recode(variable,
+                                                                                                                                                                              logFC = "diff", P.Value = "p.val", qval = "p.adj")) %>%
+    unite(temp, comparison, variable) %>% spread(temp, value)
+  rowData(se) <- merge(rowData(se, use.names = FALSE), table,
+                       by.x = "name", by.y = "rowname", all.x = TRUE,
+                       sort = FALSE)
+  return(se)
+}
+####____prot.add_rejections____####
+prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
+{
+  if (is.integer(alpha))
+    alpha <- as.numeric(alpha)
+  if (is.integer(lfc))
+    lfc <- as.numeric(lfc)
+  assertthat::assert_that(inherits(diff, "SummarizedExperiment"),
+                          is.numeric(alpha), length(alpha) == 1, is.numeric(lfc),
+                          length(lfc) == 1)
+  row_data <- rowData(diff, use.names = FALSE) %>% as.data.frame()
+  if (any(!c("name", "ID") %in% colnames(row_data))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(diff)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (length(grep("_p.adj|_diff", colnames(row_data))) <
+      1) {
+    stop("'[contrast]_diff' and/or '[contrast]_p.adj' columns are not present in '",
+         deparse(substitute(diff)), "'\nRun test_diff() to obtain the required columns",
+         call. = FALSE)
+  }
+  cols_p <- grep("_p.adj", colnames(row_data))
+  cols_diff <- grep("_diff", colnames(row_data))
+  if (length(cols_p) == 1) {
+    rowData(diff)$significant <- row_data[, cols_p] <= alpha &
+      abs(row_data[, cols_diff]) >= lfc
+    rowData(diff)$contrast_significant <- rowData(diff, use.names = FALSE)$significant
+    colnames(rowData(diff))[ncol(rowData(diff, use.names = FALSE))] <- gsub("p.adj",
+                                                                            "significant", colnames(row_data)[cols_p])
+  }
+  if (length(cols_p) > 1) {
+    p_reject <- row_data[, cols_p] <= alpha
+    p_reject[is.na(p_reject)] <- FALSE
+    diff_reject <- abs(row_data[, cols_diff]) >= lfc
+    diff_reject[is.na(diff_reject)] <- FALSE
+    sign_df <- p_reject & diff_reject
+    sign_df <- cbind(sign_df, significant = apply(sign_df,
+                                                  1, function(x) any(x)))
+    colnames(sign_df) <- gsub("_p.adj", "_significant",
+                              colnames(sign_df))
+    sign_df <- cbind(name = row_data$name, as.data.frame(sign_df))
+    rowData(diff) <- merge(rowData(diff, use.names = FALSE),
+                           sign_df, by = "name")
+  }
+  metadata(diff)$alpha <- as.numeric(alpha)
+  metadata(diff)$lfc <- as.numeric(lfc)
+  return(diff)
+}
+####____prot.get_results____####
+prot.get_results <- function (dep)
+{
+  assertthat::assert_that(inherits(dep, "SummarizedExperiment"))
+  row_data <- rowData(dep, use.names = FALSE)
+  if (any(!c("name", "ID") %in% colnames(row_data))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(dep)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (length(grep("_p.adj|_diff", colnames(row_data))) <
+      1) {
+    stop("'[contrast]_diff' and/or '[contrast]_p.adj' columns are not present in '",
+         deparse(substitute(dep)), "'\nRun test_diff() to obtain the required columns",
+         call. = FALSE)
+  }
+  row_data$mean <- rowMeans(assay(dep), na.rm = TRUE)
+  centered <- assay(dep) - row_data$mean
+  centered <- data.frame(centered) %>% rownames_to_column() %>%
+    gather(ID, val, -rowname) %>% left_join(., data.frame(colData(dep)),
+                                            by = "ID")
+  centered <- group_by(centered, rowname, condition) %>% summarize(val = mean(val,
+                                                                              na.rm = TRUE)) %>% mutate(val = signif(val, digits = 3)) %>%
+    spread(condition, val)
+  colnames(centered)[2:ncol(centered)] <- paste(colnames(centered)[2:ncol(centered)],
+                                                "_centered", sep = "")
+  ratio <- as.data.frame(row_data) %>% column_to_rownames("name") %>%
+    select(ends_with("diff")) %>% signif(., digits = 3) %>%
+    rownames_to_column()
+  colnames(ratio)[2:ncol(ratio)] <- gsub("_diff", "_log2fc",
+                                         colnames(ratio)[2:ncol(ratio)])
+  df <- left_join(ratio, centered, by = "rowname")
+  pval <- as.data.frame(row_data) %>% column_to_rownames("name") %>%
+    select(ends_with("p.val"), ends_with("p.adj"),
+           ends_with("significant")) %>% rownames_to_column()
+  pval[, grep("p.adj", colnames(pval))] <- pval[, grep("p.adj",
+                                                       colnames(pval))] %>% signif(digits = 3)
+  ids <- as.data.frame(row_data) %>% select(name, ID)
+  table <- left_join(ids, pval, by = c(name = "rowname"))
+  table <- left_join(table, df, by = c(name = "rowname")) %>%
+    arrange(desc(significant))
+  return(table)
+}
+####____get_annotation____####
+get_annotation <- function (dep, indicate)
+{
+  assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
+                          is.character(indicate))
+  col_data <- colData(dep) %>% as.data.frame()
+  columns <- colnames(col_data)
+  if (all(!indicate %in% columns)) {
+    stop("'", paste0(indicate, collapse = "' and/or '"),
+         "' column(s) is/are not present in ", deparse(substitute(dep)),
+         ".\nValid columns are: '", paste(columns, collapse = "', '"),
+         "'.", call. = FALSE)
+  }
+  if (any(!indicate %in% columns)) {
+    indicate <- indicate[indicate %in% columns]
+    warning("Only used the following indicate column(s): '",
+            paste0(indicate, collapse = "', '"), "'")
+  }
+  anno <- select(col_data, indicate)
+  names <- colnames(anno)
+  anno_col <- vector(mode = "list", length = length(names))
+  names(anno_col) <- names
+  for (i in names) {
+    var = anno[[i]] %>% unique() %>% sort()
+    if (length(var) == 1)
+      cols <- c("black")
+    if (length(var) == 2)
+      cols <- c("orangered", "cornflowerblue")
+    if (length(var) < 7 && length(var) > 2)
+      cols <- RColorBrewer::brewer.pal(length(var), "Pastel1")
+    if (length(var) > 7 && length(var) <= 12){
+      cols <- RColorBrewer::brewer.pal(length(var), "Set3")
+    } else {
+      pal <- c(
+        "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+        "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+        "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+        "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+        "green1", "yellow4", "yellow3", "darkorange4", "brown"
+      )
+      cols <-pal[1:length(var)]
+    }
+    names(cols) <- var
+    anno_col[[i]] <- cols
+  }
+  ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
+}
+####____prot.report_____####
+prot.report <- function(results, report.nm = NULL, ...){
+  assertthat::assert_that(is.list(results))
+  if (any(!c("data", "se", "norm",
+             "imputed", "diff", "dep", "results",
+             "param") %in% names(results))) {
+    stop("run report() with appropriate input generated by prot.workflow",
+         call. = FALSE)
+  }
+  args <- list(...)
+  for(i in 1:length(args)){
+    assign(names(args)[i], args[[i]])
+  }
+  data <- results$se
+  norm <- results$norm
+  imp <- results$imputed
+  pca <- results$pca
+  dep <- results$dep
+  param <- results$param
+  if("pora_kegg_up" %in% names(results)){
+    pora_kegg_up <- results$pora_kegg_up
+  }
+  if("pora_kegg_dn" %in% names(results)){
+    pora_kegg_dn <- results$pora_kegg_dn
+  }
+  if("pora_custom_up" %in% names(results)){
+    pora_custom_up <- results$pora_custom_up
+  }
+  if("pora_custom_dn" %in% names(results)){
+    pora_custom_dn <- results$pora_custom_dn
+  }
+  table <- results$results
+  message("Render reports...")
+  if(!is.null(report.nm)){
+    wd <- paste0(getwd(), "/", report.nm)
+  } else {
+    wd <- paste(getwd(), "/Report_", format(Sys.time(),
+                                            "%Y%m%d_%H%M%S"), sep = "")
+  }
+  dir.create(wd, showWarnings = F)
+  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package", "/Report_Prot.Rmd",
+                sep = "")
+  rmarkdown::render(file, output_format = "all", output_dir = wd,
+                    quiet = TRUE)
+  message("Save tab-delimited table")
+  utils::write.table(table, paste(wd, "results.txt",
+                                  sep = "/"), row.names = FALSE, sep = "\t")
+  message("Save RData object")
+  save(results, file = paste(wd, "results.RData", sep = "/"))
+  message(paste0("Files saved in: '", wd, "'"))
+}
+
+
+
+####____prot.pathway_enrich____####
+prot.pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
+                                 pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
+                                 minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
+{
+  if (custom_gene_sets) {
+    custom_pathways$Accession <-
+      custom_pathways$Accession %>% str_replace_all(., " // ", ", ")
+    custom_vec <-
+      custom_pathways[, match(c("Pathway", "Accession"), colnames(custom_pathways))] %>% tibble::deframe()
+    NAME2EXTID <- strsplit(as.character(custom_vec), ", ")
+    names(NAME2EXTID) <- names(custom_vec)
+    EXTID2NAME <- reverseSplit(NAME2EXTID)
+    DATA <- new.env()
+    DATA$NAME2EXTID  <- NAME2EXTID
+    DATA$EXTID2NAME  <- EXTID2NAME
+    DATA$PATHID2EXTID <- NAME2EXTID
+    res <- prot.enricher_custom(gene, pvalueCutoff = pvalueCutoff,
+                                pAdjustMethod = pAdjustMethod, universe = universe, minGSSize = minGSSize,
+                                maxGSSize = maxGSSize, qvalueCutoff = qvalueCutoff, USER_DATA = DATA)
+    if (is.null(res))
+      return(res)
+  } else {
+    species <- clusterProfiler:::organismMapper(organism)
+    if (use_internal_kegg) {
+      DATA <- get_data_from_KEGG_db(species)
+    } else {
+      DATA <- clusterProfiler:::prepare_KEGG(species, "KEGG", keyType)
+    }
+    res <- DOSE:::enricher_internal(gene, pvalueCutoff = pvalueCutoff,
+                                    pAdjustMethod = pAdjustMethod, universe = universe, minGSSize = minGSSize,
+                                    maxGSSize = maxGSSize, qvalueCutoff = qvalueCutoff, USER_DATA = DATA)
+    if (is.null(res))
+      return(res)
+    res@ontology <- "KEGG"
+    res@organism <- species
+    res@keytype <- keyType
+  }
+  res <- mutate(res, richFactor = Count / as.numeric(sub("/\\d+", "", BgRatio)))
+  return(res)
+}
+
+
+####____prot.enricher_custom____(internal) ####
+prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
+                                  minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, USER_DATA)
+{
+  gene <- as.character(unique(gene))
+
+  EXTID2NAME <- get("EXTID2NAME", envir = USER_DATA)
+  qExtID2Name <- EXTID2NAME[gene]
+  len <- sapply(qExtID2Name, length)
+  notZero.idx <- len != 0
+  qExtID2TermID <- qExtID2Name[notZero.idx]
+  qTermID <- unlist(qExtID2TermID)
+  if (is.null(qTermID)) {
+    message("--> No gene can be mapped. Either no gene was found as part of any annotated custom pathway or gene IDs have the wrong format.")
+    p2e <- get("NAME2EXTID", envir = USER_DATA)
+    sg <- unlist(p2e[1:10])
+    sg <- sample(sg, min(length(sg), 6))
+    message("--> Expected input gene IDs (examples): ", paste0(sg,
+                                                               collapse = ","))
+    return(NULL)
+
+  }
+  qExtID2TermID.df <- data.frame(extID = rep(names(qExtID2TermID),
+                                             times = lapply(qExtID2TermID, length)), termID = qTermID)
+  qExtID2TermID.df <- unique(qExtID2TermID.df)
+  extID <- get("NAME2EXTID", envir = USER_DATA) %>% unlist() %>% unique()
+
+  qTermID2ExtID <- with(qExtID2TermID.df, split(as.character(extID),
+                                                as.character(termID)))
+  if (missing(universe))
+    universe <- NULL
+  if (!is.null(universe)) {
+    if (is.character(universe)) {
+      extID <- intersect(extID, universe)
+    }
+    else {
+      message("`universe` is not in character and will be ignored...")
+    }
+  }
+  qTermID2ExtID <- lapply(qTermID2ExtID, intersect, extID)
+  qTermID <- unique(names(qTermID2ExtID))
+
+  termID2ExtID <- get("PATHID2EXTID", envir = USER_DATA)
+  termID2ExtID <- termID2ExtID[qTermID]
+  termID2ExtID <- lapply(termID2ExtID, intersect, extID)
+  geneSets <- lapply(termID2ExtID, intersect, extID)
+
+  if (is.na(minGSSize) || is.null(minGSSize))
+    minGSSize <- 1
+  if (is.na(maxGSSize) || is.null(maxGSSize))
+    maxGSSize <- Inf
+  geneSet_size <- sapply(geneSets, length)
+  idx <- minGSSize <= geneSet_size & geneSet_size <= maxGSSize
+
+
+  if (sum(idx) == 0) {
+    msg <- paste("No gene sets have size between",
+                 minGSSize, "and", maxGSSize, "...")
+    message(msg)
+    message("--> return NULL...")
+    return(NULL)
+  }
+  termID2ExtID <- termID2ExtID[idx]
+  qTermID2ExtID <- qTermID2ExtID[idx]
+  qTermID <- unique(names(qTermID2ExtID))
+  k <- sapply(qTermID2ExtID, length)
+  k <- k[qTermID]
+  M <- sapply(termID2ExtID, length)
+  M <- M[qTermID]
+  N <- rep(length(extID), length(M))
+  n <- rep(length(qExtID2TermID), length(M))
+  args.df <- data.frame(numWdrawn = k - 1, numW = M, numB = N -
+                          M, numDrawn = n)
+  pvalues <- apply(args.df, 1, function(n) phyper(n[1], n[2],
+                                                  n[3], n[4], lower.tail = FALSE))
+  GeneRatio <- apply(data.frame(a = k, b = n), 1, function(x) paste(x[1],
+                                                                    "/", x[2], sep = "", collapse = ""))
+  BgRatio <- apply(data.frame(a = M, b = N), 1, function(x) paste(x[1],
+                                                                  "/", x[2], sep = "", collapse = ""))
+  Over <- data.frame(ID = as.character(qTermID), GeneRatio = GeneRatio,
+                     BgRatio = BgRatio, pvalue = pvalues, stringsAsFactors = FALSE)
+  p.adj <- p.adjust(Over$pvalue, method = pAdjustMethod)
+  qobj <- tryCatch(qvalue(p = Over$pvalue, lambda = 0.05, pi0.method = "bootstrap"),
+                   error = function(e) NULL)
+  if (class(qobj) == "qvalue") {
+    qvalues <- qobj$qvalues
+  } else {
+    qvalues <- NA
+  }
+  geneID <- sapply(qTermID2ExtID, function(i) paste(i, collapse = "/"))
+  geneID <- geneID[qTermID]
+  Over <- data.frame(Over, p.adjust = p.adj, qvalue = qvalues,
+                     geneID = geneID, Count = k, stringsAsFactors = FALSE)
+  Description <- qTermID
+  if (length(qTermID) != length(Description)) {
+    idx <- qTermID %in% names(Description)
+    Over <- Over[idx, ]
+  }
+  Over$Description <- Description
+  nc <- ncol(Over)
+  Over <- Over[, c(1, nc, 2:(nc - 1))]
+  Over <- Over[order(pvalues), ]
+  Over$ID <- as.character(Over$ID)
+  row.names(Over) <- as.character(Over$ID)
+  x <- new("enrichResult", result = Over, pvalueCutoff = pvalueCutoff,
+           pAdjustMethod = pAdjustMethod, qvalueCutoff = qvalueCutoff,
+           gene = as.character(gene), universe = extID, geneSets = geneSets,
+           organism = "UNKNOWN", keytype = "UNKNOWN",
+           ontology = "UNKNOWN", readable = FALSE)
+  return(x)
+}
+
+

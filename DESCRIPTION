@@ -31,11 +31,13 @@ Imports:
     caret,
     circlize,
     cluster,
+    clusterProfiler,
     ComplexHeatmap,
     crmn,
     data.table,
     DEP,
     devtools,
+    DOSE,
     DT,
     edgeR,
     ellipse,
@@ -98,7 +100,8 @@ Imports:
     tidyr,
     UpSetR,
     vctrs,
-    vsn
+    vsn,
+    xlsx
 Suggests: 
     ggpubr
 VignetteBuilder: 
@@ -110,6 +113,8 @@ Remotes:
     bioc::release/globaltest,
     bioc::release/KEGGgraph,
     bioc::release/sva,
+    bioc::release/clusterProfiler,
+    bioc::release/DOSE,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA
