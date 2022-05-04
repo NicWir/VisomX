@@ -622,7 +622,18 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
 #' Replace missing variables via a chosen method. Data need to be re-calibrated after this step, including \code{\link[VisomX::met.PerformFeatureFilter]{filtering}} as well as \code{\link[VisomX::met.normalize]{normalization, transformation, and scaling}}. Data imputation is performed as part of \code{\link[VisomX]{met.read_data}}.
 #'
 #' @param mSetObj Input name of the created mSet object ((see \code{\link[VisomX]{$met.initialize}} and \code{\link[MetaboAnalystR]{Read.TextData}}).
-#' @param method (Character) Is the data paired (\code{TRUE}) or not (\code{FALSE}).
+#' @param method (Character) Select the option to replace missing variables:
+#' \itemize{
+#'  \item \code{"lod"} replaces missing values with 1/5 of the minimum value for the respective variable.
+#'  \item \code{"rowmin"} replaces missing values with the half sample minimum.
+#'  \item \code{"colmin"} replaces missing values with the half feature minimum.
+#'  \item \code{"mean"} replaces missing values with the mean value of the respective feature column.
+#'  \item \code{"median"} replaces missing values with the median value of the respective feature column.
+#'  \item \code{"knn_var"} imputes missing values by finding the features in the training set “closest” to it and averages these nearby points to fill in the value.
+#'  \item \code{"knn_smp} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
+#'  \item \code{"bpca"} applies Bayesian PCA to impute missing values.
+#'  \item \code{"ppca"} applies probabilistic PCA to impute missing values.
+#'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
 met.impute <- function (mSetObj = NA, method = "min") {
@@ -640,9 +651,18 @@ met.impute <- function (mSetObj = NA, method = "min") {
     new.mat <- int.mat[, good.inx, drop = FALSE]
     msg <- c(msg, "Variables with missing values were excluded.")
   }
-  else if (method == "min") {
+  else if (method == "lod") {
     new.mat <- MetaboAnalystR:::ReplaceMissingByLoD(int.mat)
     msg <- c(msg, "Missing variables were replaced by LoDs (1/5 of the min positive value for each variable)")
+  }
+  else if (method == "rowmin") {
+    new.mat <- apply(int.mat, 1, function(x) {
+      if (sum(is.na(x)) > 0) {
+        x[is.na(x)] <- min(x, na.rm = T)/2
+      }
+      x
+    })
+    msg <- c(msg, "Missing variables were replaced by 1/2 of min values for each sample row.")
   }
   else if (method == "colmin") {
     new.mat <- apply(int.mat, 2, function(x) {
@@ -704,8 +724,17 @@ met.impute <- function (mSetObj = NA, method = "min") {
   return(mSetObj)
 }
 
+#' Constructs a dataSet object for storing metabolomics data
+#'
+#' This functions handles the construction of an mSetObj object for storing data for further processing and analysis. It is necessary to utilize this function to provide downstream functions with information about type of data and the type of analysis you will perform, as well as to provide the required data structure. This initialization is performed as part of \code{\link[VisomX]{met.read_data}}.
+#'
+#' @param data.type (Character) The type of data, either "list" (Compound lists), "conc" (Compound concentration data), "specbin" (Binned spectra data), "pktable" (Peak intensity table), "nmrpeak" (NMR peak lists), "mspeak" (MS peak lists), or "msspec" (MS spectra data).
+#' @param anal.type (Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg"
+#' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
+#' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @export
 $met.initialize
-function (data.type, anal.type, paired = FALSE)
+function (data.type = "conc", anal.type = "stat", paired = FALSE)
 {
   dataSet <- list()
   dataSet$type <- data.type
@@ -762,6 +791,16 @@ function (data.type, anal.type, paired = FALSE)
   return(mSetObj)
 }
 
+#' Data normalization
+#'
+#' This function performs row-wise normalization, transformation, and scaling of metabolomics data. This step is performed as part of the \code{\link[VisomX]{met.workflow}} function. Additionally, the workflow \code{\link[VisomX]{met.test_normalization}} allows the simultaneous testing of different data processing conditions and helps with finding the most suitable options.
+#'
+#' @param mSetObj Input name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).
+#' @param rowNorm (Character) Select the option for row-wise normalization, "QuantileNorm" for Quantile Normalization, "CompNorm" for Normalization by a reference feature, "SumNorm" for Normalization to constant sum of intensities, "MedianNorm" for normalization to sample median, and "SpecNorm" for Normalization by a sample-specific factor.
+#' @param transNorm (Character) Select option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.
+#' @param scaleNorm (Character) Select option for scaling the data, "MeanCenter" for Mean Centering, "AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.
+#' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @export
 $met.normalize
 function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NULL, norm.vec = NULL,
           ratio = FALSE, ratioNum = 20)
