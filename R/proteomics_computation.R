@@ -83,7 +83,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
     if (file.exists(data)) {
       if (str_replace_all(data, ".{1,}\\.", "") == "csv") {
         prot <-
-          read.csv(
+          utils::read.csv(
             data,
             sep = csvsep,
             header = T,
@@ -99,7 +99,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
         prot <- read_excel(data)
       } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
         prot <-
-          read.csv(
+          utils::read.csv(
             data,
             sep = "\t",
             header = T,
@@ -112,7 +112,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
           )
       } else if (str_replace_all(data, ".{1,}\\.", "") == "txt") {
         prot <-
-          read.table(
+          utils::read.table(
             data,
             sep = "\t",
             header = T,
@@ -219,7 +219,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
       getwd(),
       "/experimental_design.txt"
     ))
-    write.table(
+    utils::write.table(
       experimental_design,
       file = "experimental_design.txt",
       sep = "\t",
@@ -231,18 +231,18 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
     experimental_design <- expdesign
   } else if (is.character(expdesign) && file.exists(expdesign)) {
     if (str_replace_all(expdesign, ".{1,}\\.", "") == "csv") {
-      experimental_design <- read.csv( expdesign, sep = csvsep, header = T,
+      experimental_design <- utils::read.csv( expdesign, sep = csvsep, header = T,
                                        stringsAsFactors = F, fill = T, na.strings = "",
                                        quote = "", comment.char = "", check.names=FALSE )
     } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "xls" |
                str_replace_all(expdesign, ".{1,}\\.", "") == "xlsx") {
       experimental_design <- read_excel(expdesign)
     } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "tsv") {
-      experimental_design <- read.csv(expdesign, sep = "\t", header = T,
+      experimental_design <- utils::read.csv(expdesign, sep = "\t", header = T,
                                       stringsAsFactors = F, fill = T, na.strings = "",
                                       quote = "", comment.char = "", check.names=FALSE )
     } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "txt") {
-      experimental_design <- read.table(expdesign, sep = "\t", header = T, stringsAsFactors = F,
+      experimental_design <- utils::read.table(expdesign, sep = "\t", header = T, stringsAsFactors = F,
                                         fill = T, na.strings = "", comment.char = "", check.names=FALSE )
     } else {
       stop(
@@ -604,7 +604,7 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
       mutate_if(is.numeric, function(x) ifelse(is.na(x), min(x, na.rm = T), x)) %>%
       as.matrix()
   } else {
-    MSnSet_data <- as(se, "MSnSet")
+    MSnSet_data <- methods::as(se, "MSnSet")
     MSnSet_imputed <- MSnbase::impute(MSnSet_data, method = fun,
                                       ...)
     assay(se) <- MSnbase::exprs(MSnSet_imputed)
@@ -634,14 +634,14 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   # (source: https://bioconductor.org/packages/release/bioc/vignettes/vsn/inst/doc/A-vsn.html )
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
-    pdf("Plots/meanSDPlot.pdf")
+    grDevices::pdf("Plots/meanSDPlot.pdf")
     plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
-    dev.off()
+    grDevices::dev.off()
 
-    png("Plots/meanSDPlot.png",
+    grDevices::png("Plots/meanSDPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
     plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
-    dev.off()
+    grDevices::dev.off()
     message(paste0("Exporting meanSdPlot to:\n\"", getwd(), "\"/Plots/meanSdPlot.pdf\" and \".../meanSdPlot.png\""))
   }
 
@@ -681,7 +681,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
     message("-- removing the lower ", removeVar * 100,
             "% of variables based on variance")
     varorder <- order(vars, decreasing = TRUE)
-    keep <- head(varorder, max(1, ncol(mat) * (1 - removeVar)))
+    keep <- utils::head(varorder, max(1, ncol(mat) * (1 - removeVar)))
     mat <- mat[, keep, drop = FALSE]
     vars <- vars[keep]
   }
@@ -713,7 +713,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
 }
 ####____prot.test_diff____####
 prot.test_diff <- function (se, type = c("control", "all", "manual"),
-                            control = NULL, test = NULL, design_formula = formula(~0 +
+                            control = NULL, test = NULL, design_formula = stats::formula(~0 +
                                                                                     condition))
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
@@ -746,7 +746,7 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
            "'", call. = FALSE)
     }
   }
-  variables <- terms.formula(design_formula) %>% attr(., "variables") %>%
+  variables <- stats::terms.formula(design_formula) %>% attr(., "variables") %>%
     as.character() %>% .[-1]
   if (any(!variables %in% colnames(col_data))) {
     stop("run make_diff() with an appropriate 'design_formula'")
@@ -1145,7 +1145,7 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
   n <- rep(length(qExtID2TermID), length(M))
   args.df <- data.frame(numWdrawn = k - 1, numW = M, numB = N -
                           M, numDrawn = n)
-  pvalues <- apply(args.df, 1, function(n) phyper(n[1], n[2],
+  pvalues <- apply(args.df, 1, function(n) stats::phyper(n[1], n[2],
                                                   n[3], n[4], lower.tail = FALSE))
   GeneRatio <- apply(data.frame(a = k, b = n), 1, function(x) paste(x[1],
                                                                     "/", x[2], sep = "", collapse = ""))

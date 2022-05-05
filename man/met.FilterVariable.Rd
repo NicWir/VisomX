@@ -19,7 +19,7 @@ met.FilterVariable(
 \item{filter}{(Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
 \itemize{
 \item \code{"rsd"} filters features with low relative standard deviation across the data set.
-\item \code{"nrsd}" is the non-parametric relative standard deviation.
+\item \code{"nrsd"} is the non-parametric relative standard deviation.
 \item \code{"mean"} filters features with low mean intensity value across the data set.
 \item \code{"median"} filters features with low median intensity value across the data set.
 \item \code{"sd"} filters features with low absolute standard deviation across the data set.

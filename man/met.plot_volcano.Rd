@@ -36,7 +36,7 @@ Data container after ANOVA analysis (\code{\link[VisomX]{met.ANOVA.Anal}}) if \c
 \item{grp2}{(Character) Enter name of the second group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.}
 
 \item{test}{(Character) Choose a statistical tests. For \code{test = "ttest"}, \code{met.plot_volcano} runs \code{\link[VisomX]{met.Ttests.Anal}} with the chosen test parameters.
-For \\code{test = "anova"}, \code{\link[VisomX]{met.ANOVA.Anal}} must have been applied previously on the mSetObj.}
+For \code{test = "anova"}, \code{\link[VisomX]{met.ANOVA.Anal}} must have been applied previously on the mSetObj.}
 
 \item{paired}{(Logical) Is the data paired (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.}
 

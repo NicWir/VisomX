@@ -52,14 +52,14 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     fig_width = ncol(se)/1.5
     message(paste0("Exporting plot with identified proteins per sample to:\n\"", getwd(), "/Plots/ProteinsIdentified.pdf\" and \".../ProteinsIdentified.png\""))
-    png("Plots/ProteinsIdentified.png",
+    grDevices::png("Plots/ProteinsIdentified.png",
         width = fig_width, height = 8, units = 'in', res = 300)
     print(p)
-    dev.off()
-    pdf("Plots/ProteinsIdentified.pdf",
+    grDevices::dev.off()
+    grDevices::pdf("Plots/ProteinsIdentified.pdf",
         width = fig_width, height = 8)
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot) {
     return(p)
@@ -123,13 +123,13 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting imputation plot to:\n\"", getwd(), "/Plots/ImputationPlot.pdf\" and \".../ImputationPlot.png\""))
-    png("Plots/ImputationPlot.png",
+    grDevices::png("Plots/ImputationPlot.png",
         width = 7, height = 8, units = 'in', res = 300)
     print(p)
-    dev.off()
-    pdf("Plots/ImputationPlot.pdf")
+    grDevices::dev.off()
+    grDevices::pdf("Plots/ImputationPlot.pdf")
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
 
   if (plot == TRUE){
@@ -266,13 +266,13 @@ prot.plot_density <- function(se1,
     if (export == TRUE){
       dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
       message(paste0("Exporting density plots to:\n\"", getwd(), "/Plots/DensityPlot.pdf\" and \".../DensityPlot.png\""))
-      pdf("Plots/DensityPlot.pdf", height = height, width = width)
+      grDevices::pdf("Plots/DensityPlot.pdf", height = height, width = width)
       suppressWarnings(print(marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
-      dev.off()
-      png("Plots/DensityPlot.png",
+      grDevices::dev.off()
+      grDevices::png("Plots/DensityPlot.png",
           width = width, height = height, units = 'in', res = 300)
       suppressWarnings(print(marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
-      dev.off()
+      grDevices::dev.off()
     }
 
     if (plot == TRUE){
@@ -297,13 +297,13 @@ prot.plot_density <- function(se1,
     if (export == TRUE){
       dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
       message(paste0("Exporting grouped density plots to:\n\"", getwd(), "/Plots/DensityPlot_grp.pdf\" and \".../DensityPlot_grp.png\""))
-      pdf("Plots/DensityPlot_grp.pdf", width=width, height=height)
+      grDevices::pdf("Plots/DensityPlot_grp.pdf", width=width, height=height)
       print(p)
-      dev.off()
-      png("Plots/DensityPlot_grp.png",
+      grDevices::dev.off()
+      grDevices::png("Plots/DensityPlot_grp.png",
           width=width, height=height, units = 'in', res = 300)
       print(p)
-      dev.off()
+      grDevices::dev.off()
     }
 
     if (plot == TRUE){
@@ -338,14 +338,14 @@ prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting Missing values pattern to:\n\"", getwd(), "/Plots/MissValPlot.pdf\" and \".../MissValPlot.png\""))
 
-    pdf("Plots/MissValPlot.pdf")
+    grDevices::pdf("Plots/MissValPlot.pdf")
     ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
 
-    png("Plots/MissValPlot.png",
+    grDevices::png("Plots/MissValPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
     ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
   }
 
   if (plot == TRUE){
@@ -437,14 +437,14 @@ prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting density distributions and cumulative fraction of proteins with and without missing values to:\n\"", getwd(), "/Plots/DensMissPlot.pdf\" and \".../DensMissPlot.png\""))
 
-    pdf("Plots/DensMissPlot.pdf")
+    grDevices::pdf("Plots/DensMissPlot.pdf")
     gridExtra::grid.arrange(p1, p2, ncol = 1)
-    dev.off()
+    grDevices::dev.off()
 
-    png("Plots/DensMissPlot.png",
+    grDevices::png("Plots/DensMissPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
     gridExtra::grid.arrange(p1, p2, ncol = 1)
-    dev.off()
+    grDevices::dev.off()
   }
 
   if (plot == TRUE){
@@ -551,7 +551,7 @@ prot.plot_pca <- function (dep,
   }
   var <- apply(assay(dep), 1, sd)
   df <- assay(dep)[order(var, decreasing = TRUE)[seq_len(n)],]
-  pca <- prcomp(t(df), scale = FALSE)
+  pca <- stats::prcomp(t(df), scale = FALSE)
   pca_df <- pca$x %>% data.frame(check.names = FALSE) %>% rownames_to_column() %>%
     left_join(., data.frame(colData(dep), check.names = FALSE), by = c(rowname = "ID"))
   percent <- round(100 * pca$sdev ^ 2 / sum(pca$sdev ^ 2), 1)
@@ -636,14 +636,14 @@ prot.plot_pca <- function (dep,
                    "/Plots/PCAPlot_", "PC", x, "-PC", y, ".pdf\" and \".../PCAPlot_",
                    "PC", x, "-PC", y, ".png\""))
 
-    pdf(paste0("Plots/PCAPlot_", "PC", x, "-PC", y, ".pdf"))
+    grDevices::pdf(paste0("Plots/PCAPlot_", "PC", x, "-PC", y, ".pdf"))
     print(p)
-    dev.off()
+    grDevices::dev.off()
 
-    png(paste0("Plots/PCAPlot_", "PC", x, "-PC", y, ".png"),
+    grDevices::png(paste0("Plots/PCAPlot_", "PC", x, "-PC", y, ".png"),
         width = 8, height = 8, units = 'in', res = 300)
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot) {
     print(p)
@@ -864,13 +864,13 @@ prot.plot_volcano <-
         )
       )
 
-      pdf(paste0("Plots/VolcanoPlot_", contrast, ".pdf"),
+      grDevices::pdf(paste0("Plots/VolcanoPlot_", contrast, ".pdf"),
           width = 8.1,
           height = 8.6)
       print(plot_volcano)
-      dev.off()
+      grDevices::dev.off()
 
-      png(
+      grDevices::png(
         paste0("Plots/VolcanoPlot_", contrast, ".png"),
         width = 8.1,
         height = 8.6,
@@ -878,7 +878,7 @@ prot.plot_volcano <-
         res = 300
       )
       print(plot_volcano)
-      dev.off()
+      grDevices::dev.off()
     }
     if (plot) {
       print(plot_volcano)
@@ -1190,7 +1190,7 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
     col_limit
   } else {
     df_cent <- assay(filtered) - rowMeans(assay(filtered))
-    col_lim <- ceiling(quantile(df_cent, probs= 0.95)) - ceiling(quantile(df_cent, probs= 0.05))
+    col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95)) - ceiling(stats::quantile(df_cent, probs= 0.05))
   }
   breaks =  if (col_limit == 1){
     seq(-1, 1, 0.5)
@@ -1260,19 +1260,19 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
                    type,
                    ".png\""))
 
-    pdf(paste0("Plots/HeatMap_",
+    grDevices::pdf(paste0("Plots/HeatMap_",
                type,
                ".pdf"),
         width = w, height = len)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
 
-    png(paste0("Plots/HeatMap_",
+    grDevices::png(paste0("Plots/HeatMap_",
                type,
                ".png"),
         width = w, height = len, units = 'in', res = 300)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
@@ -1369,7 +1369,7 @@ prot.plot_heatmap_all <- function (se,
     col_limit
   } else {
     df_cent <- assay(se) - rowMeans(assay(se))
-    col_lim <- ceiling(quantile(df_cent, probs= 0.95, na.rm=TRUE)) - ceiling(quantile(df_cent, probs= 0.05, na.rm=TRUE))
+    col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95, na.rm=TRUE)) - ceiling(stats::quantile(df_cent, probs= 0.05, na.rm=TRUE))
   }
   breaks =  if (col_limit == 1){
     seq(-1, 1, 0.5)
@@ -1434,17 +1434,17 @@ prot.plot_heatmap_all <- function (se,
                    " and \"HeatMap_all",
                    ".png\""))
 
-    pdf(paste0("Plots/HeatMap_all",
+    grDevices::pdf(paste0("Plots/HeatMap_all",
                ".pdf"),
         width = w, height = len)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
 
-    png(paste0("Plots/HeatMap_all",
+    grDevices::png(paste0("Plots/HeatMap_all",
                ".png"),
         width = w, height = len, units = 'in', res = 300)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
@@ -1546,14 +1546,14 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting scree plot to:\n\"", getwd(), "/Plots/ScreePlot.pdf\" and \".../ScreePlot.png\""))
 
-    pdf("Plots/ScreePlot.pdf")
+    grDevices::pdf("Plots/ScreePlot.pdf")
     print(p)
-    dev.off()
+    grDevices::dev.off()
 
-    png("Plots/ScreePlot.png",
+    grDevices::png("Plots/ScreePlot.png",
         width = 6, height = 6, units = 'in', res = 300)
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot == TRUE) {
     return(p)
@@ -1679,14 +1679,14 @@ prot.plot_loadings <- function (pcaobj, components = getComponents(pcaobj, seq_l
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting loadings plot to:\n\"", getwd(), "/Plots/LoadingsPlot.pdf\" and \".../LoadingsPlot.png\""))
 
-    pdf("Plots/LoadingsPlot.pdf")
+    grDevices::pdf("Plots/LoadingsPlot.pdf")
     print(p)
-    dev.off()
+    grDevices::dev.off()
 
-    png("Plots/LoadingsPlot.png",
+    grDevices::png("Plots/LoadingsPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot == TRUE) {
     return(p)
@@ -1745,7 +1745,7 @@ prot.plot_enrichment <- function(enrichset,
     )
     w <- 6+max(str_count(enrichset$Description))/6
     h <- 5+length(enrichset$Description)/6
-    pdf(paste0("Plots/EnrichmentPlot_",
+    grDevices::pdf(paste0("Plots/EnrichmentPlot_",
                if_else(
                  grepl("Diff", title, ignore.case = T),
                  "Diff_", if_else(
@@ -1759,9 +1759,9 @@ prot.plot_enrichment <- function(enrichset,
         width = w,
         height = h)
     print(p)
-    dev.off()
+    grDevices::dev.off()
 
-    png(
+    grDevices::png(
       paste0("Plots/EnrichmentPlot_",
              if_else(
                grepl("Diff", title, ignore.case = T),
@@ -1779,7 +1779,7 @@ prot.plot_enrichment <- function(enrichset,
       res = 300
     )
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   if (plot) {
     print(p)
@@ -1943,7 +1943,7 @@ prot.plot_bar <- function (dep,
           n = n()
         ) %>%
         mutate(
-          error = qnorm(0.975) * sd / sqrt(n),
+          error = stats::qnorm(0.975) * sd / sqrt(n),
           CI.L = mean -
             error,
           CI.R = mean + error
@@ -2134,13 +2134,13 @@ prot.plot_bar <- function (dep,
         )
       )
 
-      pdf(paste0(export_name, ".pdf"),
+      grDevices::pdf(paste0(export_name, ".pdf"),
           width = w,
           height = h)
       print(p)
-      dev.off()
+      grDevices::dev.off()
 
-      png(
+      grDevices::png(
         paste0(export_name, ".png"),
         width = w,
         height = h,
@@ -2148,7 +2148,7 @@ prot.plot_bar <- function (dep,
         res = 300
       )
       print(p)
-      dev.off()
+      grDevices::dev.off()
     }
     if(length(proteins)>8){
       plot = FALSE
@@ -2240,14 +2240,14 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting normalization plots to:\n\"", getwd(), "/Plots/BoxPlotIntensity.pdf\" and \".../BoxPlotIntensity.png\""))
-    png("Plots/BoxPlotIntensity.png",
+    grDevices::png("Plots/BoxPlotIntensity.png",
         width = 8, height = 10, units = 'in', res = 300)
     print(p)
-    dev.off()
-    pdf("Plots/BoxPlotIntensity.pdf",
+    grDevices::dev.off()
+    grDevices::pdf("Plots/BoxPlotIntensity.pdf",
         width = 8, height = 10)
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
 
   if (plot == TRUE){

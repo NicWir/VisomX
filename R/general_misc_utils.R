@@ -43,7 +43,7 @@ fast.write.csv <- function(dat, file, row.names = TRUE) {
         # there is a rare bug in data.table (R 3.6) which kill the R process in some cases
         data.table::fwrite(dat, file, row.names = row.names)
       } else {
-        write.csv(dat, file, row.names = row.names)
+        utils::write.csv(dat, file, row.names = row.names)
       }
     },
     error = function(e) {

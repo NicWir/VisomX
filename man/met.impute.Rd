@@ -17,7 +17,7 @@ met.impute(mSetObj = NA, method = "min")
 \item \code{"mean"} replaces missing values with the mean value of the respective feature column.
 \item \code{"median"} replaces missing values with the median value of the respective feature column.
 \item \code{"knn_var"} imputes missing values by finding the features in the training set “closest” to it and averages these nearby points to fill in the value.
-\item \code{"knn_smp} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
+\item \code{"knn_smp"} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
 \item \code{"bpca"} applies Bayesian PCA to impute missing values.
 \item \code{"ppca"} applies probabilistic PCA to impute missing values.
 \item \code{"svdImpute"} applies singular value decomposition to impute missing values.

@@ -40,7 +40,6 @@ Data container after normalization (\code{\link[VisomX]{met.normalize}}).}
 The input mSet object with added plot: the top is a density plot and the bottom is a box plot.
 In a boxplot, the bottom and top of the box are always the 25th and 75th percentile (the lower and upper quartiles, or Q1 and Q3, respectively), and the band near the middle of the box is always the 50th percentile (the median or Q2). The upper whisker is located at the smaller of the maximum x value and Q3 + 1.5 x IQR (Interquantile Range), whereas the lower whisker is located at the larger of the smallest x value and Q1 - 1.5 x IQR.
 The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_feature.plot)}.
-#' @export
 }
 \description{
 \code{met.plot_FeatureNormSummary} visualizes the density distributions of features before and after normalization, transformation, and scaling.

@@ -26,7 +26,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
     fstat <- res[, 1]
     p.value <- res[, 2]
     names(fstat) <- names(p.value) <- colnames(mSetObj$dataSet$norm)
-    fdr.p <- p.adjust(p.value, "fdr")
+    fdr.p <- stats::p.adjust(p.value, "fdr")
     inx.imp <- fdr.p <= thresh
     sig.num <- sum(inx.imp)
     if (sig.num > 0) {
@@ -51,7 +51,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
     aov.nm <- "One-way ANOVA"
     aov.res <- apply(as.matrix(mSetObj$dataSet$norm),
                      2, MetaboAnalystR:::aof, cls = mSetObj$dataSet$cls)
-    anova.res <- lapply(aov.res, anova)
+    anova.res <- lapply(aov.res,stats::anova)
     res <- unlist(lapply(anova.res, function(x) {
       c(x["F value"][1, ], x["Pr(>F)"][1,
       ])
@@ -61,7 +61,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
     fstat <- res[, 1]
     p.value <- res[, 2]
     names(fstat) <- names(p.value) <- colnames(mSetObj$dataSet$norm)
-    fdr.p <- p.adjust(p.value, "fdr")
+    fdr.p <- stats::p.adjust(p.value, "fdr")
     if (all_results == TRUE) {
       all.mat <- data.frame(signif(p.value, 5), signif(-log10(p.value),
                                                        5), signif(fdr.p, 5))
@@ -80,7 +80,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
       cmp.res <- NULL
       post.nm <- NULL
       if (post.hoc == "tukey") {
-        tukey.res.imp <- lapply(aov.imp, TukeyHSD, conf.level = 1 -
+        tukey.res.imp <- lapply(aov.imp, stats::TukeyHSD, conf.level = 1 -
                                   thresh)
         cmp.res.imp <- unlist(lapply(tukey.res.imp, MetaboAnalystR:::parseTukey,
                                      cut.off = thresh))
@@ -91,7 +91,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
           },
           cut.off = thresh))
 
-        tukey.res.all <- lapply(aov.res, TukeyHSD, conf.level = 1 -
+        tukey.res.all <- lapply(aov.res, stats::TukeyHSD, conf.level = 1 -
                                   thresh)
         cmp.res.all <- unlist(lapply(tukey.res.all, MetaboAnalystR:::parseTukey,
                                      cut.off = thresh))
@@ -141,7 +141,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
     cntrst <- rev(apply(utils::combn(rev(conditions), 2), 2, paste,
                         collapse = "-"))
     aov <- list(aov.nm = aov.nm, sig.num = sig.num, sig.nm = fileName,
-                raw.thresh = thresh, thresh = -log10(thresh), p.value = p.value, p.adj = p.adjust(p.value, "fdr"),
+                raw.thresh = thresh, thresh = -log10(thresh), p.value = p.value, p.adj = stats::p.adjust(p.value, "fdr"),
                 p.log = -log10(p.value), inx.imp = inx.imp, post.hoc = post.hoc,
                 sig.mat = sig.mat, post.hoc.all = cbind(contrasts=paste(cntrst, collapse= "; "), data.frame(posthoc_signif=cmp.res.all, p.adj=posthoc_p.adj.all)))
   }
@@ -278,7 +278,7 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #' @param filter (Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
 #' \itemize{
 #'  \item \code{"rsd"} filters features with low relative standard deviation across the data set.
-#'  \item \code{"nrsd}" is the non-parametric relative standard deviation.
+#'  \item \code{"nrsd"} is the non-parametric relative standard deviation.
 #'  \item \code{"mean"} filters features with low mean intensity value across the data set.
 #'  \item \code{"median"} filters features with low median intensity value across the data set.
 #'  \item \code{"sd"} filters features with low absolute standard deviation across the data set.
@@ -318,7 +318,7 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
     qc.hits <- tolower(as.character(cls)) %in% "qc"
     if (sum(qc.hits) > 1) {
       qc.mat <- int.mat[qc.hits, ]
-      sds <- apply(qc.mat, 2, sd, na.rm = T)
+      sds <- apply(qc.mat, 2, stats::quantile, na.rm = T)
       mns <- apply(qc.mat, 2, mean, na.rm = T)
       rsd.vals <- abs(sds/mns)
       gd.inx <- rsd.vals < rsd
@@ -357,7 +357,7 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
 #' @param filter (Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
 #' \itemize{
 #'  \item \code{"rsd"} filters features with low relative standard deviation across the data set.
-#'  \item \code{"nrsd}" is the non-parametric relative standard deviation.
+#'  \item \code{"nrsd"} is the non-parametric relative standard deviation.
 #'  \item \code{"mean"} filters features with low mean intensity value across the data set.
 #'  \item \code{"median"} filters features with low median intensity value across the data set.
 #'  \item \code{"sd"} filters features with low absolute standard deviation across the data set.
@@ -374,7 +374,7 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
 #' @param anal.type (Character) Type of analysis. Extracted from mSetObj by higher function at mSetObj$analSet$type.
 #' @param all.rsd (Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in %) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.
 #' @return A list with filtered data and a message to inform about the chosen filtering conditions
-met.PerformFeatureFilter <- function (int.mat, mSetObj, filter, remain.num = remain.num, anal.type = NULL, all.rsd = NULL)
+met.PerformFeatureFilter <- function (int.mat, mSetObj, filter = "none", remain.num = NULL, anal.type = NULL, all.rsd = NULL)
 {
   feat.num <- ncol(int.mat)
   feat.nms <- colnames(int.mat)
@@ -386,12 +386,12 @@ met.PerformFeatureFilter <- function (int.mat, mSetObj, filter, remain.num = rem
   }
   else if(!is.null(all.rsd)){
     all.rsd <- all.rsd/100
-    smaller_0.05quant <- int.mat[,apply(int.mat<unname(quantile(int.mat, probs=seq(0, 1 , 1/20))[2]), 2, any)]
+    smaller_0.05quant <- int.mat[,apply(int.mat<unname(stats::quantile(int.mat, probs=seq(0, 1 , 1/20))[2]), 2, any)]
     vec.smaller_0.05quant <- replace(smaller_0.05quant[1,], !is.null(smaller_0.05quant[1,]), 0)
-    greater_0.05quant <- int.mat[,apply(int.mat<unname(quantile(int.mat, probs=seq(0, 1 , 1/20))[2]), 2, any)!=TRUE]
+    greater_0.05quant <- int.mat[,apply(int.mat<unname(stats::quantile(int.mat, probs=seq(0, 1 , 1/20))[2]), 2, any)!=TRUE]
     ls.sd <-
       lapply(1:length(levels(mSetObj[["dataSet"]][["cls"]])), function (x)
-        apply(greater_0.05quant[grep(levels(mSetObj[["dataSet"]][["cls"]])[x], as.character(mSetObj[["dataSet"]][["cls"]])),], 2, sd, na.rm = T))
+        apply(greater_0.05quant[grep(levels(mSetObj[["dataSet"]][["cls"]])[x], as.character(mSetObj[["dataSet"]][["cls"]])),], 2, stats::quantile, na.rm = T))
     ls.mns <-
       lapply(1:length(levels(mSetObj[["dataSet"]][["cls"]])), function (x)
         apply(greater_0.05quant[grep(levels(mSetObj[["dataSet"]][["cls"]])[x], as.character(mSetObj[["dataSet"]][["cls"]])), ], 2, mean, na.rm = T))
@@ -409,14 +409,14 @@ met.PerformFeatureFilter <- function (int.mat, mSetObj, filter, remain.num = rem
   }
   else {
     if (filter == "rsd") {
-      sds <- apply(int.mat, 2, sd, na.rm = T)
+      sds <- apply(int.mat, 2, stats::quantile, na.rm = T)
       mns <- apply(int.mat, 2, mean, na.rm = T)
       filter.val <- abs(sds/mns)
       nm <- "Relative standard deviation"
     }
     else if (filter == "nrsd") {
-      mads <- apply(int.mat, 2, mad, na.rm = T)
-      meds <- apply(int.mat, 2, median, na.rm = T)
+      mads <- apply(int.mat, 2, stats::mad, na.rm = T)
+      meds <- apply(int.mat, 2, stats::median, na.rm = T)
       filter.val <- abs(mads/meds)
       nm <- "Non-paramatric relative standard deviation"
     }
@@ -425,19 +425,19 @@ met.PerformFeatureFilter <- function (int.mat, mSetObj, filter, remain.num = rem
       nm <- "mean"
     }
     else if (filter == "sd") {
-      filter.val <- apply(int.mat, 2, sd, na.rm = T)
+      filter.val <- apply(int.mat, 2, stats::quantile, na.rm = T)
       nm <- "standard deviation"
     }
     else if (filter == "mad") {
-      filter.val <- apply(int.mat, 2, mad, na.rm = T)
+      filter.val <- apply(int.mat, 2, stats::mad, na.rm = T)
       nm <- "Median absolute deviation"
     }
     else if (filter == "median") {
-      filter.val <- apply(int.mat, 2, median, na.rm = T)
+      filter.val <- apply(int.mat, 2, stats::median, na.rm = T)
       nm <- "median"
     }
     else if (filter == "iqr"){
-      filter.val <- apply(int.mat, 2, IQR, na.rm = T)
+      filter.val <- apply(int.mat, 2, stats::IQR, na.rm = T)
       nm <- "Interquantile Range"
     }
     else {
@@ -523,7 +523,7 @@ met.Ttests.Anal <- function (mSetObj = NA, grp1, grp2, nonpar = FALSE, threshp =
   p.value <- res[, 2]
   names(t.stat) <- names(p.value) <- colnames(mSetObj$dataSet$norm)
   p.log <- -log10(p.value)
-  fdr.p <- p.adjust(p.value, "fdr")
+  fdr.p <- stats::p.adjust(p.value, "fdr")
   if (all_results == TRUE) {
     all.mat <- data.frame(signif(t.stat, 5), signif(p.value,
                                                     5), signif(p.log, 5), signif(fdr.p, 5))
@@ -631,7 +631,7 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
 #'  \item \code{"mean"} replaces missing values with the mean value of the respective feature column.
 #'  \item \code{"median"} replaces missing values with the median value of the respective feature column.
 #'  \item \code{"knn_var"} imputes missing values by finding the features in the training set “closest” to it and averages these nearby points to fill in the value.
-#'  \item \code{"knn_smp} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
+#'  \item \code{"knn_smp"} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
 #'  \item \code{"bpca"} applies Bayesian PCA to impute missing values.
 #'  \item \code{"ppca"} applies probabilistic PCA to impute missing values.
 #'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
@@ -1035,7 +1035,7 @@ met.PLS_ImpScatter <- function(mSetObj, imgName=NULL, format = "png", dpi = 300,
     Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
                  width = w, height = h, type = format, bg = "white")
     print(p)
-    dev.off()
+    grDevices::dev.off()
   }
   mSetObj[["imgSet"]][[paste0("pls.ImpScatter_plot_",feat.nm)]] <-  p
   if (plot == TRUE){
@@ -1074,7 +1074,7 @@ met.PLSDA.CV <- function (mSetObj = NA, methodName = "T", compNum = MetaboAnalys
                                                          1]
   }
   else {
-    cls <- model.matrix(~mSetObj$dataSet$cls - 1)
+    cls <- stats::model.matrix(~mSetObj$dataSet$cls - 1)
   }
   datmat <- as.matrix(mSetObj$dataSet$norm)
   plsda.reg <- pls::plsr(cls ~ datmat, method = "oscorespls",
@@ -1166,7 +1166,7 @@ met.PLSR.Anal <- function (mSetObj = NA, reg = FALSE, data = "all")
     cls <- scale(as.numeric(mSetObj$dataSet$cls))[, 1]
   }
   else {
-    cls <- model.matrix(~mSetObj$dataSet$cls - 1)
+    cls <- stats::model.matrix(~mSetObj$dataSet$cls - 1)
   }
   if(data=="anova.sig"&&is.null(mSetObj$analSet$aov)) {
     stop("Please perform 'met.ANOVA.Anal' on your mSet before running PLS analysis with 'data = \"anova\"'")
@@ -1251,7 +1251,7 @@ met.read_data <- function (data,
     if (file.exists(data)) {
       if (str_replace_all(data, ".{1,}\\.", "") == "csv") {
         dat <-
-          read.csv(
+          utils::read.csv(
             data,
             sep = csvsep,
             header = T,
@@ -1267,7 +1267,7 @@ met.read_data <- function (data,
         dat <- read_excel(data)
       } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
         dat <-
-          read.csv(
+          utils::read.csv(
             data,
             sep = "\t",
             header = T,
@@ -1280,7 +1280,7 @@ met.read_data <- function (data,
           )
       } else if (str_replace_all(data, ".{1,}\\.", "") == "txt") {
         dat <-
-          read.table(
+          utils::read.table(
             data,
             sep = "\t",
             header = T,
@@ -2003,7 +2003,7 @@ met.test_normalization <- function(mSetObj,
       w = 10
       h = 8
       if (format == "pdf") {
-        pdf(
+        grDevices::pdf(
           file = imgName,
           width = w,
           height = h,
@@ -2021,7 +2021,7 @@ met.test_normalization <- function(mSetObj,
           bg = "white")
       }
       print(venn)
-      dev.off()
+      grDevices::dev.off()
     }
     return(venn)
   }
@@ -2129,7 +2129,7 @@ met.test_normalization <- function(mSetObj,
   # Extract elements of Venn Diagram VIP1
   mSet_list$vip_sig_comp1[["combs"]] <-
     unlist(lapply(1:length(mSet_list$vip_sig_comp1), function(j)
-      combn(names(mSet_list$vip_sig_comp1), j, simplify = FALSE)),
+      utils::combn(names(mSet_list$vip_sig_comp1), j, simplify = FALSE)),
       recursive = FALSE)
   names(mSet_list$vip_sig_comp1[["combs"]]) <-
     sapply(mSet_list$vip_sig_comp1[["combs"]], function(i)
@@ -2143,7 +2143,7 @@ met.test_normalization <- function(mSetObj,
   # Extract elements of Venn Diagram VIP2
   mSet_list$vip_sig_comp2[["combs"]] <-
     unlist(lapply(1:length(mSet_list$vip_sig_comp2), function(j)
-      combn(names(mSet_list$vip_sig_comp2), j, simplify = FALSE)),
+      utils::combn(names(mSet_list$vip_sig_comp2), j, simplify = FALSE)),
       recursive = FALSE)
   names(mSet_list$vip_sig_comp2[["combs"]]) <-
     sapply(mSet_list$vip_sig_comp2[["combs"]], function(i)
@@ -2157,7 +2157,7 @@ met.test_normalization <- function(mSetObj,
   # Extract elements of Venn ANOVA significant
   mSet_list$anova_significant[["combs"]] <-
     unlist(lapply(1:length(mSet_list$anova_significant), function(j)
-      combn(names(mSet_list$anova_significant), j, simplify = FALSE)),
+      utils::combn(names(mSet_list$anova_significant), j, simplify = FALSE)),
       recursive = FALSE)
   names(mSet_list$anova_significant[["combs"]]) <-
     sapply(mSet_list$anova_significant[["combs"]], function(i)
@@ -2173,7 +2173,7 @@ met.test_normalization <- function(mSetObj,
     for(i in 1:length(mSet_list$plot_venn_anova_vs_vip1)){
       imgName = paste0("Plots/Venn Diagrams/Venn_ANOVA-signif_vs_PLSDA-VIP1_", names(mSet_list$plot_venn_anova_vs_vip1)[i], ".", export.format)
       if (export.format == "pdf") {
-        pdf(
+        grDevices::pdf(
           file = imgName,
           width = w,
           height = h,
@@ -2192,7 +2192,7 @@ met.test_normalization <- function(mSetObj,
           bg = "white"
         )
         print(mSet_list$plot_venn_anova_vs_vip1[[i]])
-        dev.off()
+        grDevices::dev.off()
       }
     }
   }
@@ -2311,8 +2311,8 @@ met.test_normalization <- function(mSetObj,
 
   names(mSet_list) <- c(list_names, names(mSet_list[(length(list_names)+1):length(mSet_list)]))
 
-  if(!is.null(dev.list())){
-    dev.off()
+  if(!is.null(grDevices::dev.list())){
+    grDevices::dev.off()
   }
   if(report==TRUE) {
     stack_size <- getOption("pandoc.stack.size", default = "512m")
