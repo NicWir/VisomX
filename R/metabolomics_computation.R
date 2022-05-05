@@ -503,8 +503,7 @@ met.PerformFeatureFilter <- function (int.mat, mSetObj, filter, remain.num = rem
 #' @param silent (Logical) Suppress message about the number of significant features found in the console (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with T-Test results added at mSetObj$analSet$tt$grp1_vs_grp2.
 #' @export
-$met.Ttests.Anal
-function (mSetObj = NA, grp1, grp2, nonpar = FALSE, threshp = 0.05, paired = FALSE,
+met.Ttests.Anal <- function (mSetObj = NA, grp1, grp2, nonpar = FALSE, threshp = 0.05, paired = FALSE,
           equal.var = TRUE, pvalType = "fdr", all_results = TRUE, silent = FALSE)
 {
   if(!is.null(grp1) && !is.null(grp2)){
@@ -733,8 +732,7 @@ met.impute <- function (mSetObj = NA, method = "min") {
 #' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
-$met.initialize
-function (data.type = "conc", anal.type = "stat", paired = FALSE)
+met.initialize <- function (data.type = "conc", anal.type = "stat", paired = FALSE)
 {
   dataSet <- list()
   dataSet$type <- data.type
@@ -801,8 +799,7 @@ function (data.type = "conc", anal.type = "stat", paired = FALSE)
 #' @param scaleNorm (Character) Select option for scaling the data, "MeanCenter" for Mean Centering, "AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
-$met.normalize
-function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NULL, norm.vec = NULL,
+met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NULL, norm.vec = NULL,
           ratio = FALSE, ratioNum = 20)
 {
   if(!is.null(mSetObj$dataSet$prenorm)){
@@ -981,8 +978,7 @@ function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NULL, norm.vec = NU
 
 
 
-$met.PLS_ImpScatter
-function(mSetObj, imgName=NULL, format = "png", dpi = 300, width = NA,
+met.PLS_ImpScatter <- function(mSetObj, imgName=NULL, format = "png", dpi = 300, width = NA,
          feat.nm="coef.mean", vip.nm = c("Comp. 1", "Comp. 2"), plot = TRUE, export = FALSE, vip.thresh = 1,
          show.title = FALSE, title){
   if(!is.character(imgName)){
@@ -1045,8 +1041,7 @@ function(mSetObj, imgName=NULL, format = "png", dpi = 300, width = NA,
   return(mSetObj)
 }
 
-  $met.PLSDA.CV
-function (mSetObj = NA, methodName = "T", compNum = MetaboAnalystR:::GetDefaultPLSCVComp(mSetObj),
+met.PLSDA.CV <- function (mSetObj = NA, methodName = "T", compNum = MetaboAnalystR:::GetDefaultPLSCVComp(mSetObj),
           choice = "Q2", data = "all")
 {
   if(data=="anova.sig") {
@@ -1155,8 +1150,7 @@ function (mSetObj = NA, methodName = "T", compNum = MetaboAnalystR:::GetDefaultP
   return(mSetObj)
 }
 
-  $met.PLSR.Anal
-function (mSetObj = NA, reg = FALSE, data = "all")
+met.PLSR.Anal <- function (mSetObj = NA, reg = FALSE, data = "all")
 {
   comp.num <- dim(mSetObj$dataSet$norm)[1] - 1
   if (comp.num > 8) {
@@ -1193,8 +1187,7 @@ function (mSetObj = NA, reg = FALSE, data = "all")
   return(mSetObj)
 }
 
-  $met.PreparePrenormData
-function (mSetObj = NA)
+met.PreparePrenormData <- function (mSetObj = NA)
 {
   if (!is.null(mSetObj$dataSet$edit)) {
     mydata <- mSetObj$dataSet$edit
@@ -1230,8 +1223,7 @@ function (mSetObj = NA)
   return(mSetObj)
 }
 
-$met.read_data
-function (data,
+met.read_data <- function (data,
           data.type = "conc", anal.type = "stat", paired = FALSE, # Parameters used to initialize dataSet object
           csvsep = ";", # optional: delimiter if reading CSV file
           format = "rowu", lbl.type = "disc",
@@ -1500,8 +1492,7 @@ function (data,
   return(mSetObj)
 }
 
-$met.report
-function(mSetObj, report.nm = NULL, ...){
+met.report <- function(mSetObj, report.nm = NULL, ...){
   args <- list(...)
   for(i in 1:length(args)){
     assign(names(args)[i], args[[i]])
@@ -1524,8 +1515,7 @@ function(mSetObj, report.nm = NULL, ...){
   unlink("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/Plots", recursive = TRUE)
 }
 
-  $met.report_test_normalization
-function(mSet_list, report.nm = NULL, ...){
+met.report_test_normalization <- function(mSet_list, report.nm = NULL, ...){
   assertthat::assert_that(is.list(mSet_list))
   args <- list(...)
   for(i in 1:length(args)){
@@ -1549,8 +1539,7 @@ function(mSet_list, report.nm = NULL, ...){
   unlink(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots"), recursive = TRUE)
 }
 
-$met.SanityCheck
-function (mSetObj = NA) {
+met.SanityCheck <- function (mSetObj = NA) {
   if(!is.null(mSetObj$dataSet$data_orig)){
     orig.data <- mSetObj$dataSet$data_orig
   } else if (file.exists("data_orig.qs")) {
@@ -1845,8 +1834,7 @@ function (mSetObj = NA) {
   return(mSetObj)
 }
 
-$met.test_normalization
-function(mSetObj,
+met.test_normalization <- function(mSetObj,
          test_conditions = NULL,
          ref = NULL, # Input the name of the reference sample or the reference feature, use " " around the name (for rowNorm="CompNorm" or "SpecNorm").
          class_order = FALSE,
@@ -2344,8 +2332,7 @@ function(mSetObj,
 
 
 
-$met.UpdateData
-function (mSetObj = NA,
+met.UpdateData <- function (mSetObj = NA,
           filt.metab = c(""),
           filt.smpl = c(""),
           filt.grp = c(""))
@@ -2401,8 +2388,7 @@ function (mSetObj = NA,
   return(mSetObj)
 }
 
-$met.workflow
-function(mSetObj,
+met.workflow <- function(mSetObj,
          rowNorm = "NULL", # Option for row-wise normalization
          transNorm = "NULL", # Option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.
          scaleNorm = "NULL", # Option for scaling the data, "MeanCenter" for Mean Centering, "AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.
