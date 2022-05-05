@@ -1474,7 +1474,7 @@ met.read_data <- function (data,
   mSetObj <- met.impute(mSetObj, method = imp.method)
   mSetObj <- met.PreparePrenormData(mSetObj)
 
-  if(!filt.meta b== "" || !filt.smpl == "" || !filt.grp == "") {
+  if(!filt.metab== "" || !filt.smpl == "" || !filt.grp == "") {
     mSetObj <- GetGroupNames(mSetObj, "")
     mSetObj <- met.UpdateData(mSetObj, filt.metab = filt.metab,
                               filt.smpl = filt.smpl,
