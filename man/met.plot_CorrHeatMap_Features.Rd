@@ -23,13 +23,13 @@ met.plot_CorrHeatMap_Features(
 \arguments{
 \item{mSetObj}{Input name of the created mSet object.}
 
-\item{imgName}{(Character) Input a name for the image file (if \code{export = TRUE}).}
+\item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
 \item{format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
-\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 for PNG, 72 for PDF)}
+\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
-\item{width}{(Numeric) width of the the image file in inch (if \code{export = TRUE})?}
+\item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
 \item{cor.method}{Indicate the correlation method, 'pearson', 'spearman', or 'kendall'.}
 
@@ -37,18 +37,18 @@ met.plot_CorrHeatMap_Features(
 
 \item{viewOpt}{Indicate "overview" to get an overview of the heatmap, and "detail" to get a detailed view of the heatmap.}
 
-\item{fix.col}{Logical, fix colors (\code{TRUE}) or not (\code{FALSE}).}
+\item{fix.col}{(Logical) Fix colors (\code{TRUE}) or not (\code{FALSE}).}
 
-\item{no.clst}{Logical, indicate if the correlations should be clustered (\code{TRUE}) or not (\code{FALSE}).}
+\item{no.clst}{(Logical) Indicate if the correlations should be clustered (\code{TRUE}) or not (\code{FALSE}).}
 
 \item{corrCutoff}{set correlation cut off}
 
-\item{plot}{(\code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 
-\item{export}{(\code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
 }
 \value{
-A heat map showing the correlations between features. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$corr.heatmap_features.plot)}.
+The input mSet object with added heat map showing the correlations between features. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$corr.heatmap_features.plot)}.
 }
 \description{
 \code{met.plot_CorrHeatMap_Features} visualizes the correlations between features.

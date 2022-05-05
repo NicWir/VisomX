@@ -1889,7 +1889,7 @@ met.plot_ImpVar <- function (mSetObj = NA, imp.vec, xlbl, feat.num = 15, color.B
 #' @param vip.thresh (Numeric) Draw a vertical line in the plot indicating a chosen VIP relevance threshold (the default is \code{1}).
 #' @param show.title (Logical) \code{TRUE} to add a title to the plot, or \code{FALSE} to not.
 #' @param title (Character) Define the title if \code{show.title = TRUE}
-#' @return The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$"pls.ImpScatter_plot_\strong{\emph{feat.nm_}}.plot)}.
+#' @return The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\strong{\emph{feat.nm_}}.plot)}.
 #' @export
 met.plot_PLS_ImpScatter <- function(mSetObj, imgName = "PLS_ImpScatter", format = "png", dpi = 300, width = NA,
                                     feat.nm="coef.mean", vip.nm = c("Comp. 1", "Comp. 2"), plot = TRUE, export = FALSE, vip.thresh = 1,

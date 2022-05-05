@@ -15,7 +15,7 @@ Description: This package represents a comprehensive suite of functions
     data analysis workflows to be executed in a single step. The results
     of these workflows are summarized in detailed reports as well as in R
     data containers that can be intuitively navigated.
-License: `use_gpl3_license()`
+License: GPL (>= 3)
 URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
@@ -62,6 +62,7 @@ Imports:
     jsonlite,
     kableExtra,
     KEGGgraph,
+    knitr,
     lattice,
     limma,
     markdown,

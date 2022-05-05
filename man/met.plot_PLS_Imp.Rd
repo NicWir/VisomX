@@ -23,13 +23,13 @@ met.plot_PLS_Imp(
 \item{mSetObj}{Input name of the created mSet object,
 Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).}
 
-\item{imgName}{(Character) Input a name for the image file (if \code{export = TRUE}).}
+\item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
 \item{format}{(\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
-\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 for PNG, 72 for PDF)}
+\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
-\item{width}{(Numeric) width of the the image file in inch (if \code{export = TRUE})?}
+\item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
 \item{type}{(Character) Indicate the variables of importance type to use, \code{"vip"} to use VIP scores, or \code{"coef"} for coefficients}
 
@@ -39,14 +39,14 @@ Data container after partial least squares-discriminant analysis (\code{\link[Vi
 
 \item{color.BW}{(Logical) \code{TRUE} to use black and white, or \code{FALSE} to not.}
 
-\item{plot}{(\code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 
-\item{export}{(\code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
 
 \item{title}{(Logical) \code{TRUE} to add a title with the used normalization, transformation, and scaling method, or \code{FALSE} to not add any title.}
 }
 \value{
-A dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$mSetObj$pls.imp_\strong{\emph{type}}_\strong{\emph{feat.nm}}.plot)}.
+The input mSet object with added dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.imp_\strong{\emph{type}}_\strong{\emph{feat.nm}}.plot)}.
 }
 \description{
 \code{met.plot_PLS_Imp} visualizes the features' importance in the PLS-DA model.

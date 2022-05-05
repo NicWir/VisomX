@@ -21,26 +21,26 @@ met.plot_PCA2DLoading(
 \item{mSetObj}{Input name of the created mSet object,
 Data container after principal component analysis (\code{\link[VisomX]{met.PCA.Anal}}).}
 
-\item{imgName}{(Character) Input a name for the image file (if \code{export = TRUE}).}
+\item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
 \item{format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
-\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 for PNG, 72 for PDF)}
+\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
-\item{subtitle}{(\code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?}
+\item{subtitle}{(Logical, \code{TRUE} or \code{FALSE}) Shall the applied data transformation and scaling methods be displayed below the plot title?}
 
-\item{width}{(Numeric) width of the the image file in inch (if \code{export = TRUE})?}
+\item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
 \item{inx1}{Numeric, indicate the number of the principal component for the x-axis of the loading plot.}
 
 \item{inx2}{Numeric, indicate the number of the principal component for the y-axis of the loading plot.}
 
-\item{export}{(\code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
 
-\item{plot}{(\code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 }
 \value{
-A scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$mSetObj$pca.loading_PCx_PCy.plot)}.
+The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pca.loading_PCx_PCy.plot)}.
 }
 \description{
 \code{met.plot_PCA2DLoading} visualizes which features are responsible for the patterns seen among the samples in principal component analysis.

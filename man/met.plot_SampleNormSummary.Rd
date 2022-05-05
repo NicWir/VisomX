@@ -19,22 +19,24 @@ met.plot_SampleNormSummary(
 \item{mSetObj}{Input name of the created mSet object,
 Data container after normalization (\code{\link[VisomX]{met.normalize}}).}
 
-\item{imgName}{(Character) Input a name for the image file (if \code{export = TRUE}).}
+\item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
 \item{format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
-\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 for PNG, 72 for PDF)}
+\item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
-\item{width}{(Numeric) width of the the image file in inch (if \code{export = TRUE})?}
+\item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
-\item{show_prenorm}{(\code{TRUE} or \code{FALSE}) Shall density distributions before normalization be displayed?}
+\item{show_prenorm}{(Logical, \code{TRUE} or \code{FALSE}) Shall density distributions before normalization be displayed?}
 
-\item{export}{(\code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
 
-\item{plot}{(\code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 }
 \value{
-The top is a density plot and the bottom is a box plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_sample.plot)}.
+The input mSet object with added plot: the top is a density plot and the bottom is a box plot.
+In a boxplot, the bottom and top of the box are always the 25th and 75th percentile (the lower and upper quartiles, or Q1 and Q3, respectively), and the band near the middle of the box is always the 50th percentile (the median or Q2). The upper whisker is located at the smaller of the maximum x value and Q3 + 1.5 x IQR (Interquantile Range), whereas the lower whisker is located at the larger of the smallest x value and Q1 - 1.5 x IQR.
+The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_norm_sample.plot)}.
 }
 \description{
 \code{met.plot_SampleNormSummary} visualizes the density distributions of samples before and after normalization, transformation, and scaling.

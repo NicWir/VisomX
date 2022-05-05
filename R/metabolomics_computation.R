@@ -284,6 +284,7 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #'  \item \code{"sd"} filters features with low absolute standard deviation across the data set.
 #'  \item \code{"mad"} filters features with low median absolute deviation across the data set.
 #'  \item \code{"iqr"} filters features with a low inter-quartile range across the data set.
+#'  }
 #' @param qcFilter (Logical) Filter the variables based on the relative standard deviation of features in QC samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.
 #' @param qc.rsd (Numeric) Define the relative standard deviation cut-off in %. Variables with a RSD greater than this number will be removed from the data set. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will not be used in the function.
 #' @param remain.num (Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
@@ -362,6 +363,7 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
 #'  \item \code{"sd"} filters features with low absolute standard deviation across the data set.
 #'  \item \code{"mad"} filters features with low median absolute deviation across the data set.
 #'  \item \code{"iqr"} filters features with a low inter-quartile range across the data set.
+#'  }
 #' @param remain.num (Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
 #' \itemize{
 #'   \item \strong{Less than 250 variables:} 5% will be filtered
@@ -633,6 +635,7 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
 #'  \item \code{"bpca"} applies Bayesian PCA to impute missing values.
 #'  \item \code{"ppca"} applies probabilistic PCA to impute missing values.
 #'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
+#'  }
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
 met.impute <- function (mSetObj = NA, method = "min") {
@@ -1482,7 +1485,7 @@ met.read_data <- function (data,
     mSetObj<- met.PreparePrenormData(mSetObj)
   }
   if(!is.null(filt.method)){
-    mSetObj <- met.FilterVariable(mSetObj, filt.method, qcFilter, rsd = qc.rsd, all.rsd=all.rsd)
+    mSetObj <- met.FilterVariable(mSetObj, filt.method, qcFilter, qc.rsd = qc.rsd, all.rsd=all.rsd)
     mSetObj<- met.PreparePrenormData(mSetObj)
   }
   dir.create(paste0(getwd(), "/met.ProcessedData"), showWarnings = F)

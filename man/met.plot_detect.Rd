@@ -17,13 +17,13 @@ met.plot_detect(
 \item{mSetObj}{Input name of the created mSet object,
 Data container with missing values.}
 
-\item{plot}{(\code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 
-\item{imgName}{(Character) Input a name for the image file (if \code{export = TRUE}).}
+\item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
 \item{format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
-\item{export}{(\code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?}
 
 \item{basesize}{(Numeric) Font sized used in the plot.}
 }
