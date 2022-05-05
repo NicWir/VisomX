@@ -1,3 +1,17 @@
+#' Run upon attaching package VisomX
+#'
+#' Changes debug option for package \code{rgl} to avoid Rstudio crashing upon attaching it and prints welcome message
+#'
+#' @param x A character string. The text to be colored.
+#' @param color (Character) A color.
+.onAttach <- function (libname, pkgname){
+  options(rgl.debug = TRUE)
+  k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")
+  k0 <- "\n"
+  k2 <- paste("https://github.com/NicWir/VisomX")
+  packageStartupMessage(c(k1,k0,k2))
+}
+
 #' Format font color for Markdown reports
 #'
 #' \code{colFmt} formats the input depending on PDF or HTML output to give colored text in reports.
