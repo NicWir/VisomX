@@ -174,9 +174,9 @@ prot.plot_density <- function(se1,
         se.df3 %>% pivot_longer(c(2:ncol(se.df3)), names_to = "colname", values_to = "val")
     }
     if (length(unique(se1$condition)) <= 8) {
-      pal <- brewer.pal(n = 8, name = "Dark2")
+      pal <- RColorBrewer::brewer.pal(n = 8, name = "Dark2")
     } else if (length(unique(se1$condition)) <= 12) {
-      pal <- brewer.pal(n = 12, name = "Set3")
+      pal <- RColorBrewer::brewer.pal(n = 12, name = "Set3")
     } else {
       pal <- c(
         "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
@@ -185,7 +185,7 @@ prot.plot_density <- function(se1,
         "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
         "green1", "yellow4", "yellow3", "darkorange4", "brown")
     }
-    pal <- brewer.pal(n = 8, name = "Dark2")
+    pal <- RColorBrewer::brewer.pal(n = 8, name = "Dark2")
     colors <- c()
     for (i in 1:length(unique(se1$condition))) {
       colors <-
@@ -1817,7 +1817,6 @@ prot.plot_bar <- function (dep,
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
                           is.character(proteins), is.character(type), is.logical(plot),
                           length(plot) == 1)
-  require("ggnewscale")
   type <- match.arg(type)
   # Replace rownames of dep with column of original data frame defined in "col.id" argument
   row_data <- rowData(dep, use.names = F)
@@ -1955,9 +1954,9 @@ prot.plot_bar <- function (dep,
         ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
         geom_col(aes(y = mean, fill = condition), colour = "black")
       if (length(unique(dep$condition)) <= 8) {
-        p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
       } else if (length(unique(dep$condition)) <= 12) {
-        p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
       } else {
         p <- p + scale_fill_manual(values = c(
           "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
@@ -1968,7 +1967,7 @@ prot.plot_bar <- function (dep,
         ))
       }
       p <- p +
-        new_scale_fill() +
+        ggnewscale::new_scale_fill() +
         geom_point(
           data = df_reps,
           aes(condition, val, fill = replicate),
@@ -1978,8 +1977,8 @@ prot.plot_bar <- function (dep,
           position = position_dodge(width = 0.3)
         ) +
         scale_fill_manual(values = case_when(
-          as.numeric(max(dep$replicate))<=8       ~ brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
-          as.numeric(max(dep$replicate))>8        ~ colorRampPalette(brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+          as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
+          as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
         ) +
         geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
         labs(
@@ -2025,9 +2024,9 @@ prot.plot_bar <- function (dep,
           ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
           geom_col(aes(y = diff, fill = contrast), colour = "black")
         if (length(unique(dep$condition)) <= 8) {
-          p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
         } else if (length(unique(dep$condition)) <= 12) {
-          p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
         } else {
           p <- p + scale_fill_manual(values = c(
             "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
@@ -2079,9 +2078,9 @@ prot.plot_bar <- function (dep,
           ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
           geom_col(aes(y = diff, fill = contrast), colour = "black")
         if (length(unique(dep$condition)) <= 8) {
-          p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
         } else if (length(unique(dep$condition)) <= 12) {
-          p <- p + scale_fill_manual(values = brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
         } else {
           p <- p + scale_fill_manual(values = c(
             "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",

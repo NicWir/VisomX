@@ -14,7 +14,7 @@ met.FilterVariable(
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
+\item{mSetObj}{Enter the name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
 
 \item{filter}{(Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
 \itemize{

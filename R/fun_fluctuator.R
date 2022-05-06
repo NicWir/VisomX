@@ -236,7 +236,15 @@ read_flux <- function(file.data = dat_flux,
   return(df_data)
 }
 
-####____flux_to_map____####
+
+#'
+#'
+#' ...
+#'
+#' @param
+#' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @import reticulate
+#' @export
 flux_to_map <- function (df = "dat_flux.",
                          template = NULL,
                          result = NULL,
@@ -509,7 +517,6 @@ flux_to_map <- function (df = "dat_flux.",
   write_svg(MAP, file = result_svg)
 
   if ( export == TRUE ){
-    library(reticulate)
     svg_to_png(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
     svg_to_pdf(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
 
@@ -548,7 +555,7 @@ svg_to_png <-
     py_run_string('import subprocess
 inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
 
-    py_run_string(str_glue('subprocess.run([inkscape, "--export-type=png",
+    py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=png",
   f"--export-filename={png}",
   f"--export-width={width}",
   f"--export-height={height}",
@@ -591,7 +598,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
 
 
 
-    py_run_string(str_glue('subprocess.run([inkscape, "--export-type=pdf",
+    py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=pdf",
   f"--export-filename={pdf}",
   f"--export-width={width}",
   f"--export-height={height}",
@@ -630,14 +637,14 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
    imp_fun <- match.arg(imp_fun)
    dir.create(paste0(getwd(),"/Plots"), showWarnings = F)
    # Define palettes for protein squares and legend
-   if (pal %in% rownames(brewer.pal.info)) {
-     pal_prot <- colorRampPalette(rev(brewer.pal(n = 7, name =pal)))(201) # Spectral Palette
+   if (pal %in% rownames(RColorBrewer::brewer.pal.info)) {
+     pal_prot <- colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name =pal)))(201) # Spectral Palette
    } else {
      stop(
        paste0(
          "No valid color palette provided to indicate protein log2(fold change) values.\nPlease define any brewer palette as \"pal =\" argument:\n",
          "'",
-         paste(rownames(brewer.pal.info), collapse = "', '"),
+         paste(rownames(RColorBrewer::brewer.pal.info), collapse = "', '"),
          "'"
        ),
        call. = FALSE
@@ -678,12 +685,12 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
 
    # Create list of proteins in the map based on matches with the defined prefix (pfx)
    if (is.null(protein_set)){
-     assign("protein_set", setNames(data.frame(MAP@summary$label[grep( paste(pfx, collapse="|"), MAP@summary$label)]), paste(select.id)))
+     assign("protein_set", stats::setNames(data.frame(MAP@summary$label[grep( paste(pfx, collapse="|"), MAP@summary$label)]), paste(select.id)))
    }
 
    # create a vector for the proteins that were not present in the data set
    selected_ids <- protein_set[,select.id]
-   detected  <- rowData(prot_imp) %>% data.frame(check.names = F) %>% pull(col.id)
+   detected  <- SummarizedExperiment::rowData(prot_imp) %>% data.frame(check.names = F) %>% pull(col.id)
    not_detected <- setdiff(selected_ids, detected)
 
    if (type == "centered" && is.null(condition)){
@@ -696,7 +703,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
             call. = FALSE)
      }
      df <- data.frame(assay(prot_imp), check.names = F)
-     row_data <- data.frame(rowData(prot_imp), check.names = F)
+     row_data <- data.frame(SummarizedExperiment::rowData(prot_imp), check.names = F)
      df$ID <- row_data[[col.id]]
 
      #Calculate the relative standard deviation for the chosen condition
@@ -732,7 +739,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
      # Test for differential expression by empirical Bayes moderation
      # of a linear model and defined contrasts
      prot_diff <- prot.test_diff(prot_imp, type = "manual", test = contrast)
-     row_data <- data.frame(rowData(prot_diff), check.names = F)
+     row_data <- data.frame(SummarizedExperiment::rowData(prot_diff), check.names = F)
      df <- data.frame(assay(prot_diff), check.names = F)
      df$ID <- row_data[[col.id]]
      #add log2(fold change) values from prot_diff
@@ -897,11 +904,16 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
    return(df_plot)
  }
 
+#'
+#'
+#' ...
+#'
+#' @param
+#' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @export
 ####____png_to_gif____####
  png_to_gif <-
    function(png, ..., fps = 0.5, out = "Plots/animated_gif.gif") {
-     library(magick)
-
      call <- match.call()
      call$out <- NULL
      call$fps <- NULL

@@ -7,7 +7,7 @@
 met.impute(mSetObj = NA, method = "min")
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object ((see \code{\link[VisomX]{$met.initialize}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
+\item{mSetObj}{Enter the name of the created mSet object ((see \code{\link[VisomX]{$met.initialize}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
 
 \item{method}{(Character) Select the option to replace missing variables:
 \itemize{

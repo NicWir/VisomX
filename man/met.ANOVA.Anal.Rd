@@ -14,7 +14,7 @@ met.ANOVA.Anal(
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
+\item{mSetObj}{Enter the name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
 
 \item{nonpar}{(Logical) Use a non-parametric test (\code{TRUE}) or not (\code{FALSE}).}
 

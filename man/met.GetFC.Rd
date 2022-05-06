@@ -7,7 +7,7 @@
 met.GetFC(mSetObj = NA, paired = FALSE, grp1, grp2)
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
+\item{mSetObj}{Enter the name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
 
 \item{paired}{(Logical) Are the data in both groups paired (\code{TRUE}) or not (\code{FALSE}).}
 

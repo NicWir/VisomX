@@ -66,5 +66,5 @@ met.plot_heatmap(
 The input mSet object with added heat map. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$heatmap.avg.plot)} or \code{print(mSetObj$imgSet$heatmap.all.plot)}, depending on \code{grp.ave}.
 }
 \description{
-\code{met.plot_heatmap} Plot a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
+\code{met.plot_heatmap} plots a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
 }

@@ -1705,7 +1705,7 @@ met.plot_PLS2DLoading <- function (mSetObj = NA, imgName = "PLSDA_2DLoadings", f
 #' @param plot (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?
 #' @param title (Logical) \code{TRUE} to add a title with the used normalization, transformation, and scaling method, or \code{FALSE} to not add any title.
-#' @return The input mSet object with added dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.imp_\strong{\emph{type}}_\strong{\emph{feat.nm}}.plot)}.
+#' @return The input mSet object with added dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.imp_\emph{type}_\emph{feat.nm}.plot)}.
 #' @export
 met.plot_PLS_Imp <- function (mSetObj = NA, imgName, format = "pdf", dpi = NULL,
                               width = NA, type = "vip", feat.nm = c("Comp. 1", "Comp. 2"), feat.num = 15,
@@ -1891,7 +1891,7 @@ met.plot_ImpVar <- function (mSetObj = NA, imp.vec, xlbl, feat.num = 15, color.B
 #' @param vip.thresh (Numeric) Draw a vertical line in the plot indicating a chosen VIP relevance threshold (the default is \code{1}).
 #' @param show.title (Logical) \code{TRUE} to add a title to the plot, or \code{FALSE} to not.
 #' @param title (Character) Define the title if \code{show.title = TRUE}
-#' @return The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\strong{\emph{feat.nm_}}.plot)}.
+#' @return The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\emph{feat.nm_}.plot)}.
 #' @export
 met.plot_PLS_ImpScatter <- function(mSetObj, imgName = "PLS_ImpScatter", format = "png", dpi = 300, width = NA,
                                     feat.nm="coef.mean", vip.nm = c("Comp. 1", "Comp. 2"), plot = TRUE, export = FALSE, vip.thresh = 1,
@@ -1955,7 +1955,7 @@ met.plot_PLS_ImpScatter <- function(mSetObj, imgName = "PLS_ImpScatter", format 
 
 #' Create heat map of hierarchically clustered features and samples
 #'
-#' \code{met.plot_heatmap} Plot a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
+#' \code{met.plot_heatmap} plots a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
 #'
 #' @param mSetObj Input name of the created mSet object.
 #' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
@@ -2138,10 +2138,11 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
 #' For \code{test = "anova"}, \code{\link[VisomX]{met.ANOVA.Anal}} must have been applied previously on the mSetObj.
 #' @param paired (Logical) Is the data paired (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.
 #' @param nonpar (Logical) Use a non-parametric test (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.
+#' @param equal.var (Logical) The two groups have equal variance (\code{TRUE}) or not (\code{FALSE}). Only applicable for \code{test = "ttest"}.
 #' @param log2fc.thresh (Numeric) Enter a relevance threshold for log2 fold changes, highlighted in the plot by vertical lines and colored compounds
 #' @param threshp (Numeric) Enter a significance threshold for features based on T-test or ANOVA test results, highlighted in the plot by an horizontal line and colored compounds
 #' @param pval.type (Character) Display and apply significance threshold to \code{"raw"} p values or adjusted p values (\code{"fdr"}).
-#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}). If \code{NULL}, the name \code{Plots/Volcano_\strong{\emph{grp1}}_vs_\strong{\emph{grp2}}} is assigned.
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}). If \code{NULL}, the name \code{Plots/Volcano_\emph{grp1}_vs_\emph{grp2}} is assigned.
 #' @param format (\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param add_names (Logical) Display labels of significant features (\code{TRUE}) or not (\code{FALSE}).
 #' @param label_size (Numeric) Font size for feature labels (if \code{add_names = TRUE}).
@@ -2151,7 +2152,7 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?
 #' @param silent (Logical) Shall the results of \code{\link[VisomX]{met.Ttests.Anal}} be printed in the console (\code{TRUE}) or not (\code{FALSE})?
 #' @param test_condition (Logical) Add a subtitle with the applied data transformation and scaling methods be displayed below the plot title (\code{TRUE}) or not (\code{FALSE}).
-#' @return The input mSet object with added volcano plot (generated by \code{\link[ggplot2]{ggplot}}). The plot can be retrieved from within R via \code{print(mSetObj$imgSet$volcano$\strong{\emph{grp1}_vs_\strong{\emph{grp2}.plot}.
+#' @return The input mSet object with added volcano plot (generated by \code{\link[ggplot2]{ggplot}}). The plot can be retrieved from within R via \code{print(mSetObj$imgSet$volcano$\emph{grp1}_vs_\emph{grp2}.plot)}.
 #' @import ggplot2
 #' @export
 met.plot_volcano <- function (mSetObj = NA, grp1, grp2, test = "ttest", paired = FALSE, nonpar = FALSE, equal.var = TRUE,
@@ -2386,7 +2387,7 @@ met.plot_PCA3DLoading <- function (mSetObj = NA, imgName = "PCA3DLoading", forma
   imgName = paste(imgName, ".", format, sep = "")
   if(export==TRUE){
     message(paste0("Exporting 3D PCA loading plot to:\n\"", getwd(), imgName, "\""))
-    json.mat <- rjson::toJSON(pca3d)
+    json.mat <- jsonlite::toJSON(pca3d)
     sink(imgName)
     cat(json.mat)
     sink()
@@ -2465,7 +2466,7 @@ met.plot_PCA3DScore <- function (mSetObj = NA, imgName = "PCA3DScore", format = 
   imgName = paste(imgName, ".", format, sep = "")
   if(export==TRUE){
     message(paste0("Exporting 3D PCA score plot to:\n\"", getwd(), imgName, "\""))
-    json.obj <- rjson::toJSON(pca3d)
+    json.obj <- jsonlite::toJSON(pca3d)
     sink(imgName)
     cat(json.obj)
     sink()
@@ -2559,7 +2560,7 @@ met.plot_PLS3DLoading <- function (mSetObj = NA, imgName = "PLS3DLoading", forma
 
   if(export==TRUE){
     message(paste0("Exporting 3D PLS-DA loading plot to:\n\"", getwd(), imgName, "\""))
-    json.mat <- rjson::toJSON(pls3d)
+    json.mat <- jsonlite::toJSON(pls3d)
     sink(imgName)
     cat(json.mat)
     sink()
@@ -2638,7 +2639,7 @@ met.plot_PLS3DScore <- function (mSetObj = NA, imgName = "PLS3DScore", format = 
   imgName = paste(imgName, ".", format, sep = "")
   if(export==TRUE){
     message(paste0("Exporting 3D PLS-DA score plot to:\n\"", getwd(), imgName, "\""))
-    json.obj <- rjson::toJSON(pls3d)
+    json.obj <- jsonlite::toJSON(pls3d)
     sink(imgName)
     cat(json.obj)
     sink()
@@ -2831,6 +2832,87 @@ met.plot_PLS.Crossvalidation <- function (mSetObj = NA, imgName = "PLSDA-CrossVa
   grDevices::dev.off()
   if(plot==TRUE){
     p()
+  }
+  return(mSetObj)
+}
+
+#' Plot PLS important variables
+#'
+#' \code{met.plot_PLSImpScatter} creates a scatter plot of features with PLS coefficients on the y-axis and VIP scores on the x-axis.
+#'
+#' @param mSetObj Input name of the created mSet object after PLS(-DA) (see \code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).
+#' @param imgName (Character) Enter a name for the image file (if \code{export = TRUE}).
+#' @param format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
+#' @param dpi (Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)
+#' @param width (Numeric) width of the the image file in inches (if \code{export = TRUE}).
+#' @param feat.nm (Character) Indicate the name of the feature. Choose \code{"coef.mean"} for average coefficients, or the name of a sample group in your data set.
+#' @param vip.nm (Character or character vector) Enter \code{"Comp. 1"}, \code{"Comp. 2"}, etc., depending on the component for which the VIP scores should be shown. If more than one component are indicated in a vector, the average VIP score for all components is calculated.
+#' @param vip.thresh (Numeric) Enter a chosen relevance threshold for VIP scores. A vertical line will be drawn at the indicated value.
+#' @param plot (Logical) Shall the plot be returned in the RStudio 'Plots' pane \code{TRUE} or not \code{FALSE}?
+#' @param export (Logical) Shall the plot be exported as PDF or PNG file \code{TRUE} or not \code{FALSE}?
+#' @param show.title (Logical) Add a title above the scatter plot \code{TRUE} or not \code{FALSE}.
+#' @param title (Character) Enter the name of the title (if \code{show.title = TRUE})
+#' @return The input mSet object with imp. feature scatter plot added. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\emph{feat.nm})}.
+#' @export
+met.plot_PLSImpScatter <- function(mSetObj, imgName=NULL, format = "pdf", dpi = NULL, width = NA,
+                                   feat.nm="coef.mean", vip.nm = c("Comp. 1", "Comp. 2"), vip.thresh = 1, plot = TRUE, export = FALSE,
+                                   show.title = FALSE, title = ""){
+  if(!is.character(imgName)){
+    imgName <- paste0("Plots/PLS_ImpScatter_", feat.nm)
+  }
+  imgName = paste(imgName, ".", format,
+                  sep = "")
+  if (is.na(width)) {
+    w <- 9
+  }
+  else if (width == 0) {
+    w <- 8
+  }
+  else {
+    w <- width
+  }
+  h <- w * if_else(show.title==TRUE, 1.1, 1.0)
+  mSetObj[["imgSet"]][[paste0("pls.ImpScatter_", feat.nm)]] <- imgName
+  df <- data.frame(mSetObj$analSet$plsda$vip.mat, mSetObj$analSet$plsda$coef.mat[rownames(mSetObj$analSet$plsda$vip.mat),], check.names = TRUE)
+  feat <- make.names(feat.nm)
+  if(length(vip.nm)>1){
+    df$vip_avg <- rowMeans(df[,grep(paste0(make.names(vip.nm), collapse="|"), colnames(df))])
+    vip <- "vip_avg"
+  } else {
+    vip <- make.names(vip.nm)
+  }
+  p <-
+    ggplot(df, aes_string(x = vip, y = feat)) +
+    geom_point(color = "Black", fill="Gray", shape=21, size = 3.5, alpha = 0.6) +
+    ggrepel::geom_text_repel(
+      aes(label = rownames(df)),
+      box.padding = unit(0.25,
+                         "lines"),
+      point.padding = unit(0.5, "lines")
+    ) +
+    geom_vline(xintercept = vip.thresh,
+               linetype = "longdash", alpha = 0.4) +
+    ylab(if_else(feat.nm=="coef.mean", feat.nm, paste0("Coef. ", feat.nm))) +
+    theme_bw(base_size = 18) +
+    theme(axis.text=element_text(size = 20),
+          axis.title = element_text(size=24,face="bold"))
+  if(length(vip.nm)>1){
+    p <- p + xlab(paste0("average VIP (", paste(vip.nm, collapse = ", "), ")"))
+  } else {
+    p <- p + xlab(paste0("VIP - ", vip.nm))
+  }
+  if(show.title == TRUE){
+    p <- p + ggtitle(title) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  }
+  if (export == TRUE){
+    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
+                 width = w, height = h, type = format, bg = "white")
+    print(p)
+    grDevices::dev.off()
+  }
+  mSetObj[["imgSet"]][[paste0("pls.ImpScatter_plot_",feat.nm)]] <-  p
+  if (plot == TRUE){
+    print(p)
   }
   return(mSetObj)
 }

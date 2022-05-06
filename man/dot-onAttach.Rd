@@ -7,9 +7,9 @@
 .onAttach(libname, pkgname)
 }
 \arguments{
-\item{x}{A character string. The text to be colored.}
+\item{libname}{library name}
 
-\item{color}{(Character) A color.}
+\item{pkgname}{package name}
 }
 \description{
 Changes debug option for package \code{rgl} to avoid Rstudio crashing upon attaching it and prints welcome message

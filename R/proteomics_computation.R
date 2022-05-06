@@ -4,27 +4,27 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
   type <- match.arg(type)
-  if (any(!c("name", "ID") %in% colnames(rowData(se,
+  if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (any(!c("label", "condition", "replicate") %in%
-          colnames(colData(se)))) {
+          colnames(SummarizedExperiment::colData(se)))) {
     stop("'label', 'condition' and/or 'replicate' columns are not present in '",
          deparse(substitute(se)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
          call. = FALSE)
   }
   if (!is.null(type)){
     if (type == "complete") {
-      keep <- !apply(assay(se), 1, function(x) any(is.na(x)))
+      keep <- !apply(SummarizedExperiment::assay(se), 1, function(x) any(is.na(x)))
       filtered <- se[keep, ]
     }
     if (type == "condition") {
       assertthat::assert_that(is.numeric(thr), length(thr) ==
                                 1)
-      max_repl <- max(colData(se)$replicate)
+      max_repl <- max(SummarizedExperiment::colData(se)$replicate)
       if (thr < 0 | thr > max_repl) {
         stop("invalid filter threshold 'thr' applied",
              "\nRun filter() with a threshold ranging from 0 to ",
@@ -39,11 +39,11 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
         stop("invalid filter threshold 'min' applied",
              "\nRun filter() with a percent ranging from 0 to 1")
       }
-      bin_data <- assay(se)
-      idx <- is.na(assay(se))
+      bin_data <- SummarizedExperiment::assay(se)
+      idx <- is.na(SummarizedExperiment::assay(se))
       bin_data[!idx] <- 1
       bin_data[idx] <- 0
-      keep <- bin_data %>% as.data.frame() %>% rownames_to_column() %>%
+      keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
         gather(ID, value, -rowname) %>% group_by(rowname) %>%
         summarize(n = n(), valid = sum(value), frac = valid/n) %>%
         filter(frac >= min)
@@ -52,14 +52,14 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
   } else {
     filtered <- se
   }
-  if( (nrow(assay(se)) - nrow(assay(filtered))) != 0 ){
-    number_removed <- nrow(assay(se)) - nrow(assay(filtered))
+  if( (nrow(SummarizedExperiment::assay(se)) - nrow(SummarizedExperiment::assay(filtered))) != 0 ){
+    number_removed <- nrow(SummarizedExperiment::assay(se)) - nrow(SummarizedExperiment::assay(filtered))
     cat(paste0(number_removed, " out of ",
-               nrow(assay(se)), " proteins were removed from the dataset due to missing values.\n\n"))
+               nrow(SummarizedExperiment::assay(se)), " proteins were removed from the dataset due to missing values.\n\n"))
     filtered@metadata$n.filtered <- number_removed
   }
   filtered@metadata$filt_type <- type
-  filtered@metadata$n.pre_filt <- nrow(assay(se))
+  filtered@metadata$n.pre_filt <- nrow(SummarizedExperiment::assay(se))
   return(filtered)
 }
 ####____prot.read_data____####
@@ -96,7 +96,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
           )
       } else if (str_replace_all(data, ".{1,}\\.", "") == "xls" |
                  str_replace(data, ".{1,}\\.", "") == "xlsx") {
-        prot <- read_excel(data)
+        prot <- readxl::read_excel(data)
       } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
         prot <-
           utils::read.csv(
@@ -178,9 +178,9 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
 
 
     if (length(row.rm) > 1) {
-      prot_unique <- make_unique(proteins = prot.rm, names = name, ids = id, delim = ";")
+      prot_unique <- DEP::make_unique(proteins = prot.rm, names = name, ids = id, delim = ";")
     } else {
-      prot_unique <- make_unique(proteins = prot, names = name, ids = id, delim = ";")
+      prot_unique <- DEP::make_unique(proteins = prot, names = name, ids = id, delim = ";")
     }
 
   } else if (!any(colnames(prot) %in% name) && !any(colnames(prot) %in% id)) {
@@ -236,7 +236,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                                        quote = "", comment.char = "", check.names=FALSE )
     } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "xls" |
                str_replace_all(expdesign, ".{1,}\\.", "") == "xlsx") {
-      experimental_design <- read_excel(expdesign)
+      experimental_design <- readxl::read_excel(expdesign)
     } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "tsv") {
       experimental_design <- utils::read.csv(expdesign, sep = "\t", header = T,
                                       stringsAsFactors = F, fill = T, na.strings = "",
@@ -329,13 +329,13 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     prot_imp <- prot.impute(prot_norm, fun = imp_fun)
   }
   # Perform PCA Analysis
-  prot_pca <- prot.pca(assay(prot_imp))
+  prot_pca <- prot.pca(SummarizedExperiment::assay(prot_imp))
   # Test for differential expression by empirical Bayes moderation
   # of a linear model and defined contrasts
   prot_diff <- prot.test_diff(prot_imp, type = type, control = control, test = contrast)
   # Denote significantly differentially expressed proteins
   prot_dep <- prot.add_rejections(prot_diff, alpha = alpha, lfc = lfc)
-  contrasts <- rowData(prot_dep) %>%
+  contrasts <- SummarizedExperiment::rowData(prot_dep) %>%
     data.frame(check.names = FALSE) %>%
     select(ends_with("_diff")) %>%
     colnames() %>% str_replace_all("_diff", "")
@@ -356,7 +356,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
     for (i in 1:length(contrasts)) {
       ls.significant_df[[i]] <-
-        rowData(prot_dep[rowData(prot_dep)[[paste0(contrasts[i], "_significant")]],]) %>% data.frame()
+        SummarizedExperiment::rowData(prot_dep[SummarizedExperiment::rowData(prot_dep)[[paste0(contrasts[i], "_significant")]],]) %>% data.frame()
       ls.significant_up[[i]] <-
         ls.significant_df[[i]][ls.significant_df[[i]][paste0(contrasts[i], "_diff")] > 0,]
       ls.significant_dn[[i]] <-
@@ -552,7 +552,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
 
   param <- data.frame(type, alpha, lfc, check.names = FALSE)
-  results <- list(data = rowData(se), se = se, norm = prot_norm,
+  results <- list(data = SummarizedExperiment::rowData(se), se = se, norm = prot_norm,
                   imputed = prot_imp, pca = prot_pca, diff = prot_diff, dep = prot_dep,
                   results = results, param = param)
   if (pathway_enrichment == T && pathway_kegg) {
@@ -583,31 +583,31 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
                           is.character(fun))
   fun <- match.arg(fun)
-  if (any(!c("name", "ID") %in% colnames(rowData(se,
+  if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
-  if (!any(is.na(assay(se)))) {
+  if (!any(is.na(SummarizedExperiment::assay(se)))) {
     warning("No missing values in '", deparse(substitute(se)),
             "'. ", "Returning the unchanged object.",
             call. = FALSE)
     return(se)
   }
-  rowData(se)$imputed <- apply(is.na(assay(se)), 1, any)
-  rowData(se)$num_NAs <- rowSums(is.na(assay(se)))
+  SummarizedExperiment::rowData(se)$imputed <- apply(is.na(SummarizedExperiment::assay(se)), 1, any)
+  SummarizedExperiment::rowData(se)$num_NAs <- rowSums(is.na(SummarizedExperiment::assay(se)))
   if (fun == "man") {
     se <- manual_impute(se, ...)
   } else if (fun == "SampMin"){
-    assay(se) <- assay(se) %>% data.frame() %>%
+    SummarizedExperiment::assay(se) <- SummarizedExperiment::assay(se) %>% data.frame() %>%
       mutate_if(is.numeric, function(x) ifelse(is.na(x), min(x, na.rm = T), x)) %>%
       as.matrix()
   } else {
     MSnSet_data <- methods::as(se, "MSnSet")
     MSnSet_imputed <- MSnbase::impute(MSnSet_data, method = fun,
                                       ...)
-    assay(se) <- MSnbase::exprs(MSnSet_imputed)
+    SummarizedExperiment::assay(se) <- MSnbase::exprs(MSnSet_imputed)
   }
   metadata(se)$imp_fun <- fun
   return(se)
@@ -619,8 +619,8 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   # Normalize the data (including log2 transformation)
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
   se_vsn <- se
-  vsn.fit <- suppressMessages(vsn::vsnMatrix(2^assay(se_vsn)), classes = "message") # Fit the vsn model
-  assay(se_vsn) <- vsn::predict(vsn.fit, 2^assay(se_vsn)) #Apply the vsn transformation to data
+  vsn.fit <- suppressMessages(vsn::vsnMatrix(2^SummarizedExperiment::assay(se_vsn)), classes = "message") # Fit the vsn model
+  SummarizedExperiment::assay(se_vsn) <- vsn::predict(vsn.fit, 2^SummarizedExperiment::assay(se_vsn)) #Apply the vsn transformation to data
 
   # Verify the variance stabilisation.
   # "The aim of these plots is to see whether there is a systematic trend in the standard
@@ -635,18 +635,18 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     grDevices::pdf("Plots/meanSDPlot.pdf")
-    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    plot_meanSdPlot <- suppressWarnings(vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
     grDevices::dev.off()
 
     grDevices::png("Plots/meanSDPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
-    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    plot_meanSdPlot <- suppressWarnings(vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
     grDevices::dev.off()
     message(paste0("Exporting meanSdPlot to:\n\"", getwd(), "\"/Plots/meanSdPlot.pdf\" and \".../meanSdPlot.png\""))
   }
 
   if (plot == TRUE){
-    meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD")
+    vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD")
   }
 
 
@@ -719,12 +719,12 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
                           is.character(type), class(design_formula) == "formula")
   type <- match.arg(type)
-  col_data <- colData(se)
-  raw <- assay(se)
-  if (any(!c("name", "ID") %in% colnames(rowData(se,
+  col_data <- SummarizedExperiment::colData(se)
+  raw <- SummarizedExperiment::assay(se)
+  if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (any(!c("label", "condition", "replicate") %in%
@@ -802,9 +802,9 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
   if (any(is.na(raw))) {
     for (i in cntrst) {
       covariates <- strsplit(i, " - ") %>% unlist
-      single_contrast <- makeContrasts(contrasts = i, levels = design[,
+      single_contrast <- limma::makeContrasts(contrasts = i, levels = design[,
                                                                       covariates])
-      single_contrast_fit <- contrasts.fit(fit[, covariates],
+      single_contrast_fit <- limma::contrasts.fit(fit[, covariates],
                                            single_contrast)
       contrast_fit$coefficients[, i] <- single_contrast_fit$coefficients[,
                                                                          1]
@@ -821,7 +821,7 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
     res$qval <- fdr_res$qval
     res$lfdr <- fdr_res$lfdr
     res$comparison <- rep(comp, dim(res)[1])
-    res <- rownames_to_column(res)
+    res <- tibble::rownames_to_column(res)
     return(res)
   }
   limma_res <- map_df(cntrst, retrieve_fun)
@@ -831,7 +831,7 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
                                                                                                                         -c(rowname, comparison)) %>% mutate(variable = recode(variable,
                                                                                                                                                                               logFC = "diff", P.Value = "p.val", qval = "p.adj")) %>%
     unite(temp, comparison, variable) %>% spread(temp, value)
-  rowData(se) <- merge(rowData(se, use.names = FALSE), table,
+  SummarizedExperiment::rowData(se) <- merge(SummarizedExperiment::rowData(se, use.names = FALSE), table,
                        by.x = "name", by.y = "rowname", all.x = TRUE,
                        sort = FALSE)
   return(se)
@@ -846,10 +846,10 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
   assertthat::assert_that(inherits(diff, "SummarizedExperiment"),
                           is.numeric(alpha), length(alpha) == 1, is.numeric(lfc),
                           length(lfc) == 1)
-  row_data <- rowData(diff, use.names = FALSE) %>% as.data.frame()
+  row_data <- SummarizedExperiment::rowData(diff, use.names = FALSE) %>% as.data.frame()
   if (any(!c("name", "ID") %in% colnames(row_data))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(diff)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(diff)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (length(grep("_p.adj|_diff", colnames(row_data))) <
@@ -861,10 +861,10 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
   cols_p <- grep("_p.adj", colnames(row_data))
   cols_diff <- grep("_diff", colnames(row_data))
   if (length(cols_p) == 1) {
-    rowData(diff)$significant <- row_data[, cols_p] <= alpha &
+    SummarizedExperiment::rowData(diff)$significant <- row_data[, cols_p] <= alpha &
       abs(row_data[, cols_diff]) >= lfc
-    rowData(diff)$contrast_significant <- rowData(diff, use.names = FALSE)$significant
-    colnames(rowData(diff))[ncol(rowData(diff, use.names = FALSE))] <- gsub("p.adj",
+    SummarizedExperiment::rowData(diff)$contrast_significant <- SummarizedExperiment::rowData(diff, use.names = FALSE)$significant
+    colnames(SummarizedExperiment::rowData(diff))[ncol(SummarizedExperiment::rowData(diff, use.names = FALSE))] <- gsub("p.adj",
                                                                             "significant", colnames(row_data)[cols_p])
   }
   if (length(cols_p) > 1) {
@@ -878,7 +878,7 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
     colnames(sign_df) <- gsub("_p.adj", "_significant",
                               colnames(sign_df))
     sign_df <- cbind(name = row_data$name, as.data.frame(sign_df))
-    rowData(diff) <- merge(rowData(diff, use.names = FALSE),
+    SummarizedExperiment::rowData(diff) <- merge(SummarizedExperiment::rowData(diff, use.names = FALSE),
                            sign_df, by = "name")
   }
   metadata(diff)$alpha <- as.numeric(alpha)
@@ -889,10 +889,10 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
 prot.get_results <- function (dep)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"))
-  row_data <- rowData(dep, use.names = FALSE)
+  row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
   if (any(!c("name", "ID") %in% colnames(row_data))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(dep)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(dep)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (length(grep("_p.adj|_diff", colnames(row_data))) <
@@ -901,25 +901,25 @@ prot.get_results <- function (dep)
          deparse(substitute(dep)), "'\nRun test_diff() to obtain the required columns",
          call. = FALSE)
   }
-  row_data$mean <- rowMeans(assay(dep), na.rm = TRUE)
-  centered <- assay(dep) - row_data$mean
-  centered <- data.frame(centered) %>% rownames_to_column() %>%
-    gather(ID, val, -rowname) %>% left_join(., data.frame(colData(dep)),
+  row_data$mean <- rowMeans(SummarizedExperiment::assay(dep), na.rm = TRUE)
+  centered <- SummarizedExperiment::assay(dep) - row_data$mean
+  centered <- data.frame(centered) %>% tibble::rownames_to_column() %>%
+    gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep)),
                                             by = "ID")
   centered <- group_by(centered, rowname, condition) %>% summarize(val = mean(val,
                                                                               na.rm = TRUE)) %>% mutate(val = signif(val, digits = 3)) %>%
     spread(condition, val)
   colnames(centered)[2:ncol(centered)] <- paste(colnames(centered)[2:ncol(centered)],
                                                 "_centered", sep = "")
-  ratio <- as.data.frame(row_data) %>% column_to_rownames("name") %>%
+  ratio <- as.data.frame(row_data) %>% tibble::column_to_rownames("name") %>%
     select(ends_with("diff")) %>% signif(., digits = 3) %>%
-    rownames_to_column()
+    tibble::rownames_to_column()
   colnames(ratio)[2:ncol(ratio)] <- gsub("_diff", "_log2fc",
                                          colnames(ratio)[2:ncol(ratio)])
   df <- left_join(ratio, centered, by = "rowname")
-  pval <- as.data.frame(row_data) %>% column_to_rownames("name") %>%
+  pval <- as.data.frame(row_data) %>% tibble::column_to_rownames("name") %>%
     select(ends_with("p.val"), ends_with("p.adj"),
-           ends_with("significant")) %>% rownames_to_column()
+           ends_with("significant")) %>% tibble::rownames_to_column()
   pval[, grep("p.adj", colnames(pval))] <- pval[, grep("p.adj",
                                                        colnames(pval))] %>% signif(digits = 3)
   ids <- as.data.frame(row_data) %>% select(name, ID)
@@ -933,7 +933,7 @@ get_annotation <- function (dep, indicate)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
                           is.character(indicate))
-  col_data <- colData(dep) %>% as.data.frame()
+  col_data <- SummarizedExperiment::colData(dep) %>% as.data.frame()
   columns <- colnames(col_data)
   if (all(!indicate %in% columns)) {
     stop("'", paste0(indicate, collapse = "' and/or '"),
@@ -1041,7 +1041,7 @@ prot.pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
       custom_pathways[, match(c("Pathway", "Accession"), colnames(custom_pathways))] %>% tibble::deframe()
     NAME2EXTID <- strsplit(as.character(custom_vec), ", ")
     names(NAME2EXTID) <- names(custom_vec)
-    EXTID2NAME <- reverseSplit(NAME2EXTID)
+    EXTID2NAME <- Biobase::reverseSplit(NAME2EXTID)
     DATA <- new.env()
     DATA$NAME2EXTID  <- NAME2EXTID
     DATA$EXTID2NAME  <- EXTID2NAME
@@ -1054,7 +1054,7 @@ prot.pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
   } else {
     species <- clusterProfiler:::organismMapper(organism)
     if (use_internal_kegg) {
-      DATA <- get_data_from_KEGG_db(species)
+      DATA <- clusterProfiler::get_data_from_KEGG_db(species)
     } else {
       DATA <- clusterProfiler:::prepare_KEGG(species, "KEGG", keyType)
     }
@@ -1101,8 +1101,9 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
 
   qTermID2ExtID <- with(qExtID2TermID.df, split(as.character(extID),
                                                 as.character(termID)))
-  if (missing(universe))
+  if (missing(universe)){
     universe <- NULL
+  }
   if (!is.null(universe)) {
     if (is.character(universe)) {
       extID <- intersect(extID, universe)
@@ -1153,8 +1154,8 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
                                                                   "/", x[2], sep = "", collapse = ""))
   Over <- data.frame(ID = as.character(qTermID), GeneRatio = GeneRatio,
                      BgRatio = BgRatio, pvalue = pvalues, stringsAsFactors = FALSE)
-  p.adj <- p.adjust(Over$pvalue, method = pAdjustMethod)
-  qobj <- tryCatch(qvalue(p = Over$pvalue, lambda = 0.05, pi0.method = "bootstrap"),
+  p.adj <- stats::p.adjust(Over$pvalue, method = pAdjustMethod)
+  qobj <- tryCatch(qvalue::qvalue(p = Over$pvalue, lambda = 0.05, pi0.method = "bootstrap"),
                    error = function(e) NULL)
   if (class(qobj) == "qvalue") {
     qvalues <- qobj$qvalues

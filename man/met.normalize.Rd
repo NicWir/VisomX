@@ -16,17 +16,25 @@ met.normalize(
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).}
+\item{mSetObj}{Enter the name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).}
 
 \item{rowNorm}{(Character) Select the option for row-wise normalization, "QuantileNorm" for Quantile Normalization, "CompNorm" for Normalization by a reference feature, "SumNorm" for Normalization to constant sum of intensities, "MedianNorm" for normalization to sample median, and "SpecNorm" for Normalization by a sample-specific factor.}
 
 \item{transNorm}{(Character) Select option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.}
 
 \item{scaleNorm}{(Character) Select option for scaling the data, "MeanCenter" for Mean Centering, "AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.}
+
+\item{ref}{(Character) Enter the name of the reference sample or the reference feature.}
+
+\item{norm.vec}{(Numeric vector) Vector with sample-specific scaling factors. Only applicable for \code{rowNorm = "SpecNorm"}.}
+
+\item{ratio}{This option is only for biomarker analysis.}
+
+\item{ratioNum}{Relevant only for biomarker analysis.}
 }
 \value{
-The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+The input mSet object with normalized data at mSetObj$dataSet$norm.
 }
 \description{
-This function performs row-wise normalization, transformation, and scaling of metabolomics data. This step is performed as part of the \code{\link[VisomX]{met.workflow}} function. Additionally, the workflow \code{\link[VisomX]{met.test_normalization}} allows the simultaneous testing of different data processing conditions and helps with finding the most suitable options.
+\code{met.normalize} performs row-wise normalization, transformation, and scaling of metabolomics data. This step is performed as part of the \code{\link[VisomX]{met.workflow}} function. Additionally, the workflow \code{\link[VisomX]{met.test_normalization}} allows the simultaneous testing of different data processing conditions and helps with finding the most suitable options.
 }

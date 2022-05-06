@@ -13,7 +13,7 @@ met.FC.Anal(
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
+\item{mSetObj}{Enter the name of the created mSet object. (see \code{\link[VisomX]{met.read_data}})}
 
 \item{log2fc.thresh}{(Numeric) Log2(fold-change) threshold that is considered relevant.}
 

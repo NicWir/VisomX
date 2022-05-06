@@ -14,7 +14,7 @@ met.GetTtestRes(
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).}
+\item{mSetObj}{Enter the name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).}
 
 \item{grp1}{(Character) Enter name of the first group for the contrast \code{grp1 vs. grp2}.}
 

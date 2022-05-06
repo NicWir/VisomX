@@ -2,8 +2,8 @@
 #'
 #' Changes debug option for package \code{rgl} to avoid Rstudio crashing upon attaching it and prints welcome message
 #'
-#' @param x A character string. The text to be colored.
-#' @param color (Character) A color.
+#' @param libname library name
+#' @param pkgname package name
 .onAttach <- function (libname, pkgname){
   options(rgl.debug = TRUE)
   k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")
