@@ -19,3 +19,6 @@ The input mSet object with the results of PLS-DA at mSetObj$analSet$plsr.
 \description{
 \code{met.PLSR.Anal} performs PLS analysis using \emph{oscorespls}.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PLSR.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

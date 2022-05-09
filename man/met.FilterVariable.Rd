@@ -47,3 +47,6 @@ The input mSet object with filtered data added at mSetObj$dataSet$filt.
 \description{
 \code{met.FilterVariable} filters non-informative variables (i.e., features with very small values, near-constant values, or low repeatability) from the data set, dependent on the user-specified method for filtering. The function applies a filtering method, ranks the variables within the data set, and removes variables based on its rank. The final data set should contain no more than than 5000 variables for effective computing. If more features are present, the IQR filter will be applied to keep only a number of 5000, even if \code{filter = "none"}. Data filtering is performed as part of \code{\link[VisomX]{met.read_data}}.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{FilterVariable}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

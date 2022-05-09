@@ -7,7 +7,7 @@
 met.PLSDA.CV(
   mSetObj = NA,
   methodName = "CV",
-  compNum = MetaboAnalystR:::GetDefaultPLSCVComp(mSetObj),
+  compNum = GetDefaultPLSCVComp(mSetObj),
   choice = "Q2",
   data = "all"
 )
@@ -32,4 +32,7 @@ The input mSet object with the results of PLS-DA at mSetObj$analSet$plsda.
 }
 \description{
 \code{met.PLSDA.CV} performs group classification and feature selection on a PLS model.
+}
+\references{
+adapted from \code{\link[MetaboAnalystR]{PLSDA.CV}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 }

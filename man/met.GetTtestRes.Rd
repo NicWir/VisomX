@@ -32,3 +32,6 @@ A data frame with T-test results.
 \description{
 Utility method to to get p values via T-test.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{GetTtestRes}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

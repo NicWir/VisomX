@@ -38,3 +38,6 @@ The input mSet object with normalized data at mSetObj$dataSet$norm.
 \description{
 \code{met.normalize} performs row-wise normalization, transformation, and scaling of metabolomics data. This step is performed as part of the \code{\link[VisomX]{met.workflow}} function. Additionally, the workflow \code{\link[VisomX]{met.test_normalization}} allows the simultaneous testing of different data processing conditions and helps with finding the most suitable options.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{Normalization}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

@@ -47,3 +47,6 @@ A list with filtered data and a message to inform about the chosen filtering con
 \description{
 Utility method to perform data filtering, used in higher function
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PerformFeatureFilter}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

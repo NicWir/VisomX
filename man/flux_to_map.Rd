@@ -17,6 +17,9 @@ flux_to_map(
   FBA = FALSE
 )
 }
+\arguments{
+\item{df}{data frame}
+}
 \value{
 The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 }

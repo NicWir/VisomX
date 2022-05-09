@@ -29,3 +29,6 @@ The input mSet object with results of fold-change analysis added at mSetObj$anal
 \description{
 Perform fold change analysis, method can be mean or median
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{FC.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

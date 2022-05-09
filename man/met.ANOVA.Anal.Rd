@@ -32,3 +32,6 @@ The input mSet object with ANOVA results added at mSetObj$analSet$aov.
 \description{
 ANOVA analysis
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{ANOVA.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

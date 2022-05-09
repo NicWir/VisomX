@@ -19,3 +19,6 @@ The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 \description{
 This functions handles the construction of an mSetObj object for storing data for further processing and analysis. It is necessary to utilize this function to provide downstream functions with information about type of data and the type of analysis you will perform, as well as to provide the required data structure. This initialization is performed as part of \code{\link[VisomX]{met.read_data}}.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{Initialize}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

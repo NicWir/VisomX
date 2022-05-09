@@ -9,6 +9,7 @@
 #' @param all_results (Logical) If \code{TRUE}, it the ANOVA results for all compounds with no post-hoc tests performed will be written as CSV file "anova_all_results.csv".
 #' @param silent (Logical) Suppress message with number of significant features found (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with ANOVA results added at mSetObj$analSet$aov.
+#' @references adapted from \code{\link[MetaboAnalystR]{ANOVA.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.hoc = "fisher",
           all_results = FALSE, silent = FALSE)
@@ -17,7 +18,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
   if (nonpar) {
     aov.nm <- "Kruskal Wallis Test"
     anova.res <- apply(as.matrix(mSetObj$dataSet$norm), 2,
-                       MetaboAnalystR:::kwtest, cls = mSetObj$dataSet$cls)
+                       kruskal.test(x ~ cls), cls = mSetObj$dataSet$cls)
     res <- unlist(lapply(anova.res, function(x) {
       c(x$statistic, x$p.value)
     }))
@@ -50,7 +51,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
   else {
     aov.nm <- "One-way ANOVA"
     aov.res <- apply(as.matrix(mSetObj$dataSet$norm),
-                     2, MetaboAnalystR:::aof, cls = mSetObj$dataSet$cls)
+                     2, aov(x ~ cls), cls = mSetObj$dataSet$cls)
     anova.res <- lapply(aov.res,stats::anova)
     res <- unlist(lapply(anova.res, function(x) {
       c(x["F value"][1, ], x["Pr(>F)"][1,
@@ -82,8 +83,9 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
       if (post.hoc == "tukey") {
         tukey.res.imp <- lapply(aov.imp, stats::TukeyHSD, conf.level = 1 -
                                   thresh)
-        cmp.res.imp <- unlist(lapply(tukey.res.imp, MetaboAnalystR:::parseTukey,
-                                     cut.off = thresh))
+        cmp.res.imp <-
+          unlist(lapply(tukey.res.imp, paste(rownames(tukey$cls)[tukey$cls[, "p adj"] <= cut.off], collapse = "; "),
+                        cut.off = thresh))
         posthoc_p.adj.sig.imp <-
           unlist(lapply(tukey.res.imp, function (tukey, cut.off) {
             inx <- tukey$cls[, "p adj"] <= cut.off
@@ -93,15 +95,15 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
 
         tukey.res.all <- lapply(aov.res, stats::TukeyHSD, conf.level = 1 -
                                   thresh)
-        cmp.res.all <- unlist(lapply(tukey.res.all, MetaboAnalystR:::parseTukey,
+        cmp.res.all <- unlist(lapply(tukey.res.all, paste(rownames(tukey$cls)[tukey$cls[, "p adj"] <= cut.off], collapse = "; "),
                                      cut.off = thresh))
         posthoc_p.adj.all <- unlist(lapply(tukey.res.all, function (tukey)
           paste(signif(data.frame(tukey["cls"])[, 4], 5), collapse = "; ")))
         post.nm = "Tukey's HSD"
       }
       else {
-        fisher.res <- lapply(aov.imp, MetaboAnalystR:::FisherLSD, thresh)
-        cmp.res.imp <- unlist(lapply(fisher.res, MetaboAnalystR:::parseFisher,
+        fisher.res <- lapply(aov.imp, LSD.test(aov.obj, "cls", alpha = thresh), thresh)
+        cmp.res.imp <- unlist(lapply(fisher.res, paste(rownames(fisher)[fisher[, "pvalue"] <= cut.off], collapse = "; "),
                                      cut.off = thresh))
         posthoc_p.adj.sig.imp <-
           unlist(lapply(fisher.res, function (fisher, cut.off) {
@@ -109,7 +111,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
             paste(signif(data.frame(fisher)[, 2][inx], 5), collapse = "; ")
           },
           cut.off = thresh))
-        fisher.res.all <- lapply(aov.res, MetaboAnalystR:::FisherLSD, thresh)
+        fisher.res.all <- lapply(aov.res, LSD.test(aov.obj, "cls", alpha = thresh), thresh)
         posthoc_p.adj.all <- unlist(lapply(fisher.res, function (fisher)
           paste(signif(data.frame(fisher)[, 2], 5), collapse = "; ")))
         post.nm = "Fisher's LSD"
@@ -165,6 +167,7 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
 #' @param grp2 (Character) Enter name of the second group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.
 #' @param paired (Logical) Are the data in both groups paired (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with results of fold-change analysis added at mSetObj$analSet$fc$\code{grp1}_vs_\code{grp2}.
+#' @references adapted from \code{\link[MetaboAnalystR]{FC.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.FC.Anal <- function (mSetObj = NA, log2fc.thresh = 1, grp1 = NULL, grp2 = NULL, paired = FALSE)
 {
@@ -210,6 +213,7 @@ met.FC.Anal <- function (mSetObj = NA, log2fc.thresh = 1, grp1 = NULL, grp2 = NU
 #' @param grp1 (Character) Enter name of the first group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.
 #' @param grp2 (Character) Enter name of the second group for the contrast \code{grp1 vs. grp2}. If both group arguments are empty, the first two names in the list of groups are selected.
 #' @return The input mSet object with results of fold-change analysis added at mSetObj$analSet$fc$\code{grp1}_vs_\code{grp2}.
+#' @references adapted from \code{\link[MetaboAnalystR]{GetFC}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 {
@@ -296,6 +300,7 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #' }
 #' @param all.rsd (Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in %) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.
 #' @return The input mSet object with filtered data added at mSetObj$dataSet$filt.
+#' @references adapted from \code{\link[MetaboAnalystR]{FilterVariable}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.rsd=0.25, remain.num = NULL, all.rsd = NULL)
 {
@@ -373,6 +378,7 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
 #' }
 #' @param anal.type (Character) Type of analysis. Extracted from mSetObj by higher function at mSetObj$analSet$type.
 #' @param all.rsd (Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in %) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.
+#' @references adapted from \code{\link[MetaboAnalystR]{PerformFeatureFilter}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @return A list with filtered data and a message to inform about the chosen filtering conditions
 met.PerformFeatureFilter <- function (int.mat, mSetObj, filter = "none", remain.num = NULL, anal.type = NULL, all.rsd = NULL)
 {
@@ -504,6 +510,7 @@ met.PerformFeatureFilter <- function (int.mat, mSetObj, filter = "none", remain.
 #' @param all_results (Logical) Create a CSV file with T-Test results for all compounds (\code{TRUE}) or not (\code{FALSE}).
 #' @param silent (Logical) Suppress message about the number of significant features found in the console (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with T-Test results added at mSetObj$analSet$tt$grp1_vs_grp2.
+#' @references adapted from \code{\link[MetaboAnalystR]{Ttests.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.Ttests.Anal <- function (mSetObj = NA, grp1, grp2, nonpar = FALSE, threshp = 0.05, paired = FALSE,
           equal.var = TRUE, pvalType = "fdr", all_results = TRUE, silent = FALSE)
@@ -603,6 +610,7 @@ met.Ttests.Anal <- function (mSetObj = NA, grp1, grp2, nonpar = FALSE, threshp =
 #' @param equal.var (Logical) Is the group variance equal (\code{TRUE}) or not (\code{FALSE}).
 #' @param nonpar (Logical) Use a non-parametric test (\code{TRUE}) or not (\code{FALSE}).
 #' @return A data frame with T-test results.
+#' @references adapted from \code{\link[MetaboAnalystR]{GetTtestRes}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var = TRUE, nonpar = F)
 {
 
@@ -613,7 +621,7 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
   }
   data <- as.matrix(mSetObj$dataSet$norm)
   if (!exists("mem.tt")) {
-    mem.tt <<- memoise::memoise(MetaboAnalystR:::.get.ttest.res)
+    mem.tt <<- memoise::memoise(.get.ttest.res)
   }
   return(mem.tt(data, inx1, inx2, paired, equal.var, nonpar))
 }
@@ -637,6 +645,7 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
 #'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
 #'  }
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @references adapted from \code{\link[MetaboAnalystR]{ImputeMissingVar}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.impute <- function (mSetObj = NA, method = "min") {
 
@@ -654,7 +663,7 @@ met.impute <- function (mSetObj = NA, method = "min") {
     msg <- c(msg, "Variables with missing values were excluded.")
   }
   else if (method == "lod") {
-    new.mat <- MetaboAnalystR:::ReplaceMissingByLoD(int.mat)
+    new.mat <- ReplaceMissingByLoD(int.mat)
     msg <- c(msg, "Missing variables were replaced by LoDs (1/5 of the min positive value for each variable)")
   }
   else if (method == "rowmin") {
@@ -734,6 +743,7 @@ met.impute <- function (mSetObj = NA, method = "min") {
 #' @param anal.type (Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg"
 #' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+#' @references adapted from \code{\link[MetaboAnalystR]{Initialize}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.initialize <- function (data.type = "conc", anal.type = "stat", paired = FALSE)
 {
@@ -805,6 +815,7 @@ met.initialize <- function (data.type = "conc", anal.type = "stat", paired = FAL
 #' @param ratio This option is only for biomarker analysis.
 #' @param ratioNum Relevant only for biomarker analysis.
 #' @return The input mSet object with normalized data at mSetObj$dataSet$norm.
+#' @references adapted from \code{\link[MetaboAnalystR]{Normalization}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NULL, norm.vec = NULL,
           ratio = FALSE, ratioNum = 20)
@@ -847,7 +858,7 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
   colNames <- colnames(data)
   rowNames <- rownames(data)
   if (rowNorm == "QuantileNorm") {
-    data <- MetaboAnalystR:::QuantileNormalize(data)
+    data <- return(t(preprocessCore::normalize.quantiles(t(data), copy = FALSE)))
     varCol <- apply(data, 2, var, na.rm = T)
     constCol <- (varCol == 0 | is.na(varCol))
     constNum <- sum(constCol, na.rm = T)
@@ -863,24 +874,24 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
   else if (rowNorm == "GroupPQN") {
     grp.inx <- cls == ref
     ref.smpl <- apply(data[grp.inx, , drop = FALSE], 2, mean)
-    data <- t(apply(data, 1, ProbNorm, ref.smpl))
+    data <- t(apply(data, 1, function (x, ref.smpl) x/median(as.numeric(x/ref.smpl), na.rm = T), ref.smpl))
     rownm <- "Probabilistic Quotient Normalization by a reference group"
   }
   else if (rowNorm == "SamplePQN") {
     ref.smpl <- data[ref, , drop = FALSE]
-    data <- t(apply(data, 1, MetaboAnalystR:::ProbNorm, ref.smpl))
+    data <- t(apply(data, 1, function (x, ref.smpl) x/median(as.numeric(x/ref.smpl), na.rm = T), ref.smpl))
     rownm <- "Probabilistic Quotient Normalization by a reference sample"
   }
   else if (rowNorm == "CompNorm") {
-    data <- t(apply(data, 1, MetaboAnalystR:::CompNorm, ref))
+    data <- t(apply(data, 1, function (x, ref) 1000 * x/x[ref], ref))
     rownm <- "Normalization by a reference feature"
   }
   else if (rowNorm == "SumNorm") {
-    data <- t(apply(data, 1, MetaboAnalystR:::SumNorm))
+    data <- t(apply(data, 1, function (x) 1000 * x/sum(x, na.rm = T)))
     rownm <- "Normalization to constant sum"
   }
   else if (rowNorm == "MedianNorm") {
-    data <- t(apply(data, 1, MetaboAnalystR:::MedianNorm))
+    data <- t(apply(data, 1, function (x) x/median(x, na.rm = T)))
     rownm <- "Normalization to sample median"
   }
   else if (rowNorm == "SpecNorm") {
@@ -901,15 +912,15 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
     data <- data[, -inx, drop = FALSE]
     colNames <- colNames[-inx]
   }
-  row.norm <- as.data.frame(MetaboAnalystR:::CleanData(data, T, T))
+  row.norm <- as.data.frame(CleanData(data, T, T))
   qs::qsave(row.norm, file = "row_norm.qs")
   mSetObj$dataSet$row_norm <- row.norm
   if (ratio) {
     min.val <- min(abs(data[data != 0]))/2
     norm.data <- log2((data + sqrt(data^2 + min.val))/2)
     transnm <- "Log2 Normalization"
-    ratio.mat <- MetaboAnalystR:::CalculatePairwiseDiff(norm.data)
-    fstats <- MetaboAnalystR:::Get.Fstat(ratio.mat, cls)
+    ratio.mat <- CalculatePairwiseDiff(norm.data)
+    fstats <- Get.Fstat(ratio.mat, cls)
     hit.inx <- rank(-fstats) < ratioNum
     ratio.mat <- ratio.mat[, hit.inx, drop = FALSE]
     data <- cbind(norm.data, ratio.mat)
@@ -922,12 +933,12 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
     mSetObj$dataSet$use.ratio <- FALSE
     if (transNorm == "LogNorm") {
       min.val <- min(abs(data[data != 0]))/10
-      data <- apply(data, 2, MetaboAnalystR:::LogNorm, min.val)
+      data <- apply(data, 2, function (x, min.val) log10((x + sqrt(x^2 + min.val^2))/2), min.val)
       transnm <- "Log10 Transformation"
     }
     else if (transNorm == "SrNorm") {
       min.val <- min(abs(data[data != 0]))/10
-      data <- apply(data, 2, MetaboAnalystR:::SquareRootNorm, min.val)
+      data <- apply(data, 2, function (x, min.val) ((x + sqrt(x^2 + min.val^2))/2)^(1/2), min.val)
       transnm <- "Square Root Transformation"
     }
     else if (transNorm == "CrNorm") {
@@ -941,19 +952,26 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
     }
   }
   if (scaleNorm == "MeanCenter") {
-    data <- apply(data, 2, MetaboAnalystR:::MeanCenter)
+    data <- apply(data, 2, function (x) x - mean(x))
     scalenm <- "Mean Centering"
   }
   else if (scaleNorm == "AutoNorm") {
-    data <- apply(data, 2, MetaboAnalystR:::AutoNorm)
+    data <- apply(data, 2, function(x) (x - mean(x))/sd(x, na.rm = T))
     scalenm <- "Autoscaling"
   }
   else if (scaleNorm == "ParetoNorm") {
-    data <- apply(data, 2, MetaboAnalystR:::ParetoNorm)
+    data <- apply(data, 2, function(x) (x - mean(x))/sqrt(sd(x, na.rm = T)))
     scalenm <- "Pareto Scaling"
   }
   else if (scaleNorm == "RangeNorm") {
-    data <- apply(data, 2, MetaboAnalystR:::RangeNorm)
+    data <- apply(data, 2, function (x) {
+      if (max(x) == min(x)) {
+        x
+      }
+      else {
+        (x - mean(x))/(max(x) - min(x))
+      }
+    })
     scalenm <- "Range Scaling"
   }
   else {
@@ -961,9 +979,9 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
   }
   rownames(data) <- rowNames
   colnames(data) <- colNames
-  data <- MetaboAnalystR:::CleanData(data, T, F)
+  data <- CleanData(data, T, F)
   if (ratio) {
-    mSetObj$dataSet$ratio <- MetaboAnalystR:::CleanData(ratio.mat, T, F)
+    mSetObj$dataSet$ratio <- CleanData(ratio.mat, T, F)
   }
   mSetObj$dataSet$norm <- as.data.frame(data)
   if (substring(mSetObj$dataSet$format, 4, 5) == "ts") {
@@ -998,8 +1016,9 @@ met.normalize <- function (mSetObj = NA, rowNorm, transNorm, scaleNorm, ref = NU
 #' @param choice (Character) Choose the criterion used to estimate the predictive ability of the model, \code{"Q2"} or \code{"R2"}.
 #' @param data (Character) Enter \code{"all"} to train the PLS-DA model on your whole (filtered and normalized) data set or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.
 #' @return The input mSet object with the results of PLS-DA at mSetObj$analSet$plsda.
+#' @references adapted from \code{\link[MetaboAnalystR]{PLSDA.CV}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
-met.PLSDA.CV <- function (mSetObj = NA, methodName = "CV", compNum = MetaboAnalystR:::GetDefaultPLSCVComp(mSetObj),
+met.PLSDA.CV <- function (mSetObj = NA, methodName = "CV", compNum = GetDefaultPLSCVComp(mSetObj),
           choice = "Q2", data = "all")
 {
   if(data=="anova.sig") {
@@ -1116,6 +1135,7 @@ met.PLSDA.CV <- function (mSetObj = NA, methodName = "CV", compNum = MetaboAnaly
 #' @param reg (Logical)
 #' @param data (Character) Enter \code{"all"} to train the PLS-DA model on your whole (filtered and normalized) data set or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.
 #' @return The input mSet object with the results of PLS-DA at mSetObj$analSet$plsr.
+#' @references adapted from \code{\link[MetaboAnalystR]{PLSR.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
 met.PLSR.Anal <- function (mSetObj = NA, reg = FALSE, data = "all")
 {
@@ -1154,6 +1174,14 @@ met.PLSR.Anal <- function (mSetObj = NA, reg = FALSE, data = "all")
   return(mSetObj)
 }
 
+#' Prepare data for normalization
+#'
+#' \code{met.PreparePrenormData} checks for previous data editing and filtering, and defines adds a 'prenormalization' data table to the mSet object for further analysis.
+#'
+#' @param mSetObj Enter name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).
+#' @return The input mSet object with prenorm data table at mSetObj$dataSet$prenorm.
+#' @references adapted from \code{\link[MetaboAnalystR]{PreparePrenormData}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+#' @export
 met.PreparePrenormData <- function (mSetObj = NA)
 {
   if (!is.null(mSetObj$dataSet$edit)) {
@@ -1389,12 +1417,15 @@ met.read_data <- function (data,
     return(0)
   }
   smpl.nms <- gsub("\\\\", "-", smpl.nms)
-  url.smp.nms <- MetaboAnalystR:::CleanNames(smpl.nms)
+  url.smp.nms <- make.unique(gsub("[^[:alnum:].@_-]", "", smpl.nms))
   names(url.smp.nms) <- smpl.nms
   var.nms <- gsub("\\\\", "-", var.nms)
-  url.var.nms <- MetaboAnalystR:::CleanNames(var.nms)
+  url.var.nms <- make.unique(gsub("[^[:alnum:].@_-]", "", var.nms))
   names(url.var.nms) <- var.nms
-  cls.lbl <- MetaboAnalystR:::ClearStrings(as.vector(cls.lbl))
+  cls.lbl <- gsub(" +", " ", as.vector(cls.lbl))
+  cls.lbl <- gsub("\\\\", "-", cls.lbl)
+  cls.lbl <- sub("^[[:space:]]*(.*?)[[:space:]]*$", "\\1", cls.lbl,
+               perl = TRUE)
   rownames(conc) <- smpl.nms
   colnames(conc) <- var.nms
   if (mSetObj$dataSet$paired) {
@@ -1917,7 +1948,7 @@ met.test_normalization <- function(mSetObj,
       met.PLSDA.CV(
         mSet_list[[i]],
         methodName = "L",
-        compNum = MetaboAnalystR:::GetDefaultPLSCVComp(mSet_list[[i]]),
+        compNum = GetDefaultPLSCVComp(mSet_list[[i]]),
         data = pls.data
       )
 

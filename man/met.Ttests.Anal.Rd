@@ -44,3 +44,6 @@ The input mSet object with T-Test results added at mSetObj$analSet$tt$grp1_vs_gr
 \description{
 \code{met.Ttests.Anal} performs the Student's t-test on chosen sample groups. For large data set (> 1000 variables), both the paired information and the group variance will be ignored, and the default parameters will be used for t-tests to save computational time. If you choose non-parametric tests (Wilcoxon rank-sum test), the group variance will be ignored.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{Ttests.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

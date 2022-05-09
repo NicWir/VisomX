@@ -306,7 +306,11 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
   if(show_prenorm){
     p <- function(){
       graphics::layout(matrix(c(1, 2, 2, 2, 3, 4, 4, 4), 4, 2, byrow = FALSE))
-      pre.inx <- MetaboAnalystR:::GetRandomSubsetIndex(nrow(proc.data), sub.num = 50)
+      pre.inx <- if (nrow(proc.data) < 50) {
+                    1:nrow(proc.data)
+                  } else {
+                    sample(1:nrow(proc.data), 50)
+                  }
       namesVec <- rownames(proc.data[pre.inx, , drop = FALSE])
       nm.inx <- namesVec %in% rownames(mSetObj$dataSet$norm)
       namesVec <- namesVec[nm.inx]
@@ -316,7 +320,7 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
       rangex.pre <- range(proc.data[pre.inx, , drop = FALSE], na.rm = T)
       rangex.norm <- range(mSetObj$dataSet$norm[norm.inx, , drop = FALSE],
                            na.rm = T)
-      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      x.label <- if_else(mSetObj$dataSet$type == "conc", "Concentration", "Intensity")
       y.label <- "Samples"
       op <- graphics::par(mar = c(6.5, 7, 0, 0), xaxt = "s")
       plot(stats::density(apply(proc.data, 1, mean, na.rm = TRUE)), col = "darkblue",
@@ -352,7 +356,11 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
   } else {
     p <- function(){
       graphics::layout(matrix(c(1, 2, 2, 2), 4, 1, byrow = FALSE))
-      pre.inx <- MetaboAnalystR:::GetRandomSubsetIndex(nrow(proc.data), sub.num = 50)
+      pre.inx <- if (nrow(proc.data) < 50) {
+                    1:nrow(proc.data)
+                  } else {
+                    sample(1:nrow(proc.data), 50)
+                  }
       namesVec <- rownames(proc.data[pre.inx, , drop = FALSE])
       nm.inx <- namesVec %in% rownames(mSetObj$dataSet$norm)
       namesVec <- namesVec[nm.inx]
@@ -362,7 +370,7 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
       rangex.pre <- range(proc.data[pre.inx, , drop = FALSE], na.rm = T)
       rangex.norm <- range(mSetObj$dataSet$norm[norm.inx, , drop = FALSE],
                            na.rm = T)
-      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
+      x.label <- if_else(mSetObj$dataSet$type == "conc", "Concentration", "Intensity")
       y.label <- "Samples"
       op <- graphics::par(mar = c(6.5, 7, 0, 0), xaxt = "s")
       plot(density(apply(mSetObj$dataSet$norm, 1, mean, na.rm = TRUE)),
@@ -473,8 +481,18 @@ met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName = "FeatureNormSum
       rangex.pre <- range(proc.data[, pre.inx, drop = FALSE], na.rm = T)
       rangex.norm <- range(mSetObj$dataSet$norm[, norm.inx, drop = FALSE],
                            na.rm = T)
-      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
-      y.label <- MetaboAnalystR:::GetVariableLabel(mSetObj$dataSet$type)
+      x.label <- if_else(mSetObj$dataSet$type == "conc", "Concentration", "Intensity")
+      y.label <- if (mSetObj$dataSet$type == "conc") {
+                    "Compounds"
+                  } else if (mSetObj$dataSet$type == "specbin") {
+                    "Spectra Bins"
+                  } else if (mSetObj$dataSet$type == "nmrpeak") {
+                    "Peaks (ppm)"
+                  } else if (mSetObj$dataSet$type == "mspeak") {
+                    "Peaks (mass)"
+                  } else {
+                    "Peaks(mz/rt)"
+                  }
       if (anal.type == "roc" & mSetObj$dataSet$roc_cols ==
           1) {
         op <- graphics::par(mar = c(4, 7, 4, 0), xaxt = "s")
@@ -546,8 +564,22 @@ met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName = "FeatureNormSum
       rangex.pre <- range(proc.data[, pre.inx, drop = FALSE], na.rm = T)
       rangex.norm <- range(mSetObj$dataSet$norm[, norm.inx, drop = FALSE],
                            na.rm = T)
-      x.label <- MetaboAnalystR:::GetAbundanceLabel(mSetObj$dataSet$type)
-      y.label <- MetaboAnalystR:::GetVariableLabel(mSetObj$dataSet$type)
+      x.label <- if_else(mSetObj$dataSet$type == "conc", "Concentration", "Intensity")
+      y.label <- if (mSetObj$dataSet$type == "conc") {
+                    "Compounds"
+                  }
+                  else if (mSetObj$dataSet$type == "specbin") {
+                    "Spectra Bins"
+                  }
+                  else if (mSetObj$dataSet$type == "nmrpeak") {
+                   "Peaks (ppm)"
+                  }
+                  else if (mSetObj$dataSet$type == "mspeak") {
+                    "Peaks (mass)"
+                  }
+                  else {
+                    "Peaks(mz/rt)"
+                  }
       if (anal.type == "roc" & mSetObj$dataSet$roc_cols ==
           1) {
         op <- graphics::par(mar = c(7, 7, 0, 0), xaxt = "s")
@@ -1126,7 +1158,7 @@ met.plot_PCA2DScore <- function (mSetObj = NA, imgName = "PCA_2DScores", format 
       y.ext <- (yrg[2] - yrg[1])/12
       xlims <- c(xrg[1] - x.ext, xrg[2] + x.ext)
       ylims <- c(yrg[1] - y.ext, yrg[2] + y.ext)
-      cols <- MetaboAnalystR:::GetColorSchema(cls, grayscale = F)
+      cols <- GetColorSchema(cls, grayscale = F)
       uniq.cols <- unique(cols)
       plot(pc1, pc2, xlab = xlabel, xlim = xlims, ylim = ylims,
            ylab = ylabel, type = "n",
@@ -1444,7 +1476,7 @@ met.plot_PLS2DScore <- function (mSetObj = NA, imgName = "PLSDA_2DScore", format
     y.ext <- (yrg[2] - yrg[1])/12
     xlims <- c(xrg[1] - x.ext, xrg[2] + x.ext)
     ylims <- c(yrg[1] - y.ext, yrg[2] + y.ext)
-    cols <- MetaboAnalystR:::GetColorSchema(cls, grayscale = F)
+    cols <- GetColorSchema(cls, grayscale = F)
     uniq.cols <- unique(cols)
     plot(lv1, lv2, xlab = xlabel, xlim = xlims, ylim = ylims,
          ylab = ylabel, type = "n",
@@ -2050,7 +2082,7 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
   else {
     annotation <- NA
   }
-  plot_dims <- MetaboAnalystR:::get_pheatmap_dims(t(hc.dat), annotation, viewOpt,
+  plot_dims <- get_pheatmap_dims(t(hc.dat), annotation, viewOpt,
                                                   width)
   h <- plot_dims$height
   w <- plot_dims$width
@@ -2067,7 +2099,7 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
 
   p <- function(){
     if (cls.type == "disc") {
-      cols <- MetaboAnalystR:::GetColorSchema(cls, palette == "gray")
+      cols <- GetColorSchema(cls, palette == "gray")
       uniq.cols <- unique(cols)
       if (mSetObj$dataSet$type.cls.lbl == "integer") {
         cls <- as.factor(as.numeric(levels(cls))[cls])
@@ -2360,8 +2392,8 @@ met.plot_PCA3DLoading <- function (mSetObj = NA, imgName = "PCA3DLoading", forma
   pca3d$loading$axis <- paste("Loading PC", c(inx1, inx2,
                                               inx3), sep = "")
   coords <- data.frame(t(signif(pca$rotation[, 1:3], 5)))
-  dists <- MetaboAnalystR:::GetDist3D(coords)
-  pca3d$loading$cols <- MetaboAnalystR:::GetRGBColorGradient(dists)
+  dists <- apply(coords, 2, function(x) dist(rbind(x, target)))
+  pca3d$loading$cols <- GetRGBColorGradient(dists)
   cols_vectors <- stringr::str_replace_all(pca3d$loading$cols, "rgba\\(", "") %>% stringr::str_replace_all(., "\\)", "")
   cols_vectors <- sapply(1:length(cols_vectors), function (x) str_split(cols_vectors[x], ","))
   pca3d$loading$cols_hex <-
@@ -2380,7 +2412,7 @@ met.plot_PCA3DLoading <- function (mSetObj = NA, imgName = "PCA3DLoading", forma
   else {
     clss <- as.character(cls)
   }
-  if (MetaboAnalystR:::all.numeric(clss)) {
+  if (all.numeric(clss)) {
     clss <- paste("Group", clss)
   }
   pca3d$cls = clss
@@ -2457,12 +2489,14 @@ met.plot_PCA3DScore <- function (mSetObj = NA, imgName = "PCA3DScore", format = 
   else {
     cls <- as.character(cls)
   }
-  if (MetaboAnalystR:::all.numeric(cls)) {
+  if (all.numeric(cls)) {
     cls <- paste("Group", cls)
   }
   pca3d$score$facA <- cls
-  cols <- unique(MetaboAnalystR:::GetColorSchema(as.factor(cls)))
-  pca3d$score$colors <- MetaboAnalystR:::my.col2rgb(cols)
+  cols <- unique(GetColorSchema(as.factor(cls)))
+  pca3d$score$colors <- apply(col2rgb(cols), 2, function(x) {
+                          paste("rgb(", paste(x, collapse = ","), ")", sep = "")
+                        })
   imgName = paste(imgName, ".", format, sep = "")
   if(export==TRUE){
     message(paste0("Exporting 3D PCA score plot to:\n\"", getwd(), imgName, "\""))
@@ -2485,7 +2519,7 @@ met.plot_PCA3DScore <- function (mSetObj = NA, imgName = "PCA3DScore", format = 
 #' @return A 3D scatter plot. To close the graphics device, execute \code{rgl::close3d()}.
 #' @export
 met.print_PCA3DScore <- function (mSetObj = NA){
-  colors <- MetaboAnalystR:::GetColorSchema(as.factor(cls))
+  colors <- GetColorSchema(as.factor(cls))
   rgl::plot3d(x= mSetObj$imgSet$pca.score3d.plot$score$xyz[1,],
               y= mSetObj$imgSet$pca.score3d.plot$score$xyz[3,],
               z= mSetObj$imgSet$pca.score3d.plot$score$xyz[2,],
@@ -2535,8 +2569,8 @@ met.plot_PLS3DLoading <- function (mSetObj = NA, imgName = "PLS3DLoading", forma
   pls3d$loading$xyz <- coords
   pls3d$loading$name <- rownames(pls$loadings)
   pls3d$loading$entrez <- rownames(pls$loadings)
-  dists <- MetaboAnalystR:::GetDist3D(coords0)
-  cols <- MetaboAnalystR:::GetRGBColorGradient(dists)
+  dists <- apply(coords0, 2, function(x) dist(rbind(x, target)))
+  cols <- GetRGBColorGradient(dists)
   pls3d$loading$cols <- cols
   cols_vectors <- stringr::str_replace_all(cols, "rgba\\(", "") %>% stringr::str_replace_all(., "\\)", "")
   cols_vectors <- sapply(1:length(cols_vectors), function (x) str_split(cols_vectors[x], ","))
@@ -2552,7 +2586,7 @@ met.plot_PLS3DLoading <- function (mSetObj = NA, imgName = "PLS3DLoading", forma
   else {
     cls <- as.character(mSetObj$dataSet$cls)
   }
-  if (MetaboAnalystR:::all.numeric(cls)) {
+  if (all.numeric(cls)) {
     cls <- paste("Group", cls)
   }
   pls3d$cls = cls
@@ -2630,12 +2664,14 @@ met.plot_PLS3DScore <- function (mSetObj = NA, imgName = "PLS3DScore", format = 
   else {
     cls <- as.character(cls1)
   }
-  if (MetaboAnalystR:::all.numeric(cls)) {
+  if (all.numeric(cls)) {
     cls <- paste("Group", cls)
   }
   pls3d$score$facA <- cls
-  cols <- unique(MetaboAnalystR:::GetColorSchema(cls1))
-  pls3d$score$colors <- MetaboAnalystR:::my.col2rgb(cols)
+  cols <- unique(GetColorSchema(cls1))
+  pls3d$score$colors <- apply(col2rgb(cols), 2, function(x) {
+                          paste("rgb(", paste(x, collapse = ","), ")", sep = "")
+                        })
   imgName = paste(imgName, ".", format, sep = "")
   if(export==TRUE){
     message(paste0("Exporting 3D PLS-DA score plot to:\n\"", getwd(), imgName, "\""))
@@ -2658,7 +2694,7 @@ met.plot_PLS3DScore <- function (mSetObj = NA, imgName = "PLS3DScore", format = 
 #' @return A 3D scatter plot. To close the graphics device, execute \code{rgl::close3d()}.
 #' @export
 met.print_PLS3DScore <- function (mSetObj = NA){
-  colors <- MetaboAnalystR:::GetColorSchema(as.factor(cls))
+  colors <- GetColorSchema(as.factor(cls))
   rgl::plot3d(x= mSetObj$imgSet$pls.score3d.plot$score$xyz[1,],
               y= mSetObj$imgSet$pls.score3d.plot$score$xyz[3,],
               z= mSetObj$imgSet$pls.score3d.plot$score$xyz[2,],

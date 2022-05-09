@@ -241,7 +241,7 @@ read_flux <- function(file.data = dat_flux,
 #'
 #' ...
 #'
-#' @param
+#' @param df data frame
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @import reticulate
 #' @export
@@ -908,7 +908,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
 #'
 #' ...
 #'
-#' @param
+#' @param png PNG image file
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
 ####____png_to_gif____####

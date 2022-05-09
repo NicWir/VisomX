@@ -6,6 +6,9 @@
 \usage{
 png_to_gif(png, ..., fps = 0.5, out = "Plots/animated_gif.gif")
 }
+\arguments{
+\item{png}{PNG image file}
+}
 \value{
 The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 }

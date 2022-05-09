@@ -29,3 +29,6 @@ The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 \description{
 Replace missing variables via a chosen method. Data need to be re-calibrated after this step, including \code{\link[VisomX::met.PerformFeatureFilter]{filtering}} as well as \code{\link[VisomX::met.normalize]{normalization, transformation, and scaling}}. Data imputation is performed as part of \code{\link[VisomX]{met.read_data}}.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{ImputeMissingVar}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

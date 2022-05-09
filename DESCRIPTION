@@ -1,5 +1,6 @@
 Package: VisomX
-Title: User-Friendly and Comprehensive Analysis and Visualization of Omics Data
+Title: User-Friendly and Comprehensive Analysis and Visualization of Omics
+    Data
 Version: 0.0.0.9000
 Authors@R: 
     person("Nicolas T.", "Wirth", , "mail.nicowirth@gmail.com", role = c("aut", "cre"),
@@ -26,6 +27,7 @@ Depends:
 Imports: 
     assertthat,
     Biobase,
+    BiocSingular,
     Cairo,
     caret,
     circlize,
@@ -33,7 +35,8 @@ Imports:
     clusterProfiler,
     ComplexHeatmap,
     data.table,
-    DEP,
+    DelayedArray,
+    DO.db,
     DOSE,
     edgeR,
     ellipse,
@@ -46,6 +49,7 @@ Imports:
     ggVennDiagram,
     grid,
     gridExtra,
+    guide_graphics,
     impute,
     jsonlite,
     kableExtra,
@@ -54,10 +58,11 @@ Imports:
     limma,
     magick,
     markdown,
-    MetaboAnalystR,
+    memoise,
     MSnbase,
     multtest,
     pcaMethods,
+    pheatmap,
     plotly,
     pls,
     plyr,
@@ -69,6 +74,7 @@ Imports:
     qvalue,
     RColorBrewer,
     readxl,
+    reshape,
     reticulate,
     rgl,
     rlang,
@@ -80,12 +86,15 @@ Imports:
     UpSetR,
     vsn
 Suggests: 
-    ggpubr
+    DEP,
+    ggpubr,
+    MetaboAnalystR
 VignetteBuilder: 
     knitr
 Remotes: 
     bioc::release/clusterProfiler,
     bioc::release/DEP,
+    bioc::release/DO.db,
     bioc::release/DOSE,
     bioc::release/edgeR,
     bioc::release/genefilter,

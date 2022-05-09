@@ -21,3 +21,6 @@ The input mSet object with results of fold-change analysis added at mSetObj$anal
 \description{
 Utility method to calculate FC, used in higher function
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{GetFC}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}

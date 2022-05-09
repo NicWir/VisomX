@@ -1054,7 +1054,7 @@ prot.pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
   } else {
     species <- clusterProfiler:::organismMapper(organism)
     if (use_internal_kegg) {
-      DATA <- clusterProfiler::get_data_from_KEGG_db(species)
+      DATA <- clusterProfiler:::get_data_from_KEGG_db(species)
     } else {
       DATA <- clusterProfiler:::prepare_KEGG(species, "KEGG", keyType)
     }
