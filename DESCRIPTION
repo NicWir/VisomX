@@ -48,7 +48,6 @@ Imports:
     ggVennDiagram,
     grid,
     gridExtra,
-    guide_graphics,
     impute,
     jsonlite,
     kableExtra,
