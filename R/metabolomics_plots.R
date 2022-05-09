@@ -41,13 +41,13 @@ met.plot_missval <- function (mSetObj, plot = TRUE, imgName = "MissValPlot", for
     message(paste0("Exporting Missing values pattern to:\n\"", getwd(), imgName, "\""))
 
     if (format == "pdf") {
-      grDevices::pdf("Plots/MissValPlot.pdf")
+      grDevices::pdf(imgName)
       ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
       grDevices::dev.off()
     }
 
     if (format == "png") {
-      grDevices::png("Plots/MissValPlot.png",
+      grDevices::png(imgName,
           width = 6, height = 6, units = 'in', res = 300)
       ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
       grDevices::dev.off()
@@ -94,7 +94,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
   df <- assay %>% data.frame(check.names = FALSE)+1
   df <- t(sapply(df, as.numeric)) %>% data.frame() %>% log10()
   colnames(df) <- rownames(assay)
-  df <- df %>% rownames_to_column() %>% gather(ID, val, -rowname)
+  df <- df %>% tibble::rownames_to_column() %>% tidyr::gather(ID, val, -rowname)
   stat <- df %>% group_by(rowname) %>% summarize(mean = mean(val,
                                                              na.rm = TRUE), missval = any(is.na(val)|val==0))
   cumsum <- stat %>% group_by(missval) %>% arrange(mean) %>%
@@ -103,7 +103,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
     geom_density(na.rm = TRUE, show.legend = FALSE) +
     stat_density(geom="line", position ="identity") +
     labs(x = expression(log[10] ~ "Intensity"), y = "Density") +
-    guides(col = guide_graphics::legend(title = paste0(
+    guides(col = guide_legend(title = paste0(
       "Missing values\n(",
       round(
         100 * nrow(cumsum[cumsum$missval == TRUE, ]) / nrow(cumsum[cumsum$missval == FALSE, ]),
@@ -115,7 +115,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
   p2 <- ggplot2::ggplot(cumsum, aes(mean, cs_frac, col = missval)) +
     geom_line() + labs(x = expression(log[10] ~ "Intensity"),
                        y = "Cumulative fraction") +
-    guides(col = guide_graphics::legend(title = paste0(
+    guides(col = guide_legend(title = paste0(
       "Missing values\n(",
       round(
         100 * nrow(cumsum[cumsum$missval == TRUE, ]) / nrow(cumsum[cumsum$missval ==
@@ -137,7 +137,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
     geom_density(na.rm = TRUE, show.legend = FALSE) +
     stat_density(geom = "line", position = "identity") +
     labs(x = expression(log[2] ~ "Intensity"), y = "Density") +
-    guides(col = guide_graphics::legend(title = paste0(
+    guides(col = guide_legend(title = paste0(
       "Missing values\n(",
       round(
         100 * nrow(cumsum_per_group[cumsum_per_group$missval == TRUE, ]) / nrow(cumsum_per_group[cumsum_per_group$missval ==
@@ -151,7 +151,7 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
     ggplot2::ggplot(cumsum_per_group, aes(mean, cs_frac, col = missval)) +
     geom_line() + labs(x = expression(log[2] ~ "Intensity"),
                        y = "Cumulative fraction") +
-    guides(col = guide_graphics::legend(title = paste0(
+    guides(col = guide_legend(title = paste0(
       "Missing values\n(",
       round(
         100 * nrow(cumsum_per_group[cumsum_per_group$missval == TRUE, ]) / nrow(cumsum_per_group[cumsum_per_group$missval ==
@@ -167,13 +167,13 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "DensMissPlot", for
   if (export == TRUE){
     message(paste0("Exporting density distributions and cumulative fraction of proteins with and without missing values to:\n\"", getwd(), imgName, "\""))
     if (format == "pdf") {
-      grDevices::pdf("Plots/DensMissPlot.pdf")
+      grDevices::pdf(imgName)
       gridExtra::grid.arrange(p1, p2, ncol = 1)
       grDevices::dev.off()
     }
 
     if (format == "png") {
-      grDevices::png("Plots/DensMissPlot.png",
+      grDevices::png(imgName,
         width = 6,
         height = 6,
         units = 'in',

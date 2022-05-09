@@ -50,8 +50,11 @@ met.ANOVA.Anal <- function (mSetObj = NA, nonpar = FALSE, thresh = 0.05, post.ho
   }
   else {
     aov.nm <- "One-way ANOVA"
+    aof <- function (x, cls) {
+            stats::aov(x ~ cls)
+          }
     aov.res <- apply(as.matrix(mSetObj$dataSet$norm),
-                     2, aov(x ~ cls), cls = mSetObj$dataSet$cls)
+                     2, aof, cls = mSetObj$dataSet$cls)
     anova.res <- lapply(aov.res,stats::anova)
     res <- unlist(lapply(anova.res, function(x) {
       c(x["F value"][1, ], x["Pr(>F)"][1,
@@ -279,8 +282,9 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #' \code{met.FilterVariable} filters non-informative variables (i.e., features with very small values, near-constant values, or low repeatability) from the data set, dependent on the user-specified method for filtering. The function applies a filtering method, ranks the variables within the data set, and removes variables based on its rank. The final data set should contain no more than than 5000 variables for effective computing. If more features are present, the IQR filter will be applied to keep only a number of 5000, even if \code{filter = "none"}. Data filtering is performed as part of \code{\link[VisomX]{met.read_data}}.
 #'
 #' @param mSetObj Enter the name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).
-#' @param filter (Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
+#' @param filter (Character) Select an option for unspecific filtering based on the following ranking criteria:
 #' \itemize{
+#'  \item \code{"none"} apply no unspecific filtering.
 #'  \item \code{"rsd"} filters features with low relative standard deviation across the data set.
 #'  \item \code{"nrsd"} is the non-parametric relative standard deviation.
 #'  \item \code{"mean"} filters features with low mean intensity value across the data set.
@@ -289,8 +293,6 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #'  \item \code{"mad"} filters features with low median absolute deviation across the data set.
 #'  \item \code{"iqr"} filters features with a low inter-quartile range across the data set.
 #'  }
-#' @param qcFilter (Logical) Filter the variables based on the relative standard deviation of features in QC samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.
-#' @param qc.rsd (Numeric) Define the relative standard deviation cut-off in %. Variables with a RSD greater than this number will be removed from the data set. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will not be used in the function.
 #' @param remain.num (Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
 #' \itemize{
 #'   \item \strong{Less than 250 variables:} 5% will be filtered
@@ -298,11 +300,13 @@ met.GetFC <- function (mSetObj = NA, paired = FALSE, grp1, grp2)
 #'   \item \strong{500 - 1000 variables:} 25% will be filtered
 #'   \item \strong{More than 1000 variables:} 40% will be filtered
 #' }
+#' @param qcFilter (Logical) Filter the variables based on the relative standard deviation of features in QC samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.
+#' @param qc.rsd (Numeric) Define the relative standard deviation cut-off in %. Variables with a RSD greater than this number will be removed from the data set. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will be ignored.
 #' @param all.rsd (Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in %) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.
 #' @return The input mSet object with filtered data added at mSetObj$dataSet$filt.
 #' @references adapted from \code{\link[MetaboAnalystR]{FilterVariable}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 #' @export
-met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.rsd=0.25, remain.num = NULL, all.rsd = NULL)
+met.FilterVariable <- function (mSetObj = NA, filter = "none", remain.num = NULL, qcFilter="F", qc.rsd=0.25, all.rsd = NULL)
 {
   mSetObj$dataSet$filt <- NULL
   if (is.null(mSetObj$dataSet$proc)) {
@@ -359,8 +363,9 @@ met.FilterVariable <- function (mSetObj = NA, filter = "none", qcFilter="F", qc.
 #'
 #' @param int.mat Data matrix with samples in rows and features in columns, generated by higher function.
 #' @param mSetObj Enter the name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).
-#' @param filter (Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
+#' @param filter (Character) Select an option for unspecific filtering based on the following ranking criteria:
 #' \itemize{
+#'  \item \code{"none"} apply no unspecific filtering.
 #'  \item \code{"rsd"} filters features with low relative standard deviation across the data set.
 #'  \item \code{"nrsd"} is the non-parametric relative standard deviation.
 #'  \item \code{"mean"} filters features with low mean intensity value across the data set.
@@ -740,7 +745,7 @@ met.impute <- function (mSetObj = NA, method = "min") {
 #' This functions handles the construction of an mSetObj object for storing data for further processing and analysis. It is necessary to utilize this function to provide downstream functions with information about type of data and the type of analysis you will perform, as well as to provide the required data structure. This initialization is performed as part of \code{\link[VisomX]{met.read_data}}.
 #'
 #' @param data.type (Character) The type of data, either "list" (Compound lists), "conc" (Compound concentration data), "specbin" (Binned spectra data), "pktable" (Peak intensity table), "nmrpeak" (NMR peak lists), "mspeak" (MS peak lists), or "msspec" (MS spectra data).
-#' @param anal.type (Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg"
+#' @param anal.type (Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg".
 #' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @references adapted from \code{\link[MetaboAnalystR]{Initialize}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
@@ -1218,6 +1223,65 @@ met.PreparePrenormData <- function (mSetObj = NA)
   return(mSetObj)
 }
 
+#' Construct mSet data container, read metabolomics data, filter data, and impute missing values
+#'
+#' \code{met.read_data} is a wrapper function that constructs an mSet object, adds data from a table file or R dataframe object, applies unspecific and user-defined data filters, and imputes missing values.
+#'
+#' @param data Enter name of an R dataframe object or the "path name" (in quotes) of the CSV/TSV/XLS/XLSX/TXT file to read.
+#' @param data.type (Character) The type of data, either "list" (Compound lists), \code{"conc"} (Compound concentration data), \code{"specbin"} (Binned spectra data), \code{"pktable"} (Peak intensity table), \code{"nmrpeak"} (NMR peak lists), \code{"mspeak"} (MS peak lists), or \code{"msspec"} (MS spectra data).
+#' @param anal.type (Character) Indicate the analysis module to be performed: \code{"stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap",} or \code{"pathinteg"}.
+#' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
+#' @param csvsep (Character) Enter the separator used in the CSV file (only applicable if reading a ".csv" file).
+#' @param format (Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).
+#' @param lbl.type (Character) Specify the group label type, either categorical (\code{"disc"}) or continuous (\code{"cont"}).
+#' @param filt.metab (Character Vector) Enter the names of features to remove from the data set.
+#' @param filt.smpl (Character Vector) Enter the names of samples to remove from the data set.
+#' @param filt.grp (Character Vector) Enter the names of groups to remove from the data set.
+#' @param filt.method (Character) Select an option for unspecific filtering based on the following ranking criteria:
+#' \itemize{
+#'  \item \code{"none"} apply no unspecific filtering.
+#'  \item \code{"rsd"} filters features with low relative standard deviation across the data set.
+#'  \item \code{"nrsd"} is the non-parametric relative standard deviation.
+#'  \item \code{"mean"} filters features with low mean intensity value across the data set.
+#'  \item \code{"median"} filters features with low median intensity value across the data set.
+#'  \item \code{"sd"} filters features with low absolute standard deviation across the data set.
+#'  \item \code{"mad"} filters features with low median absolute deviation across the data set.
+#'  \item \code{"iqr"} filters features with a low inter-quartile range across the data set.
+#'  }
+#' @param remain.num (Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
+#' \itemize{
+#'   \item \strong{Less than 250 variables:} 5% will be filtered
+#'   \item \strong{250 - 500 variables:} 10% will be filtered
+#'   \item \strong{500 - 1000 variables:} 25% will be filtered
+#'   \item \strong{More than 1000 variables:} 40% will be filtered
+#' }
+#' @param qcFilter (Logical) Filter the variables based on the relative standard deviation of features in quality control (QC) samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.
+#' @param qc.rsd (Numeric) Define the relative standard deviation cut-off in %. Variables with a RSD greater than this number in the QC samples will be removed from the data set. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will be ignored.
+#' @param all.rsd (Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in %) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.
+#' @param imp.method (Character) Select the option to replace missing variables:
+#' \itemize{
+#'  \item \code{"lod"} replaces missing values with 1/5 of the minimum value for the respective variable.
+#'  \item \code{"rowmin"} replaces missing values with the half sample minimum.
+#'  \item \code{"colmin"} replaces missing values with the half feature minimum.
+#'  \item \code{"mean"} replaces missing values with the mean value of the respective feature column.
+#'  \item \code{"median"} replaces missing values with the median value of the respective feature column.
+#'  \item \code{"knn_var"} imputes missing values by finding the features in the training set “closest” to it and averages these nearby points to fill in the value.
+#'  \item \code{"knn_smp"} imputes missing values by finding the samples in the training set “closest” to it and averages these nearby points to fill in the value.
+#'  \item \code{"bpca"} applies Bayesian PCA to impute missing values.
+#'  \item \code{"ppca"} applies probabilistic PCA to impute missing values.
+#'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
+#'  }
+#' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the missing value detection plots be exported as PDF or PNG file?
+#' @return An mSet object with (built in ascending order):
+#' \itemize{
+#'  \item original data at \code{mSetObj$dataSet$data_orig}.
+#'  \item data with manually filtered out features/samples/groups at \code{mSetObj$dataSet$edit}.
+#'  \item data with unspecifically filtered data at  \code{mSetObj$dataSet$filt}.
+#'  \item data with imputed missing values at \code{mSetObj$dataSet$data_proc}.
+#'  \item missing value heatmap at \code{mSetObj$imgSet$missval_heatmap.plot} (see \code{\link[VisomX]{met.plot_missval}}).
+#'  \item Density and CumSum plots of intensities of proteins with and without missing values at \code{mSetObj$imgSet$missval_density.plot} (see \code{\link[VisomX]{met.plot_detect}}).
+#' }
+#' @export
 met.read_data <- function (data,
           data.type = "conc", anal.type = "stat", paired = FALSE, # Parameters used to initialize dataSet object
           csvsep = ";", # optional: delimiter if reading CSV file
@@ -1226,10 +1290,11 @@ met.read_data <- function (data,
           filt.smpl = c(""),
           filt.grp = c(""),
           filt.method = NULL,
-          imp.method = "min",
+          remain.num = NULL,
           qcFilter = "F",
           qc.rsd = 25,
           all.rsd = NULL,
+          imp.method = "min",
           export = TRUE
 )
 {
@@ -1463,14 +1528,23 @@ met.read_data <- function (data,
   mSetObj$dataSet$url.smp.nms <- url.smp.nms
   mSetObj$dataSet$data_orig <- conc
   qs::qsave(conc, file = "data_orig.qs")
+  var_label <- if (mSetObj$dataSet$type == "conc") {
+   "Compounds"
+  } else if (mSetObj$dataSet$type == "specbin") {
+    "Spectra Bins"
+  } else if (mSetObj$dataSet$type == "nmrpeak") {
+    "Peaks (ppm)"
+  } else if (mSetObj$dataSet$type == "mspeak") {
+   "Peaks (mass)"
+  } else {
+    "Peaks(mz/rt)"
+  }
   mSetObj$msgSet$read.msg <- c(msg, paste("The uploaded data file contains a ",
                                           nrow(conc), " (samples) by ", ncol(conc), " (",
-                                          tolower(GetVariableLabel(mSetObj$dataSet$type)), ") data matrix.",
+                                          tolower(var_label), ") data matrix.",
                                           sep = ""))
 
   mSetObj <- suppressWarnings(met.SanityCheck(mSetObj))
-  mSetObj <- met.impute(mSetObj, method = imp.method)
-  mSetObj <- met.PreparePrenormData(mSetObj)
 
   if(!filt.metab== "" || !filt.smpl == "" || !filt.grp == "") {
     mSetObj <- GetGroupNames(mSetObj, "")
@@ -1480,17 +1554,21 @@ met.read_data <- function (data,
     mSetObj<- met.PreparePrenormData(mSetObj)
   }
   if(!is.null(filt.method)){
-    mSetObj <- met.FilterVariable(mSetObj, filt.method, qcFilter, qc.rsd = qc.rsd, all.rsd=all.rsd)
+    mSetObj <- met.FilterVariable(mSetObj, filt.method, remain.num, qcFilter, qc.rsd, all.rsd)
     mSetObj<- met.PreparePrenormData(mSetObj)
   }
   dir.create(paste0(getwd(), "/met.ProcessedData"), showWarnings = F)
   mSetObj <- met.plot_missval(mSetObj, plot=F, export=export)
   mSetObj <- met.plot_detect(mSetObj, plot=F,  export=export)
 
+  mSetObj <- met.impute(mSetObj, method = imp.method)
+  mSetObj <- met.PreparePrenormData(mSetObj)
+
   return(mSetObj)
 }
 
-met.report <- function(mSetObj, report.nm = NULL, ...){
+
+met.report <- function(mSetObj, report.nm = NULL, alpha = 0.05, lfc = 2, ...){
   args <- list(...)
   for(i in 1:length(args)){
     assign(names(args)[i], args[[i]])
@@ -1847,8 +1925,6 @@ met.test_normalization <- function(mSetObj,
          permut.num = 500,
          volcano=TRUE,
          vip.thresh = 1,
-         volcano.contrast=NULL,
-         volcano.add_names = FALSE, #show labels next to circles in volcano plots
          report = FALSE, # Shall a report (HTML and PDF) be created?
          report.nm = NULL, # Folder name for created report (if report = TRUE)
          export.dir = "met.Test_Normalization"){
@@ -2315,8 +2391,6 @@ met.test_normalization <- function(mSetObj,
       mSet_list,
       report.nm = report.nm,
       list_names = list_names,
-      volcano = volcano,
-      volcano.contrast = volcano.contrast,
       contrasts = cntrst,
       alpha = alpha,
       lfc = lfc,
@@ -2386,6 +2460,8 @@ met.UpdateData <- function (mSetObj = NA,
   return(mSetObj)
 }
 
+
+#' mSetObj[["analSet"]][["contrasts"]] <- cntrst
 met.workflow <- function(mSetObj,
          rowNorm = "NULL", # Option for row-wise normalization
          transNorm = "NULL", # Option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.
@@ -2400,7 +2476,6 @@ met.workflow <- function(mSetObj,
          posthoc_method = "tukey",
          permut.num = 500,
          vip.thresh = 1,
-         volcano.contrast = NULL,
          volcano.test = "anova",
          volcano.add_names = TRUE, # Display names next to symbols in volcano plot.
          volcano.label_size = 3, # Size of labels in volcano plot if
@@ -2628,7 +2703,7 @@ met.workflow <- function(mSetObj,
   setwd(wd)
   if(report==TRUE){
     stack_size <- getOption("pandoc.stack.size", default = "512m")
-    met.report(mSetObj, report.nm=report.nm, volcano=volcano, volcano.contrast = volcano.contrast, contrasts=cntrst, alpha=alpha, lfc=lfc, vip.thresh=vip.thresh)
+    met.report(mSetObj, report.nm=report.nm, contrasts=cntrst, alpha=alpha, lfc=lfc, vip.thresh=vip.thresh)
   }
   return(mSetObj)
 

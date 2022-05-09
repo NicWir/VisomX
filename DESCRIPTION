@@ -81,6 +81,7 @@ Imports:
     stats,
     SummarizedExperiment,
     tibble,
+    tidyr,
     UpSetR,
     vsn
 Suggests: 
