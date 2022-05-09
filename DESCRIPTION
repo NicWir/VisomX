@@ -36,7 +36,6 @@ Imports:
     ComplexHeatmap,
     data.table,
     DelayedArray,
-    DO.db,
     DOSE,
     edgeR,
     ellipse,
@@ -94,7 +93,6 @@ VignetteBuilder:
 Remotes: 
     bioc::release/clusterProfiler,
     bioc::release/DEP,
-    bioc::release/DO.db,
     bioc::release/DOSE,
     bioc::release/edgeR,
     bioc::release/genefilter,
