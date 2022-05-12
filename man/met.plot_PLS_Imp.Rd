@@ -33,7 +33,7 @@ Data container after partial least squares-discriminant analysis (\code{\link[Vi
 
 \item{type}{(Character) Indicate the variables of importance type to use, \code{"vip"} to use VIP scores, or \code{"coef"} for coefficients}
 
-\item{feat.nm}{(Character) Indicate the name of the feature. If \code{type = "vip"}, choose \code{"Comp. 1"}, \code{"Comp. 2"}, etc., depending on the component for which the VIP scores should be shown. If \code{type = "coef"}, choose \code{"coef.mean"} for average coefficients, or the name of a sample group in your data set.}
+\item{feat.nm}{(Character) Indicate the name of the feature. If \code{type = "vip"}, choose \code{"Comp. 1"}, \code{"Comp. 2"}, etc., depending on the component for which the VIP scores should be shown. If \code{type = "coef"}, choose \code{"coef.mean"} for average coefficients, or the name of a sample group in your dataset.}
 
 \item{feat.num}{(Numeric) Indicate the number of features to show in the plot.}
 
@@ -50,4 +50,12 @@ The input mSet object with added dot plot. The plot can be retrieved from within
 }
 \description{
 \code{met.plot_PLS_Imp} visualizes the features' importance in the PLS-DA model.
+}
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPLS.Impg}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

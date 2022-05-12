@@ -39,3 +39,11 @@ The input mSet object with added cross validation test plot. The plot can be ret
 \description{
 \code{met.plot_PLS.Crossvalidation} performs cross-validation (CV) on the generated PLS-DA model, where a fraction of data is held back, and the model trained on the rest. In each CV, the predicted data are compared with the original data, and the sum of squared errors is calculated. The prediction error is then summed over all samples (Predicted Residual Sum of Squares or PRESS). For convenience, the PRESS is divided by the initial sum of squares and subtracted from 1 to resemble the scale of the R2. Good predictions will have low PRESS or high Q2. Generally speaking, a model with an R2 (and Q2) value above 0.7 can be considered predictive. It is possible to have negative Q2, which means that your model is not at all predictive or is overfitted.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPLS.Classification}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

@@ -53,3 +53,11 @@ The input mSet object with added heat map showing the correlations between sampl
 \description{
 \code{met.plot_CorrHeatMap_Samples} visualizes the correlations between samples.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotCorrHeatMap}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

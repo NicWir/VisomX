@@ -7,31 +7,28 @@
 met.FilterVariable(
   mSetObj = NA,
   filter = "none",
+  remain.num = NULL,
   qcFilter = "F",
   qc.rsd = 0.25,
-  remain.num = NULL,
   all.rsd = NULL
 )
 }
 \arguments{
 \item{mSetObj}{Enter the name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
 
-\item{filter}{(Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
+\item{filter}{(Character) Select an option for unspecific filtering based on the following ranking criteria:
 \itemize{
-\item \code{"rsd"} filters features with low relative standard deviation across the data set.
+\item \code{"none"} apply no unspecific filtering.
+\item \code{"rsd"} filters features with low relative standard deviation across the dataset.
 \item \code{"nrsd"} is the non-parametric relative standard deviation.
-\item \code{"mean"} filters features with low mean intensity value across the data set.
-\item \code{"median"} filters features with low median intensity value across the data set.
-\item \code{"sd"} filters features with low absolute standard deviation across the data set.
-\item \code{"mad"} filters features with low median absolute deviation across the data set.
-\item \code{"iqr"} filters features with a low inter-quartile range across the data set.
+\item \code{"mean"} filters features with low mean intensity value across the dataset.
+\item \code{"median"} filters features with low median intensity value across the dataset.
+\item \code{"sd"} filters features with low absolute standard deviation across the dataset.
+\item \code{"mad"} filters features with low median absolute deviation across the dataset.
+\item \code{"iqr"} filters features with a low inter-quartile range across the dataset.
 }}
 
-\item{qcFilter}{(Logical) Filter the variables based on the relative standard deviation of features in QC samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.}
-
-\item{qc.rsd}{(Numeric) Define the relative standard deviation cut-off in \%. Variables with a RSD greater than this number will be removed from the data set. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will not be used in the function.}
-
-\item{remain.num}{(Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
+\item{remain.num}{(Numerical) Enter the number of variables to keep in your dataset. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
 \itemize{
 \item \strong{Less than 250 variables:} 5\% will be filtered
 \item \strong{250 - 500 variables:} 10\% will be filtered
@@ -39,14 +36,23 @@ met.FilterVariable(
 \item \strong{More than 1000 variables:} 40\% will be filtered
 }}
 
-\item{all.rsd}{(Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in \%) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.}
+\item{qcFilter}{(Logical) Filter the variables based on the relative standard deviation of features in QC samples (\code{TRUE}), or not (\code{FALSE}). This filter can be applied in addition to other, unspecific filtering methods.}
+
+\item{qc.rsd}{(Numeric) Define the relative standard deviation cut-off in \%. Variables with a RSD greater than this number will be removed from the dataset. It is only necessary to specify this argument if \code{qcFilter} is \code{TRUE}. Otherwise, it will be ignored.}
+
+\item{all.rsd}{(Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in \%) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the dataset. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the dataset. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.}
 }
 \value{
 The input mSet object with filtered data added at mSetObj$dataSet$filt.
 }
 \description{
-\code{met.FilterVariable} filters non-informative variables (i.e., features with very small values, near-constant values, or low repeatability) from the data set, dependent on the user-specified method for filtering. The function applies a filtering method, ranks the variables within the data set, and removes variables based on its rank. The final data set should contain no more than than 5000 variables for effective computing. If more features are present, the IQR filter will be applied to keep only a number of 5000, even if \code{filter = "none"}. Data filtering is performed as part of \code{\link[VisomX]{met.read_data}}.
+\code{met.FilterVariable} filters non-informative variables (i.e., features with very small values, near-constant values, or low repeatability) from the dataset, dependent on the user-specified method for filtering. The function applies a filtering method, ranks the variables within the dataset, and removes variables based on its rank. The final dataset should contain no more than than 5000 variables for effective computing. If more features are present, the IQR filter will be applied to keep only a number of 5000, even if \code{filter = "none"}. Data filtering is performed as part of the data preparation workflow \code{\link[VisomX]{met.read_data}}.
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{FilterVariable}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

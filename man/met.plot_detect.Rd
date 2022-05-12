@@ -7,7 +7,7 @@
 met.plot_detect(
   mSetObj,
   plot = TRUE,
-  imgName = "DensMissPlot",
+  imgName = "Plots/DensMissPlot",
   format = "pdf",
   export = TRUE,
   basesize = 10
@@ -34,4 +34,12 @@ Density and CumSum plots of intensities of proteins with and without missing val
 \description{
 \code{met.plot_detect} generates density and CumSum plots
 of compound intensities with and without missing values.
+}
+\references{
+adapted from \code{\link[DEP]{plot_detect}} (\url{https://bioconductor.org/packages/DEP/}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

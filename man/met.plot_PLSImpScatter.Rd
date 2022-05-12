@@ -2,51 +2,57 @@
 % Please edit documentation in R/metabolomics_plots.R
 \name{met.plot_PLSImpScatter}
 \alias{met.plot_PLSImpScatter}
-\title{Plot PLS important variables}
+\title{Plot PLS important features}
 \usage{
 met.plot_PLSImpScatter(
   mSetObj,
-  imgName = NULL,
-  format = "pdf",
-  dpi = NULL,
+  imgName = "PLS_ImpScatter",
+  format = "png",
+  dpi = 300,
   width = NA,
   feat.nm = "coef.mean",
   vip.nm = c("Comp. 1", "Comp. 2"),
-  vip.thresh = 1,
   plot = TRUE,
   export = FALSE,
+  vip.thresh = 1,
   show.title = FALSE,
-  title = ""
+  title
 )
 }
 \arguments{
-\item{mSetObj}{Input name of the created mSet object after PLS(-DA) (see \code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).}
+\item{mSetObj}{Input name of the created mSet object,
+Data container after partial least squares-discriminant analysis (\code{\link[VisomX]{met.PLSR.Anal}} and \code{\link[VisomX]{met.PLSDA.CV}}).}
 
 \item{imgName}{(Character) Enter a name for the image file (if \code{export = TRUE}).}
 
-\item{format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
+\item{format}{(\code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 
 \item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
 \item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
-\item{feat.nm}{(Character) Indicate the name of the feature. Choose \code{"coef.mean"} for average coefficients, or the name of a sample group in your data set.}
+\item{feat.nm}{(Character) Indicate the name of the feature. Choose \code{"coef.mean"} for average coefficients, or the name of a sample group in your dataset.}
 
-\item{vip.nm}{(Character or character vector) Enter \code{"Comp. 1"}, \code{"Comp. 2"}, etc., depending on the component for which the VIP scores should be shown. If more than one component are indicated in a vector, the average VIP score for all components is calculated.}
+\item{vip.nm}{(Character or a character vector) Choose \code{"Comp. 1"}, \code{"Comp. 2"}, etc., depending on the component for which the VIP scores should be shown. If more than one component are specified (the default is \code{c("Comp. 1", "Comp. 2")}), an average VIP score is calculated.}
 
-\item{vip.thresh}{(Numeric) Enter a chosen relevance threshold for VIP scores. A vertical line will be drawn at the indicated value.}
+\item{plot}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be returned in the RStudio 'Plots' pane?}
 
-\item{plot}{(Logical) Shall the plot be returned in the RStudio 'Plots' pane \code{TRUE} or not \code{FALSE}?}
+\item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF or PNG file?}
 
-\item{export}{(Logical) Shall the plot be exported as PDF or PNG file \code{TRUE} or not \code{FALSE}?}
+\item{vip.thresh}{(Numeric) Draw a vertical line in the plot indicating a chosen VIP relevance threshold (the default is \code{1}).}
 
-\item{show.title}{(Logical) Add a title above the scatter plot \code{TRUE} or not \code{FALSE}.}
+\item{show.title}{(Logical) \code{TRUE} to add a title to the plot, or \code{FALSE} to not.}
 
-\item{title}{(Character) Enter the name of the title (if \code{show.title = TRUE})}
+\item{title}{(Character) Define the title if \code{show.title = TRUE}}
 }
 \value{
-The input mSet object with imp. feature scatter plot added. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\emph{feat.nm})}.
+The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\emph{feat.nm_}.plot)}.
 }
 \description{
-\code{met.plot_PLSImpScatter} creates a scatter plot of features with PLS coefficients on the y-axis and VIP scores on the x-axis.
+\code{met.plot_PLSImpScatter} visualizes the features' importance in the PLS-DA model by comparing VIP scores and coefficients.
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

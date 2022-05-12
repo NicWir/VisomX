@@ -18,18 +18,19 @@ met.PerformFeatureFilter(
 
 \item{mSetObj}{Enter the name of the created mSet object (see \code{\link[MetaboAnalystR]{InitDataObjects}} and \code{\link[MetaboAnalystR]{Read.TextData}}).}
 
-\item{filter}{(Character) Select the filter option. \code{"none"} applies no filtering based on the following ranking criteria:
+\item{filter}{(Character) Select an option for unspecific filtering based on the following ranking criteria:
 \itemize{
-\item \code{"rsd"} filters features with low relative standard deviation across the data set.
+\item \code{"none"} apply no unspecific filtering.
+\item \code{"rsd"} filters features with low relative standard deviation across the dataset.
 \item \code{"nrsd"} is the non-parametric relative standard deviation.
-\item \code{"mean"} filters features with low mean intensity value across the data set.
-\item \code{"median"} filters features with low median intensity value across the data set.
-\item \code{"sd"} filters features with low absolute standard deviation across the data set.
-\item \code{"mad"} filters features with low median absolute deviation across the data set.
-\item \code{"iqr"} filters features with a low inter-quartile range across the data set.
+\item \code{"mean"} filters features with low mean intensity value across the dataset.
+\item \code{"median"} filters features with low median intensity value across the dataset.
+\item \code{"sd"} filters features with low absolute standard deviation across the dataset.
+\item \code{"mad"} filters features with low median absolute deviation across the dataset.
+\item \code{"iqr"} filters features with a low inter-quartile range across the dataset.
 }}
 
-\item{remain.num}{(Numerical) Enter the number of variables to keep in your data set. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
+\item{remain.num}{(Numerical) Enter the number of variables to keep in your dataset. If \code{NULL}, the following empirical rules are applied during data filtering with the methods specified in \code{filter = ""}:
 \itemize{
 \item \strong{Less than 250 variables:} 5\% will be filtered
 \item \strong{250 - 500 variables:} 10\% will be filtered
@@ -39,7 +40,7 @@ met.PerformFeatureFilter(
 
 \item{anal.type}{(Character) Type of analysis. Extracted from mSetObj by higher function at mSetObj$analSet$type.}
 
-\item{all.rsd}{(Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in \%) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the data set. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the data set. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.}
+\item{all.rsd}{(Numeric or \code{NULL}) Apply a filter based on the in-group relative standard deviation (RSD, in \%) or not \code{NULL}. Therefore, the RSD of every feature is calculated for every group in the dataset. If the RSD of a variable in any group exceeds the indicated threshold, it is removed from the dataset. This filter can be applied in addition to other filtering methods and is especially useful to perform on data with technical replicates.}
 }
 \value{
 A list with filtered data and a message to inform about the chosen filtering conditions
@@ -49,4 +50,9 @@ Utility method to perform data filtering, used in higher function
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{PerformFeatureFilter}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

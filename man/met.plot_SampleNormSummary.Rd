@@ -41,3 +41,11 @@ The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_n
 \description{
 \code{met.plot_SampleNormSummary} visualizes the density distributions of samples before and after normalization, transformation, and scaling.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotSampleNormSummary}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

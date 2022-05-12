@@ -7,7 +7,7 @@
 met.plot_missval(
   mSetObj,
   plot = TRUE,
-  imgName = "MissValPlot",
+  imgName = "Plots/MissValPlot",
   format = "pdf",
   export = TRUE,
   fontsize = 12
@@ -34,4 +34,9 @@ The input mSet object with added heatmap indicating whether values are missing (
 \description{
 \code{met.plot_missval} generates a heatmap of compounds
 with missing values to discover whether values are missing at random or not.
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

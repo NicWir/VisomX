@@ -39,3 +39,11 @@ The input mSet object with added permutation test plot. The plot can be retrieve
 \description{
 Permutation test is a technique for testing a hypothesis of no effect, when the distribution of the test statistic is unknown. The objective of this test is to confirm that the initial model is superior to other models obtained by permuting the class labels and randomly assigning them to different individuals or, in other words, to answer the question "what is the model's performance if the groups are formed randomly".
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPLS.Permutation}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

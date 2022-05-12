@@ -68,3 +68,11 @@ The input mSet object with added heat map. The plot can be retrieved from within
 \description{
 \code{met.plot_heatmap} plots a heat map with optional filtering for top features based on results from t-tests/ANOVA, VIP or randomforest.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotHeatMap}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

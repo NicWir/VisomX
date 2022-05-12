@@ -36,3 +36,8 @@ The input mSet object with added 3D scatter plot. The plot can be retrieved from
 \description{
 \code{met.plot_PLS3DLoading} visualizes which features are responsible for the patterns seen among the samples in partial least squares-discriminant analysis.
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

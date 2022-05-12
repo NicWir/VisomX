@@ -6,9 +6,9 @@
 \usage{
 met.normalize(
   mSetObj = NA,
-  rowNorm,
-  transNorm,
-  scaleNorm,
+  rowNorm = NULL,
+  transNorm = NULL,
+  scaleNorm = NULL,
   ref = NULL,
   norm.vec = NULL,
   ratio = FALSE,
@@ -18,13 +18,32 @@ met.normalize(
 \arguments{
 \item{mSetObj}{Enter the name of the created mSet object (see \code{\link[VisomX]{met.read_data}}).}
 
-\item{rowNorm}{(Character) Select the option for row-wise normalization, "QuantileNorm" for Quantile Normalization, "CompNorm" for Normalization by a reference feature, "SumNorm" for Normalization to constant sum of intensities, "MedianNorm" for normalization to sample median, and "SpecNorm" for Normalization by a sample-specific factor.}
+\item{rowNorm}{(Character) Select the option for row-wise normalization:
+\itemize{
+\item \code{"GroupPQN"} for probabilistic quotient normalization by a reference group
+\item \code{"SamplePQN"} for probabilistic quotient normalization by a reference sample
+\item \code{"QuantileNorm"} for Quantile Normalization
+\item \code{"CompNorm"} for normalization by a reference feature
+\item \code{"SumNorm"} for normalization to constant sum of intensities
+\item \code{"MedianNorm"} for normalization to sample median
+\item \code{"SpecNorm"} for normalization by a sample-specific factor
+}}
 
-\item{transNorm}{(Character) Select option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.}
+\item{transNorm}{(Character) Select option to transform the data:
+\itemize{
+\item \code{"LogNorm"} for Log10 normalization
+\item \code{"CrNorm"} Cubic Root Transformation
+}}
 
-\item{scaleNorm}{(Character) Select option for scaling the data, "MeanCenter" for Mean Centering, "AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.}
+\item{scaleNorm}{(Character) Select option for scaling the data:
+\itemize{
+\item \code{"MeanCenter"} for Mean Centering
+\item \code{"AutoNorm"} for Autoscaling
+\item \code{"ParetoNorm"} for Pareto Scaling
+\item \code{"RangeNorm"} for Range Scaling
+}}
 
-\item{ref}{(Character) Enter the name of the reference sample or the reference feature.}
+\item{ref}{(Character) Enter the name of the reference sample or the reference feature (if \code{rowNorm = "GroupPQN"}, \code{"SamplePQN"}, or \code{"CompNorm"}.}
 
 \item{norm.vec}{(Numeric vector) Vector with sample-specific scaling factors. Only applicable for \code{rowNorm = "SpecNorm"}.}
 
@@ -40,4 +59,9 @@ The input mSet object with normalized data at mSetObj$dataSet$norm.
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{Normalization}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

@@ -57,3 +57,11 @@ The input mSet object with added scatter plot. The plot can be retrieved from wi
 \description{
 \code{met.plot_PLS2DScore} visualizes clusters of samples based on their similarity in partial least squares-discriminant analysis.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPLS2DScore}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

@@ -6,6 +6,7 @@
 #' @param pkgname package name
 .onAttach <- function (libname, pkgname){
   options(rgl.debug = TRUE)
+  Cairo::CairoFonts(regular="Arial:style=Regular",bold="Arial:style=Bold",italic="Arial:style=Italic",bolditalic = "Arial:style=Bold Italic",symbol = "Symbol")
   k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")
   k0 <- "\n"
   k2 <- paste("https://github.com/NicWir/VisomX")
@@ -179,7 +180,11 @@ ReplaceMissingByLoD <- function (int.mat){
   int.mat <- as.matrix(int.mat)
   rowNms <- rownames(int.mat)
   colNms <- colnames(int.mat)
-  int.mat <- apply(int.mat, 2, .replace.by.lod)
+  int.mat <- apply(int.mat, 2, function (x){
+    lod <- min(x[x > 0], na.rm = T)/5
+    x[x == 0 | is.na(x)] <- lod
+    return(x)
+  })
   rownames(int.mat) <- rowNms
   colnames(int.mat) <- colNms
   return(int.mat)
@@ -257,6 +262,8 @@ Get.Fstat <- function (x, fac, var.equal = TRUE) {
 }
 
 GetColorSchema <- function (my.cls, grayscale = F){
+  pal_18 <- c("#e6194B", "#3cb44b", "#4363d8", "#42d4f4", "#f032e6", "#ffe119", "#911eb4", "#f58231", "#bfef45",
+              "#fabebe", "#469990", "#e6beff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075")
   lvs <- levels(my.cls)
   grp.num <- length(lvs)
   if (grayscale) {
@@ -333,6 +340,15 @@ GetRGBColorGradient <- function (vals) {
   return(as.vector(ord.cols))
 }
 
+my.col2rgba <- function (cols, alpha)
+{
+  rgbcols <- grDevices::col2rgb(cols)
+  rgbcols <- rbind(rgbcols, alpha)
+  return(as.vector(apply(rgbcols, 2, function(x) {
+    paste("rgba(", paste(x, collapse = ","), ")", sep = "")
+  })))
+}
+
 all.numeric <- function (x, what = c("test", "vector"), extras = c(".", "NA")) {
   what <- match.arg(what)
   old <- options(warn = -1)
@@ -347,4 +363,51 @@ all.numeric <- function (x, what = c("test", "vector"), extras = c(".", "NA")) {
   else if (isnum)
     as.numeric(x)
   else x
+}
+
+#'Compute within group and between group sum of squares
+#'(BSS/WSS) for each row of a matrix which may have NA
+#'@description Columns have labels, x is a numeric vector,
+#'cl is consecutive integers
+#'@param x Numeric vector
+#'@param cl Columns
+#'@author Jeff Xia\email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+Get.bwss <- function (x, cl)
+{
+  K <- max(cl) - min(cl) + 1
+  tvar <- var.na(x)
+  tn <- sum(!is.na(x))
+  wvar <- wn <- numeric(K)
+  for (i in (1:K)) {
+    if (sum(cl == (i + min(cl) - 1)) == 1) {
+      wvar[i] <- 0
+      wn[i] <- 1
+    }
+    if (sum(cl == (i + min(cl) - 1)) > 1) {
+      wvar[i] <- var.na(x[cl == (i + min(cl) - 1)])
+      wn[i] <- sum(!is.na(x[cl == (i + min(cl) - 1)]))
+    }
+  }
+  WSS <- sum.na(wvar * (wn - 1))
+  TSS <- tvar * (tn - 1)
+  (TSS - WSS)/WSS
+}
+
+sum.na <- function(x,...){
+  res <- NA
+  tmp <- !(is.na(x) | is.infinite(x))
+  if(sum(tmp) > 0)
+    res <- sum(x[tmp])
+  res
+}
+
+var.na <- function(x){
+  res <- NA
+  tmp <- !(is.na(x) | is.infinite(x))
+  if(sum(tmp) > 1){
+    res <- var(as.numeric(x[tmp]))
+  }
+  res
 }

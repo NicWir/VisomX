@@ -32,3 +32,8 @@ Perform fold change analysis, method can be mean or median
 \references{
 adapted from \code{\link[MetaboAnalystR]{FC.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

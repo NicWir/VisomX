@@ -9,7 +9,7 @@ met.initialize(data.type = "conc", anal.type = "stat", paired = FALSE)
 \arguments{
 \item{data.type}{(Character) The type of data, either "list" (Compound lists), "conc" (Compound concentration data), "specbin" (Binned spectra data), "pktable" (Peak intensity table), "nmrpeak" (NMR peak lists), "mspeak" (MS peak lists), or "msspec" (MS spectra data).}
 
-\item{anal.type}{(Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg"}
+\item{anal.type}{(Character) Indicate the analysis module to be performed: "stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap", or "pathinteg".}
 
 \item{paired}{(Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).}
 }
@@ -17,8 +17,13 @@ met.initialize(data.type = "conc", anal.type = "stat", paired = FALSE)
 The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 }
 \description{
-This functions handles the construction of an mSetObj object for storing data for further processing and analysis. It is necessary to utilize this function to provide downstream functions with information about type of data and the type of analysis you will perform, as well as to provide the required data structure. This initialization is performed as part of \code{\link[VisomX]{met.read_data}}.
+This functions handles the construction of an mSetObj object for storing data for further processing and analysis. It is necessary to utilize this function to provide downstream functions with information about type of data and the type of analysis you will perform, as well as to provide the required data structure. This initialization is performed as part of the data preparation workflow \code{\link[VisomX]{met.read_data}}.
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{Initialize}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

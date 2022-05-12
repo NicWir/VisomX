@@ -16,3 +16,8 @@ A 3D scatter plot. To close the graphics device, execute \code{rgl::close3d()}.
 \description{
 \code{met.print_PLS3DScore} opens a new graphics device to show the generated 3D PLS-DA score plot.
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

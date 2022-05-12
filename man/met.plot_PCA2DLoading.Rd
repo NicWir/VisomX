@@ -45,3 +45,11 @@ The input mSet object with added scatter plot. The plot can be retrieved from wi
 \description{
 \code{met.plot_PCA2DLoading} visualizes which features are responsible for the patterns seen among the samples in principal component analysis.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPCALoading}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

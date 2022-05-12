@@ -19,9 +19,6 @@ output:
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
-library(knitr)
-library(kableExtra)
-opts_knit$set(root.dir = str_replace_all(tempdir(), "\\\\", "/"))
 knitr::opts_chunk$set(dev = "pdf")
 knit_table <- function(df){
   if (is_html_output()) {
@@ -31,7 +28,7 @@ knit_table <- function(df){
   } else {
     
     colnames(df) <- colnames(df) %>% str_replace_all(.,"<br>", "\n")
-    df %>% kable("latex", align = "c", booktabs = T, escape = F) %>% column_spec(column=1, width = "2.5cm") %>% column_spec(column=2, width = "4.5 cm")%>% column_spec(column=3, width = "3.2cm") %>% column_spec(column=4, width = "2.5cm") %>% column_spec(column=5, width = "2.2cm")
+    df %>% kable("latex", align = "c", booktabs = T, escape = F) %>% column_spec(column=1, width = "3.5cm") %>% column_spec(column=2, width = "4.2 cm")%>% column_spec(column=3, width = "3.0cm") %>% column_spec(column=4, width = "2.0cm") %>% column_spec(column=5, width = "2.1cm") %>% column_spec(column=6, width = "1.7cm")  
   }
 }
 ```
@@ -57,15 +54,23 @@ Parameters used for the analysis:
 * (adjusted) p-value <= `r colFmt(args[['alpha']],'blue')`
 * |logFC| >= `r colFmt(args[['lfc']],'blue')`
 * Class order matters (i.e. implying consecutive time points, disease severity, etc.): `r colFmt(mSet_list[[1]][["analSet"]][["plsda"]][["class_order"]],'blue')`
+*   PLS was performed on: `r colFmt(if_else(mSet_list[[1]][["analSet"]][["plsda"]][["data.type"]]=="anova", "significant features based on ANOVA.", "all features (including compounds that are non-significant according to ANOVA)."), 'blue')`
 * tested combinations:
-```{r norm_conditions, indent="  ", echo=FALSE, warning=F, message=F, results='asis'}
-norm_conditions <- data.frame("Sample normalization method"="", "Data transformation method"="", "Data scaling method"="", "PLS-DA<br>VIP(comp. 1) > 1"="", "ANOVA<br>significant"="", stringsAsFactors = F, check.names = F)
+```{r norm_conditions, echo=FALSE, warning=F, message=F, results='asis'}
+norm_conditions <- data.frame("Sample normalization method"="", "Data transformation method"="", "Data scaling method"="", ref = "", "PLS-DA<br>VIP(comp. 1) > 1"="", "ANOVA<br>significant"="", stringsAsFactors = F, check.names = F)
 for (i in 1:length(list_names)) {
-     norm_conditions[i,1]<- str_replace(mSet_list[[i]][["dataSet"]][["rownorm.method"]], "N/A", "none")
-     norm_conditions[i,2]<- str_replace(mSet_list[[i]][["dataSet"]][["trans.method"]], "N/A", "none")
-     norm_conditions[i,3]<- str_replace(mSet_list[[i]][["dataSet"]][["scale.method"]], "N/A", "none")
-     norm_conditions[i,4]<- length(mSet_list[["vip_sig_comp1"]][[i]])
-     norm_conditions[i,5]<- length(mSet_list[["anova_significant"]][[i]])
+  norm_conditions[i, 1] <-
+    str_replace(mSet_list[[i]][["dataSet"]][["rownorm.method"]], "N/A", "none")
+  norm_conditions[i, 2] <-
+    str_replace(mSet_list[[i]][["dataSet"]][["trans.method"]], "N/A", "none")
+  norm_conditions[i, 3] <-
+    str_replace(mSet_list[[i]][["dataSet"]][["scale.method"]], "N/A", "none")
+  norm_conditions[i, 4] <-
+    str_replace(args[["ref_list"]][[i]][1], "NULL", "none") %>% str_replace(., "_", "\\\\_")
+  norm_conditions[i, 5] <-
+    length(mSet_list[["vip_sig_comp1"]][[i]])
+  norm_conditions[i, 6] <-
+    length(mSet_list[["anova_significant"]][[i]])
 }
 knit_table(norm_conditions)
 ```
@@ -76,20 +81,20 @@ knit_table(norm_conditions)
 The scientific report by Wei et al. (and citations therein) provide assistance in choosing a method that is the most appropriate for your data \footnote{Wei R, Wang J, Su M, Jia E, Chen S, Chen T, Ni Y. \textit{Missing Value Imputation Approach for Mass Spectrometry-based Metabolomics Data.}, Scientific Reports 2018 8, 663}.
 
 ```{r MissVal_Heatmap_plot, fig.width=7, echo=FALSE, fig.align='center'}
-if(!is.null(mSet_list[[1]][["imgSet"]][["missval_heatmap"]])){
-  print(mSet_list[[1]][["imgSet"]][["missval_heatmap"]])
+if(!is.null(mSet_list[[1]][["imgSet"]][["missval_heatmap.plot"]])){
+  print(mSet_list[[1]][["imgSet"]][["missval_heatmap.plot"]])
 }
 ```
 ```{r MissVal_Density_plot, fig.width=7, echo=FALSE, fig.align='center'}
-if(!is.null(mSet_list[[1]][["imgSet"]][["missval_density"]])){
-  gridExtra::grid.arrange(mSet_list[[1]][["imgSet"]][["missval_density"]])
+if(!is.null(mSet_list[[1]][["imgSet"]][["missval_density.plot"]])){
+  gridExtra::grid.arrange(mSet_list[[1]][["imgSet"]][["missval_density.plot"]])
 }
 ```
 \pagebreak
 
 ## Data Filtering
  The purpose of the data filtering is to identify and remove variables that are unlikely to be of use when modeling the data. No phenotype information are used in the filtering process, so the result can be used with any downstream analysis. Data filtering is strongly recommended for datasets with a large number of variables (> 250) or datasets that contain much noise (i.e., chemometrics data). This step usually improves the results \footnote{Hackstadt AJ, Hess AM. \textit{Filtering for increased power for microarray data analysis}, BMC Bioinformatics. 2009; 10: 11}.\
-`r if_else(is.null(mSet_list[[1]][["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSet_list[[1]][["msgSet"]][["filter.msg"]], "Further feature filtering", "Metabolites were filtered"))`
+`r if_else(is.null(mSet_list[[1]][["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSet_list[[1]][["msgSet"]][["filter.msg"]], "Further feature filtering", "Features were filtered"))`
  
 ## Data Transformation
  There are several reasons why it is often necessary to normalize metabolomics data before statistical analysis. First, normalization reduces systematic or technical bias. Second, metabolite concentrations span typically several orders of magnitude. Therefore, the variance of the most abundant metabolites tend to dominate the variance-covariance matrix and can mask quantatively small but significant signals. This can lead to lead to misidentification of or an inability to identify significant changes. Transformations are generally applied to correct for heteroscedasticity, to convert multiplicative relations into additive relations (relations between variables are not necessarily additive but can also be multiplicative), and to make skewed distributions (more) symmetric, a requirement for many statistical methods.
@@ -126,22 +131,47 @@ Anal Chem 78 (13);4281 - 4290}}
 The effect of the chosen normalization procedures on the data can be visualized with the following diagnostic plots.
 
 ### Feature summaries
-```{r FeatureNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
-dir.create("Plots", showWarnings = F)
-tmp_list <- lapply(1:length(list_names), function(x) met.plot_FeatureNormSummary(mSetObj = mSet_list[[x]], imgName = paste0("Plots/FeatureNormSummary_", x, "_", names(mSet_list)[x]), 
-                                                                                      plot = F, show_prenorm = F, export = T, format = "pdf"))
+```{r FeatureNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE, message=FALSE}
+dir.create(paste0(tempdir(), "/Plots"), showWarnings = F)
+tmp_list <-
+  lapply(1:length(list_names), function(x)
+    suppressMessages(met.plot_FeatureNormSummary(
+      mSetObj = mSet_list[[x]],
+      imgName = paste0(tempdir(), "/Plots/FeatureNormSummary_", x, "_", names(mSet_list)[x]),
+      plot = F,
+      show_prenorm = F,
+      export = T,
+      format = "pdf"
+    )))
 ```
 ```{r FeatureNormSummary_plot, out.width = "31%", fig.show="hold", echo=FALSE, fig.align='center'}
 Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots"), 
                      pattern = "^Feature(.*).pdf$",
                      full.names = TRUE)
 
-knitr::include_graphics(Files_list,dpi = 300)
+knitr::include_graphics(Files_list, dpi = 300)
 ```
 \pagebreak
 ### Sample summaries
 ```{r SampleNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
-tmp_list <- lapply(1:length(list_names), function(x) met.plot_SampleNormSummary(mSetObj = mSet_list[[x]], imgName = paste0("Plots/SampleNormSummary_", x, "_", names(mSet_list)[x]), plot = F, show_prenorm = F, export = T, format = "pdf"))
+tmp_list <-
+  lapply(1:length(list_names), function(x)
+    suppressMessages(
+      met.plot_SampleNormSummary(
+        mSetObj = mSet_list[[x]],
+        imgName = paste0(
+          tempdir(),
+          "/Plots/SampleNormSummary_",
+          x,
+          "_",
+          names(mSet_list)[x]
+        ),
+        plot = F,
+        show_prenorm = F,
+        export = T,
+        format = "pdf"
+      )
+    ))
 ```
 ```{r SampleNormSummary_plot, out.width = "28%", fig.show="hold", echo=FALSE, fig.align='center'}
 Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots"), 
@@ -252,7 +282,7 @@ knitr::include_graphics(Files_list,dpi = 300)
 \pagebreak
 
 #### Partial Least Squares-Discriminant Analysis (PLS-DA) - Important Features
-
+\
 There are two variable importance measures in PLS-DA. The first, Variable Importance in Projection (or Variable Influence in Projectio, _VIP_) is a weighted sum of squares of the PLS loadings taking into account the amount of explained Y-variation in each dimension (i.e., for each PLS component)\footnote{Andersen C. M., and Bro R. \textit{Variable selection in regression-a tutorial}, Journal of Chemometrics, 24(11-12), 728–737 (2010)}. A variable with a VIP Score close to or greater than 1 can be considered important in a given model. The other importance measure is based on the weighted sum of PLS-regression. The weights are a function of the reduction of the sums of squares across the number of PLS components. For analyses with more than two groups, the same number of predictors will be built for each group. Therefore, the coefficient of each feature will be different depending on which group you want to predict. The average of the feature coefficients are used to indicate the overall coefficient-based importance.
   You can have a high VIP if feature x explains a large part of the variability in the data (__X__), and at the same time have low coefficients for x if it has a small effect on the response variable y. Wold et al. 2001 use the VIP as well as the coefficients to prune the model to eliminate unimportant variables. They do this by eliminating the x variables with low VIP and low coefficients\footnote{Svante Wold S., Sjöström M., Eriksson L. \textit{PLS-regression: a basic tool of chemometrics}, Chemometrics and Intelligent Laboratory Systems, 58:2, 109-130 (2001)}.
 
@@ -260,7 +290,7 @@ There are two variable importance measures in PLS-DA. The first, Variable Import
 w = 8; h = w*1.1
 for(i in 1:length(list_names)){
   pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLS-ImpScatter_", i, "_", list_names[i],".pdf"), width = w, height = h, bg = "white", onefile = FALSE)
-  print(mSet_list[[i]][["imgSet"]][["pls.ImpScatter_plot_coef.mean"]])
+  print(mSet_list[[i]][["imgSet"]][["pls.ImpScatter_plot_coef.mean.plot"]])
   dev.off()
 }
 
@@ -272,7 +302,7 @@ knitr::include_graphics(Files_list,dpi = 300)
 \pagebreak
 
 #### Partial Least Squares-Discriminant Analysis (PLS-DA) – Cross Validation
-
+\
 Q2 is an estimate of the predictive ability of the model, and is calculated via cross-validation (CV), where a fraction of data is held back, and the model trained on the rest. In each CV, the predicted data are compared with the original data, and the sum of squared errors is calculated. The prediction error is then summed over all samples (Predicted Residual Sum of Squares or PRESS). For convenience, the PRESS is divided by the initial sum of squares and subtracted from 1 to resemble the scale of the R2. Good predictions will have low PRESS or high Q2. Generally speaking, a model with an R2 (and Q2) value above 0.7 can be considered predictive. It is possible to have negative Q2, which means that your model is not at all predictive or is overfitted. For more details, refer to an excellent paper by Szymańska, et al\footnote{Szymańska E, Saccenti E, Smilde AK, Westerhuis JA. \textit{Double-check: validation of diagnostic statistics for PLS-DA models in metabolomics studies}, Metabolomics. 2012 Jun;8(Suppl 1):3-16.}.
 ```{r PLS_CrossValidation_plot, out.width="49%", echo=FALSE, fig.show='hold'}
 dir.create(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), showWarnings = F)
@@ -290,11 +320,11 @@ knitr::include_graphics(Files_list,dpi = 300)
 ```
 \pagebreak
 
-#### Partial Least Squares-Discriminant Analysis (PLS-DA) – Permutation Test
- Permutation test is a technique for testing a hypothesis of no effect, when the distribution of the test statistic is unknown. The objective of this test is to confirm that the initial model is superior to other models obtained by permuting the class labels and randomly assigning them to different individuals or, in other words, to answer the question "what is the model's performance if the groups are formed randomly". In each permutation, a PLS-DA model is built between the data (X) and the permuted class labels (Y) using the optimal number of components determined by cross validation for the model based on the original class assignment. The initial model is statistically compared to all the other randomly-assigned models. The indicated test statistic is based on prediction accuracy during training. If the observed test statistic is part of the distribution based on the permuted class assignments, the class discrimination cannot be considered significant from a statistical point of view. The further away it is to the right of the distribution, the more significant the separation between the groups is. The p-value is calculated as the proportion of the times that class separation based on randomly labeled sample is at least as good as the one based on the original data (one-sided p value).
+#### Partial Least Squares-Discriminant Analysis (PLS-DA) – Permutation Test\
+Permutation test is a technique for testing a hypothesis of no effect, when the distribution of the test statistic is unknown. The objective of this test is to confirm that the initial model is superior to other models obtained by permuting the class labels and randomly assigning them to different individuals or, in other words, to answer the question "what is the model's performance if the groups are formed randomly". In each permutation, a PLS-DA model is built between the data (X) and the permuted class labels (Y) using the optimal number of components determined by cross validation for the model based on the original class assignment. The initial model is statistically compared to all the other randomly-assigned models. The indicated test statistic is based on prediction accuracy during training. If the observed test statistic is part of the distribution based on the permuted class assignments, the class discrimination cannot be considered significant from a statistical point of view. The further away it is to the right of the distribution, the more significant the separation between the groups is. The p-value is calculated as the proportion of the times that class separation based on randomly labeled sample is at least as good as the one based on the original data (one-sided p value).\
  A relatively large sample size is required in order to reliably estimate the empirical p values. When your sample size is small, it is better to use unsupervised methods (such as PCA) and simple but more robust statistical tests (such as t-tests or ANOVA), due to the tendency of supervised methods (such as PLS-DA) to overfitting.
 ```{r PLS_Permutation_createFig, echo=FALSE}
-tmp_list <- lapply(1:length(list_names), function(x) met.plot_PLS.Permutation(mSetObj = mSet_list[[x]], imgName = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-Permutation_", x, "_", names(mSet_list)[x]), plot=F, export = T, format = "pdf", dpi = 110, title = TRUE))
+tmp_list <- lapply(1:length(list_names), function(x) suppressMessages(met.plot_PLS.Permutation(mSetObj = mSet_list[[x]], imgName = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA/PLSDA-Permutation_", x, "_", names(mSet_list)[x]), plot=F, export = T, format = "pdf", dpi = 110, title = TRUE)))
 ```
 ```{r PLS_Permutation_plot, out.width = "32%", fig.show='hold', echo=FALSE, fig.align='center'}
 Files_list <- list.files(path = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/PLSDA"), 
@@ -305,13 +335,14 @@ knitr::include_graphics(Files_list,dpi = 300)
 \pagebreak
 
 ## Venn Diagram - Overlap between significantly differing features (ANOVA) and PLS-DA - VIP(Component 1) > `r vip.thresh`
- Another important indication for the robustness of a PLS-DA model is that the features that drive the class separation are significant according to the ANOVA analysis (and have high loadings in PCA analysis). Unsignificant features with a VIP value greater than one are listed on the right side of each plot. A strong dicrepancy between features highlighted by ANOVA, PLS-DA, and PCA suggests a lack of significance within the data or a lack of proper data normalization. In addition to choosing appropriate data normalization and transformation procedures, you can also increase the 'significance' of your PLS model by running the PLS(-DA) analyses with only significant compounds based on ANOVA. For this, add _pls.data = "anova.sig"_ as argument to the workflow functions of _VisomX_ or _data = "anova.sig"_ as argument to met.PLSR.Anal and met.PLSDA.CV.
+ Another important indication for the robustness of a PLS-DA model is that the features that drive the class separation are significant according to the ANOVA analysis (and have high loadings in PCA analysis). Unsignificant features with a VIP value greater than one are listed on the right side of each plot. A strong dicrepancy between features highlighted by ANOVA, PLS-DA, and PCA suggests a lack of significance within the data or a lack of proper data normalization. In addition to choosing appropriate data normalization and transformation procedures, you can also increase the 'significance' of your PLS model by running the PLS(-DA) analyses with only significant compounds based on ANOVA. For this, add _pls.data = "anova"_ as argument to the workflow functions of _VisomX_ or _data = "anova"_ as argument to met.PLSR.Anal and met.PLSDA.CV.
 ```{r Venn_ANOVA-signif_VIP1_plot, out.width="50%", echo=FALSE, fig.show='hold'}
 w = 10; h = 5.5
-for(i in 1:length(names_common)){
 dir.create(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/Venn_Diagrams"), showWarnings = F)
+
+for(i in 1:length(names_common)){
   pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/Venn_Diagrams/Venn_ANOVA-signif_vs_PLSDA-VIP1_", i, "_", names_common[i],".pdf"), width = w, height = h, bg = "white", onefile = FALSE)
-  print(mSet_list[["plot_venn_anova_vs_vip1"]][[i]])
+  print(mSet_list[["plot.venn_anova_vs_vip1"]][[i]])
   dev.off()
 }
 

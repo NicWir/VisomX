@@ -39,3 +39,11 @@ The input mSet object with added line plot. The plot can be retrieved from withi
 \description{
 \code{met.plot_PCAScree} visualizes the proportion of variance explained for each principal component.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotPCAScree}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

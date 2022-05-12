@@ -36,3 +36,8 @@ The input mSet object with added 3D scatter plot. The plot can be retrieved from
 \description{
 \code{met.plot_PCA3DScore} visualizes clusters of samples based on their similarity in principal component analysis.
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

@@ -18,3 +18,8 @@ The input mSet object with prenorm data table at mSetObj$dataSet$prenorm.
 \references{
 adapted from \code{\link[MetaboAnalystR]{PreparePrenormData}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

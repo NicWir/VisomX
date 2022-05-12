@@ -26,7 +26,7 @@ Data container after normalization (\code{\link[VisomX]{met.normalize}}).}
 
 \item{dpi}{(Numeric) resolution of the image file (if \code{export = TRUE}). If \code{NULL}, the resolution will be chosen automatically based on the  chosen file format (300 dpi for PNG, 72 dpi for PDF)}
 
-\item{pre.inx}{(Numeric vector, or \code{NULL}) Provide index of compounds in your data set that shall be diplayed with box plots. If \code{NULL}, the compounds with minimum and maximum values as well as up to 50 additional features are selected automatically.}
+\item{pre.inx}{(Numeric vector, or \code{NULL}) Provide index of compounds in your dataset that shall be diplayed with box plots. If \code{NULL}, the compounds with minimum and maximum values as well as up to 50 additional features are selected automatically.}
 
 \item{width}{(Numeric) width of the the image file in inches (if \code{export = TRUE}).}
 
@@ -43,4 +43,12 @@ The plot can be retrieved from within R via \code{print(mSetObj$imgSet$summary_n
 }
 \description{
 \code{met.plot_FeatureNormSummary} visualizes the density distributions of features before and after normalization, transformation, and scaling.
+}
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotFeatureNormSummary}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

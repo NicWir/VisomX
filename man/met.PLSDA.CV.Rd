@@ -6,7 +6,8 @@
 \usage{
 met.PLSDA.CV(
   mSetObj = NA,
-  methodName = "CV",
+  methodName = "LOOCV",
+  k = 5,
   compNum = GetDefaultPLSCVComp(mSetObj),
   choice = "Q2",
   data = "all"
@@ -18,14 +19,16 @@ met.PLSDA.CV(
 \item{methodName}{(Character) Enter one of two methods for PLS-DA model (cross) validation:
 \itemize{
 \item \code{"LOOCV"} performs leave-one-out cross validation
-\item \code{"CV"} performs 10-fold cross validation.
+\item \code{"CV"} performs k-fold cross validation.
 }}
+
+\item{k}{(Numeric) The number of (randomized) groups that the dataset is to be split into during cross validation if \code{methodName = "CV"}.}
 
 \item{compNum}{Number of components used for model validation (detected automatically).}
 
 \item{choice}{(Character) Choose the criterion used to estimate the predictive ability of the model, \code{"Q2"} or \code{"R2"}.}
 
-\item{data}{(Character) Enter \code{"all"} to train the PLS-DA model on your whole (filtered and normalized) data set or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.}
+\item{data}{(Character) Enter \code{"all"} to train the PLS(-DA) model on your whole (filtered and normalized) dataset or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.}
 }
 \value{
 The input mSet object with the results of PLS-DA at mSetObj$analSet$plsda.
@@ -35,4 +38,9 @@ The input mSet object with the results of PLS-DA at mSetObj$analSet$plsda.
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{PLSDA.CV}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

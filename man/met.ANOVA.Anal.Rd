@@ -20,7 +20,7 @@ met.ANOVA.Anal(
 
 \item{thresh}{(Numeric) From 0 to 1, indicate the p-value threshold.}
 
-\item{post.hoc}{(Character) Enter the name of the post-hoc test, "fisher" or "tukey".}
+\item{post.hoc}{(Character) Enter the name of the post-hoc test, \code{"fisher"} or \code{"tukey"}.}
 
 \item{all_results}{(Logical) If \code{TRUE}, it the ANOVA results for all compounds with no post-hoc tests performed will be written as CSV file "anova_all_results.csv".}
 
@@ -34,4 +34,9 @@ ANOVA analysis
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{ANOVA.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

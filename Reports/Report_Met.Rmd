@@ -15,10 +15,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(rgl, quietly = TRUE)
-library(knitr)
-knitr::knit_hooks$set(webgl = hook_webgl)
-knitr::opts_knit$set(root.dir = str_replace_all(tempdir(), "\\\\", "/"))
+knitr::knit_hooks$set(webgl = rgl::hook_webgl)
 knitr::opts_chunk$set(dev = "pdf")
 ```
 
@@ -36,7 +33,7 @@ Samples were grouped into *`r length(levels(mSetObj[["dataSet"]][["prenorm.cls"]
 
 Parameters used for the analysis:
 
--   `r if_else(is.null(mSetObj[["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSetObj[["msgSet"]][["filter.msg"]], "Further feature filtering", "Metabolites were filtered"))`
+-   `r if_else(is.null(mSetObj[["msgSet"]][["filter.msg"]]), "No data filtering was performed.", str_replace(mSetObj[["msgSet"]][["filter.msg"]], "Further feature filtering", "Metabolites were filtered"))` 
 -   *`r colFmt(str_match_all(mSetObj[["msgSet"]][["missing.msg"]], "of\\s*(.*?)\\s* \\(")[[1]][2],'blue')`* `r str_replace(mSetObj[["msgSet"]][["replace.msg"]], "variable", "metabolite")`
 -   Data transformation method: `r colFmt(mSetObj[["dataSet"]][["trans.method"]],'blue')`
 -   Data scaling method: `r colFmt(mSetObj[["dataSet"]][["scale.method"]],'blue')`
@@ -44,7 +41,7 @@ Parameters used for the analysis:
 -   (adjusted) p-value \<= `r colFmt(args[['alpha']],'blue')`
 -   \|logFC\| >= `r colFmt(args[['lfc']],'blue')`
 -   Class order matters (i.e., implying consecutive time points, disease severity, etc.): `r colFmt(mSetObj[["analSet"]][["plsda"]][["class_order"]],'blue')` 
--   PLS was performed on: `r if_else(mSetObj[["analSet"]][["plsda"]][["data.type"]]=="anova.sig", "significant features based on ANOVA\\.", "all features (including compounds that are non-significant according to ANOVA)\\.")`
+-   PLS was performed on: `r if_else(mSetObj[["analSet"]][["plsda"]][["data.type"]]=="anova", "significant features based on ANOVA.", "all features (including compounds that are non-significant according to ANOVA).")`
 \pagebreak
 
 ## Missing value imputations
@@ -53,14 +50,14 @@ Too many zeroes or missing values will cause difficulties for downstream analysi
 The scientific report by Wei et al. (and citations therein) provide assistance in choosing a method that is the most appropriate for your data \footnote{Wei R, Wang J, Su M, Jia E, Chen S, Chen T, Ni Y. \textit{Missing Value Imputation Approach for Mass Spectrometry-based Metabolomics Data.}, Scientific Reports 2018 8, 663}.
 
 ```{r MissVal_Heatmap_plot, fig.width=7, echo=FALSE, fig.align='center'}
-if(!is.null(mSetObj[["imgSet"]][["missval_heatmap"]])){
-  print(mSetObj[["imgSet"]][["missval_heatmap"]])
+if(!is.null(mSetObj[["imgSet"]][["missval_heatmap.plot"]])){
+  print(mSetObj[["imgSet"]][["missval_heatmap.plot"]])
 }
 ```
 
 ```{r MissVal_Density_plot, fig.width=7, echo=FALSE, fig.align='center'}
-if(!is.null(mSetObj[["imgSet"]][["missval_density"]])){
-  gridExtra::grid.arrange(mSetObj[["imgSet"]][["missval_density"]])
+if(!is.null(mSetObj[["imgSet"]][["missval_density.plot"]])){
+  gridExtra::grid.arrange(mSetObj[["imgSet"]][["missval_density.plot"]])
 }
 ```
 
@@ -111,27 +108,45 @@ The effect of the chosen normalization procedures on the data can be visualized 
 
 ### Feature summaries
 
-```{r FeatureNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
-dir.create("Plots", showWarnings = F)
-tmp_list <- met.plot_FeatureNormSummary(mSetObj, imgName = paste0("Plots/FeatureNormSummary"), 
-                                        plot = F, show_prenorm = T, export = T, format = "pdf")
+```{r FeatureNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE, message=FALSE}
+dir.create(paste0(tempdir(),"/Plots"), showWarnings = F)
+tmp_list <-
+  suppressMessages(
+    met.plot_FeatureNormSummary(
+      mSetObj,
+      imgName = paste0(tempdir(), "/Plots/FeatureNormSummary"),
+      plot = F,
+      show_prenorm = T,
+      export = T,
+      format = "pdf"
+    )
+  )
 ```
 
 ```{r FeatureNormSummary_plot, echo=FALSE, fig.align='center'}
-knitr::include_graphics(paste0(getwd(),"/Plots/FeatureNormSummary.pdf"),dpi = 300)
+knitr::include_graphics(paste0(tempdir(),"/Plots/FeatureNormSummary.pdf"),dpi = 300)
 ```
 
 \pagebreak
 
 ### Sample summaries
 
-```{r SampleNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE}
-tmp_list <- met.plot_SampleNormSummary(mSetObj, imgName = paste0("Plots/SampleNormSummary"), 
-                                       plot = F, show_prenorm = T, export = T, format = "pdf")
+```{r SampleNormSummary_createFig, fig.width=8, fig.height=10, echo=FALSE, message=FALSE}
+tmp_list <-
+  suppressMessages(
+    met.plot_SampleNormSummary(
+      mSetObj,
+      imgName = paste0(tempdir(), "/Plots/SampleNormSummary"),
+      plot = F,
+      show_prenorm = T,
+      export = T,
+      format = "pdf"
+    )
+  )
 ```
 
 ```{r SampleNormSummary_plot, echo=FALSE, fig.align='center'}
-knitr::include_graphics(paste0(getwd(),"/Plots/SampleNormSummary.pdf"),dpi = 300)
+knitr::include_graphics(paste0(tempdir(),"/Plots/SampleNormSummary.pdf"),dpi = 300)
 ```
 
 \pagebreak
@@ -145,7 +160,7 @@ Univariate analysis methods are the most common methods used for exploratory dat
 Since ANOVA only reveals whether the overall comparison is significant or not, it is usually followed by post hoc analyses to determine which two conditions differ. For this purpose, two of the most commonly used methods, *Fisher's Least Significant Difference (Fisher's LSD)* and *Tukey's Honest Significant Difference (Tukey's HSD)* are implemented. The individual analyses provide a first overview of the characteristics that are potentially relevant for distinguishing the conditions under study.
 
 ```{r ANOVA_plot_create, echo=FALSE, results='hide'}
-dir.create("Plots/ANOVA", showWarnings = F)
+dir.create(paste0(tempdir(),"/Plots/ANOVA"), showWarnings = F)
 w = 7; h = 5
 pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/ANOVA/ANOVA-Plot.pdf"), width = w, height = h, bg = "white")
 print(mSetObj[["imgSet"]][["anova.plot"]])
@@ -157,7 +172,7 @@ knitr::include_graphics(paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/
 \pagebreak
 ### Volcano plots
 ```{r Volcano_plot_create, echo=FALSE, results='hide', warning=FALSE}
-dir.create("Plots/Volcano", showWarnings = F)
+dir.create(paste0(tempdir(),"/Plots/Volcano"), showWarnings = F)
 w = 9; h = w * 5.5/6.5
 for(i in 1:length(mSetObj$imgSet$volcano)){
   pdf(file = paste0(str_replace_all(tempdir(), "\\\\", "/"), "/Plots/Volcano/Volcano-Plot_",i,".pdf"), width = w, height = h, bg = "white")
@@ -200,7 +215,7 @@ knitr::include_graphics(Files_list, dpi = 300, error = F)
 #### PCA - Scores
 \
 ```{r, message_3DPCAScores, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
-cat("A 3D PCA scores plot is available in the HTML version of this report.")
+cat("_A 3D PCA scores plot is available in the HTML version of this report._")
 ```
 ```{r PCAScores_create, echo=FALSE, results='hide'}
 w = 9; h = 7.5
@@ -254,7 +269,7 @@ rgl::legend3d(
 #### PCA - Loadings
 \
 ```{r, message_3DPCALoadings, echo=FALSE, eval = knitr::is_latex_output(), results='asis'}
-cat("A 3D PCA Loadings plot is available in the HTML version of this report.")
+cat("_A 3D PCA Loadings plot is available in the HTML version of this report._")
 ```
 ```{r PCA_Loadings_create, echo=FALSE, results='hide'}
 w = 8; h = 7.5
@@ -290,7 +305,7 @@ rgl::text3d(x=mSetObj$imgSet$pca.loading3d.plot$loading$xyz[1,],
 \pagebreak
 
 ### Partial Least Squares-Discriminant Analysis (PLS-DA)
- Partial Least-Squares Discriminant Analysis (PLS-DA) is a popular machine learning tool that is gaining increasing attention as a useful feature selector and classifier. It is a supervised method that uses multivariate regression techniques to extract the information that can predict the class membership (__Y__, a class vector) via linear combination of original x variables (stored in __X__, a numeric matrix of predictors). PLS-DA can be thought of as a “supervised” version of PCA in the sense that it achieves dimensionality reduction but with full awareness of the class labels. PLS-DA is prone to overfitting (it will try to separate classes even when there is no real difference between them). Therefore, cross-validation is an essential step in using this method as a feature selector, classifier or even just for visualization \footnote{Ruiz-Perez D, Guan H, Madhivanan P, Mathee K, and Narasimhan G. \textit{So you think you can PLS-DA?}, BMC Bioinformatics 21, 2 (2020)}. Before the analysis, the variables are often transformed to make their distributions be fairly symmetrical.
+ Partial Least-Squares Discriminant Analysis (PLS-DA) is a popular machine learning tool that is gaining increasing attention as a useful feature selector and classifier. It is a supervised method that uses multivariate regression techniques to extract the information that can predict the class membership (__Y__, a class vector) via linear combination of original x variables (stored in __X__, a numeric matrix of predictors). PLS-DA can be thought of as a “supervised” version of PCA in the sense that it achieves dimensionality reduction but with full awareness of the class labels. PLS-DA is prone to overfitting with data sets that have more variables than samples (it will try to separate classes even when there is no real difference between them). Therefore, cross-validation is an essential step in using this method as a feature selector, classifier or even just for visualization \footnote{Ruiz-Perez D, Guan H, Madhivanan P, Mathee K, and Narasimhan G. \textit{So you think you can PLS-DA?}, BMC Bioinformatics 21, 2 (2020)}. Before the analysis, the variables are often transformed to make their distributions be fairly symmetrical.
 
 #### PLS-DA - Scores
 \
@@ -419,7 +434,7 @@ knitr::include_graphics(Files_list,dpi = 300)
 \pagebreak
 ##### Regression coefficients
 ```{r PLS_COEF_plot, out.width = "48%", fig.show='hold', echo=FALSE, fig.align='center', warning=F, message=F}
-w = 7.2; h = w*1.0
+w = 8; h = w*0.95
 for(i in 1:length(names(mSetObj[['imgSet']][grep("pls.imp_coef_.+plot", names(mSetObj[['imgSet']]))]))) {
   pdf(
     file = paste0(

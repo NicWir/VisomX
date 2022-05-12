@@ -35,3 +35,8 @@ Utility method to to get p values via T-test.
 \references{
 adapted from \code{\link[MetaboAnalystR]{GetTtestRes}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

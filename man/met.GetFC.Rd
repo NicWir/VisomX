@@ -24,3 +24,8 @@ Utility method to calculate FC, used in higher function
 \references{
 adapted from \code{\link[MetaboAnalystR]{GetFC}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
 }
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}

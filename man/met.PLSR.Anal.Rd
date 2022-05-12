@@ -11,7 +11,7 @@ met.PLSR.Anal(mSetObj = NA, reg = FALSE, data = "all")
 
 \item{reg}{(Logical)}
 
-\item{data}{(Character) Enter \code{"all"} to train the PLS-DA model on your whole (filtered and normalized) data set or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.}
+\item{data}{(Character) Enter \code{"all"} to train the PLS(-DA) model on your whole (filtered and normalized) dataset or \code{"anova"} to use a subset of features defined as significant based on ANOVA analysis.}
 }
 \value{
 The input mSet object with the results of PLS-DA at mSetObj$analSet$plsr.
@@ -21,4 +21,9 @@ The input mSet object with the results of PLS-DA at mSetObj$analSet$plsr.
 }
 \references{
 adapted from \code{\link[MetaboAnalystR]{PLSR.Anal}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
 }

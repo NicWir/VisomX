@@ -33,3 +33,11 @@ The input mSet object with added plot object.
 \description{
 \code{met.plot_ImpVar} is an internal function used by \code{met.plot_PLS_Imp} to visualize the features' importance in the PLS-DA model.
 }
+\references{
+adapted from \code{\link[MetaboAnalystR]{PlotImpVar}} (\url{https://github.com/xia-lab/MetaboAnalystR}).
+}
+\author{
+Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
+Technical University of Denmark
+License: GNU GPL (>= 2)
+}
