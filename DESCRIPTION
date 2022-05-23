@@ -35,22 +35,18 @@ Imports:
     clusterProfiler,
     ComplexHeatmap,
     data.table,
-    DelayedArray,
     DOSE,
-    edgeR,
     ellipse,
     fdrtool,
     fluctuator,
     ggh4x,
     ggnewscale,
     ggplot2,
-    ggpubr,
     ggrepel,
     ggVennDiagram,
     grid,
     gridExtra,
     impute,
-    jsonlite,
     kableExtra,
     knitr,
     lattice,
@@ -59,12 +55,10 @@ Imports:
     markdown,
     memoise,
     MSnbase,
-    multtest,
     pcaMethods,
     pheatmap,
     plotly,
     pls,
-    plyr,
     preprocessCore,
     pROC,
     progress,
@@ -86,9 +80,13 @@ Imports:
     UpSetR,
     vsn
 Suggests: 
+    DelayedArray,
     DEP,
+    edgeR,
     ggpubr,
-    MetaboAnalystR
+    jsonlite,
+    MetaboAnalystR,
+    multtest
 VignetteBuilder: 
     knitr
 Remotes: 

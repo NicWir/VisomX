@@ -6,7 +6,6 @@
 #' @param pkgname package name
 .onAttach <- function (libname, pkgname){
   options(rgl.debug = TRUE)
-  Cairo::CairoFonts(regular="Arial:style=Regular",bold="Arial:style=Bold",italic="Arial:style=Italic",bolditalic = "Arial:style=Bold Italic",symbol = "Symbol")
   k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")
   k0 <- "\n"
   k2 <- paste("https://github.com/NicWir/VisomX")
@@ -410,4 +409,13 @@ var.na <- function(x){
     res <- var(as.numeric(x[tmp]))
   }
   res
+}
+
+AddErrMsg <- function (msg)
+{
+  if (!exists("err.vec")) {
+    err.vec <<- ""
+  }
+  err.vec <<- c(err.vec, msg)
+  print(msg)
 }

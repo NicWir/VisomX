@@ -1338,7 +1338,7 @@ met.PreparePrenormData <- function (mSetObj = NA)
 #' @param anal.type (Character) Indicate the analysis module to be performed: \code{"stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap",} or \code{"pathinteg"}.
 #' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
 #' @param csvsep (Character) Enter the separator used in the CSV file (only applicable if reading a ".csv" file).
-#' @param format (Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).
+#' @param data.format (Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).
 #' @param lbl.type (Character) Specify the group label type, either categorical (\code{"disc"}) or continuous (\code{"cont"}).
 #' @param filt.feat (Character Vector) Enter the names of features to remove from the dataset.
 #' @param filt.smpl (Character Vector) Enter the names of samples to remove from the dataset.
@@ -1378,6 +1378,7 @@ met.PreparePrenormData <- function (mSetObj = NA)
 #'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
 #'  }
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the missing value detection plots be exported as PDF or PNG file?
+#' @param img.format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @return An mSet object with (built in ascending order):
 #' \itemize{
 #'  \item original data at \code{mSetObj$dataSet$data_orig}.
@@ -1394,7 +1395,7 @@ met.PreparePrenormData <- function (mSetObj = NA)
 met.read_data <- function (data,
           data.type = "conc", anal.type = "stat", paired = FALSE, # Parameters used to initialize dataSet object
           csvsep = ";", # optional: delimiter if reading CSV file
-          format = "rowu", lbl.type = "disc",
+          data.format = "rowu", lbl.type = "disc",
           filt.feat = c(""),
           filt.smpl = c(""),
           filt.grp = c(""),
@@ -1404,12 +1405,14 @@ met.read_data <- function (data,
           qc.rsd = 25,
           all.rsd = NULL,
           imp.method = "lod",
-          export = TRUE
+          export = FALSE,
+          img.format = "pdf",
+          dpi = dpi
 )
 {
   mSetObj <- suppressWarnings(met.initialize(data.type = data.type, anal.type = anal.type, paired = paired))
   mSetObj$dataSet$cls.type <- lbl.type
-  mSetObj$dataSet$format <- format
+  mSetObj$dataSet$format <- data.format
   if (!is.character(data)) {
     dat <- data
   } else {
@@ -1480,7 +1483,7 @@ met.read_data <- function (data,
   }
   msg <- NULL
 
-  if (substring(format, 1, 3) == "row") {
+  if (substring(data.format, 1, 3) == "row") {
     msg <- c(msg, "Samples are in rows and features in columns")
     smpl.nms <- dat[, 1]
     dat[, 1] <- NULL
@@ -1607,7 +1610,7 @@ met.read_data <- function (data,
   } else {
     if (lbl.type == "disc") {
       mSetObj$dataSet$orig.cls <- mSetObj$dataSet$cls <- as.factor(as.character(cls.lbl))
-      if (substring(format, 4, 5) == "ts") {
+      if (substring(data.format, 4, 5) == "ts") {
         mSetObj$dataSet$facA.type <- is.numeric(facA)
         mSetObj$dataSet$orig.facA <- mSetObj$dataSet$facA <- as.factor(as.character(facA))
         mSetObj$dataSet$facA.lbl <- facA.lbl
@@ -1677,8 +1680,8 @@ met.read_data <- function (data,
     mSetObj<- met.PreparePrenormData(mSetObj)
   }
   dir.create(paste0(getwd(), "/met.ProcessedData"), showWarnings = F)
-  mSetObj <- met.plot_missval(mSetObj, plot=F, export=export)
-  mSetObj <- met.plot_detect(mSetObj, plot=F,  export=export)
+  mSetObj <- met.plot_missval(mSetObj, plot=F, export=export, format = img.format)
+  mSetObj <- met.plot_detect(mSetObj, plot=F,  export=export, format = img.format)
   return(mSetObj)
 }
 
@@ -1696,7 +1699,8 @@ met.read_data <- function (data,
 #' @export
 #' @import rgl
 #' @import knitr
-met.report <- function(mSetObj, report.nm = NULL, ...){
+met.report <- function(mSetObj, report.nm = NULL, ...)
+  {
   args <- list(...)
   for(i in 1:length(args)){
     assign(names(args)[i], args[[i]])
@@ -2202,9 +2206,7 @@ met.UpdateData <- function (mSetObj = NA,
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
-#' @example
 #' @export
-
 met.test_normalization <- function(mSetObj,
                                    test_conditions = NULL,
                                    ref = NULL,
@@ -2768,7 +2770,6 @@ met.test_normalization <- function(mSetObj,
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
-#'
 met.workflow <- function(mSetObj,
          rowNorm = "NULL", # Option for row-wise normalization
          transNorm = "NULL", # Option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.

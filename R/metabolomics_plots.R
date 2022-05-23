@@ -41,7 +41,7 @@ met.plot_missval <- function (mSetObj, plot = TRUE, imgName = "Plots/MissValPlot
                                 column_names_gp = grid::gpar(fontsize = fontsize), heatmap_legend_param = list(at = c(0,
                                                                                                                       1), labels = c("Missing value", "Valid value")))
   if (export == TRUE){
-    message(paste0("Exporting Missing values pattern to:\n\"", getwd(), imgName, "\""))
+    message(paste0("Exporting Missing values pattern to:\n\"", getwd(), "/", imgName, "\""))
 
     if (format == "pdf") {
       grDevices::pdf(imgName)
@@ -172,13 +172,10 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "Plots/DensMissPlot
 
 
   if (export == TRUE){
-    message(paste0("Exporting density distributions and cumulative fraction of proteins with and without missing values to:\n\"", getwd(), imgName, "\""))
+    message(paste0("Exporting density distributions and cumulative fraction of proteins with and without missing values to:\n\"", getwd(), "/", imgName, "\""))
     if (format == "pdf") {
       grDevices::pdf(imgName)
-      gridExtra::grid.arrange(p1, p2, ncol = 1)
-      grDevices::dev.off()
     }
-
     if (format == "png") {
       grDevices::png(imgName,
         width = 6,
@@ -186,10 +183,9 @@ met.plot_detect <- function (mSetObj, plot = TRUE, imgName = "Plots/DensMissPlot
         units = 'in',
         res = 300
       )
-      gridExtra::grid.arrange(p1, p2, ncol = 1)
-      grDevices::dev.off()
     }
-
+    gridExtra::grid.arrange(p1, p2, ncol = 1)
+    grDevices::dev.off()
     mSetObj$imgSet$missval_density <- imgName
   }
 
@@ -268,8 +264,23 @@ met.plot_ANOVA <- function (mSetObj = NA, imgName = "ANOVA_plot", format = "pdf"
   }
   if(export == TRUE){
     message(paste0("Exporting anova plot to:\n\"", getwd(), imgName, "\""))
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     print(g)
     grDevices::dev.off()
   }
@@ -445,9 +456,23 @@ met.plot_SampleNormSummary <- function (mSetObj = NA, imgName = "SampleNormSumma
   }
   if(export == TRUE){
     message(paste0("Exporting density distributions of samples before and after normalization to:\n\"", getwd(), imgName, "\""))
-
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     p()
     grDevices::dev.off()
     mSetObj$imgSet$summary_norm_sample <- imgName
@@ -691,9 +716,23 @@ met.plot_FeatureNormSummary <- function (mSetObj = NA, imgName = "FeatureNormSum
   }
   if(export == TRUE){
     message(paste0("Exporting density distributions of features before and after normalization to:\n\"", getwd(), imgName, "\""))
-
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     p()
     grDevices::dev.off()
     mSetObj$imgSet$summary_norm_feature <- imgName
@@ -860,14 +899,11 @@ met.plot_CorrHeatMap_Samples <- function (mSetObj = NA, imgName = "correlation_s
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = format,
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     grid::grid.newpage()
@@ -1046,14 +1082,11 @@ met.plot_CorrHeatMap_Features <- function (mSetObj = NA, imgName = "correlation_
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = format,
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     grid::grid.newpage()
@@ -1147,14 +1180,11 @@ met.plot_PCAScree <- function (mSetObj = NA, imgName = "PCA_ScreePlot", format =
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -1363,14 +1393,11 @@ met.plot_PCA2DScore <- function (mSetObj = NA, imgName = "PCA_2DScores", format 
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -1487,14 +1514,11 @@ met.plot_PCA2DLoading <- function (mSetObj = NA, imgName = "PCA_2DLoadings", for
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -1701,14 +1725,11 @@ met.plot_PLS2DScore <- function (mSetObj = NA, imgName = "PLSDA_2DScore", format
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -1843,14 +1864,11 @@ met.plot_PLS2DLoading <- function (mSetObj = NA, imgName = "PLSDA_2DLoadings", f
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -1931,14 +1949,11 @@ met.plot_PLS_Imp <- function (mSetObj = NA, imgName, format = "pdf", dpi = NULL,
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = "png",
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -2137,8 +2152,23 @@ met.plot_PLSImpScatter <- function(mSetObj, imgName = "PLS_ImpScatter", format =
     p <- p + ggtitle(title) + theme(plot.title = element_text(face = "bold", hjust = 0.5))
   }
   if (export == TRUE){
-    Cairo::Cairo(file = imgName, unit = "in", dpi = dpi,
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     print(p)
     grDevices::dev.off()
     mSetObj[["imgSet"]][[paste0("pls.ImpScatter_", feat.nm)]] <- imgName
@@ -2302,14 +2332,11 @@ met.plot_heatmap <- function (mSetObj = NA, imgName = "Heatmap_features", format
       )
     }
     else {
-      Cairo::Cairo(
-        file = imgName,
-        unit = "in",
-        dpi = if_else(is.null(dpi), if_else(format == "pdf", 72, 300), dpi),
-        width = w,
-        height = h,
-        type = format,
-        bg = "white"
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
       )
     }
     p()
@@ -2527,8 +2554,23 @@ met.plot_volcano <- function (mSetObj = NA, grp1, grp2, test = "ttest", paired =
   }
   if (export == TRUE){
     message(paste0("Exporting volcano plot to:\n\"", getwd(), imgName, "\""))
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     print(p)
     grDevices::dev.off()
     mSetObj$imgSet$volcano[[paste0(grp1, "_vs_", grp2)]] <- imgName
@@ -2613,7 +2655,8 @@ met.plot_PCA3DLoading <- function (mSetObj = NA, imgName = "PCA3DLoading", forma
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-met.print_PCA3DLoading <- function (mSetObj = NA){
+met.print_PCA3DLoading <- function (mSetObj = NA)
+  {
   colors <- mSetObj$imgSet$pca.loading3d.plot$loading$cols_hex
   rgl::plot3d(x= mSetObj$imgSet$pca.loading3d.plot$loading$xyz[1,],
               y= mSetObj$imgSet$pca.loading3d.plot$loading$xyz[3,],
@@ -2700,7 +2743,8 @@ met.plot_PCA3DScore <- function (mSetObj = NA, imgName = "PCA3DScore", format = 
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-met.print_PCA3DScore <- function (mSetObj = NA){
+met.print_PCA3DScore <- function (mSetObj = NA)
+  {
   colors <- GetColorSchema(as.factor(cls))
   rgl::plot3d(x= mSetObj$imgSet$pca.score3d.plot$score$xyz[1,],
               y= mSetObj$imgSet$pca.score3d.plot$score$xyz[3,],
@@ -2800,7 +2844,8 @@ met.plot_PLS3DLoading <- function (mSetObj = NA, imgName = "PLS3DLoading", forma
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-met.print_PLS3DLoading <- function (mSetObj = NA){
+met.print_PLS3DLoading <- function (mSetObj = NA)
+  {
   colors <- mSetObj$imgSet$pls.loading3d.plot$loading$cols_hex
   rgl::plot3d(x= mSetObj$imgSet$pls.loading3d.plot$loading$xyz[1,],
               y= mSetObj$imgSet$pls.loading3d.plot$loading$xyz[3,],
@@ -2887,7 +2932,8 @@ met.plot_PLS3DScore <- function (mSetObj = NA, imgName = "PLS3DScore", format = 
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-met.print_PLS3DScore <- function (mSetObj = NA){
+met.print_PLS3DScore <- function (mSetObj = NA)
+  {
   colors <- GetColorSchema(as.factor(cls))
   rgl::plot3d(x= mSetObj$imgSet$pls.score3d.plot$score$xyz[1,],
               y= mSetObj$imgSet$pls.score3d.plot$score$xyz[3,],
@@ -2986,8 +3032,23 @@ met.plot_PLS.Permutation <- function (mSetObj = NA, imgName = "PLSDA-Permutation
   }
   if(export == TRUE){
     message(paste0("Exporting plots with PLS-DA model permutation results to:\n\"", getwd(), "/", imgName, "\""))
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     p()
     grDevices::dev.off()
     mSetObj$imgSet$pls.permut <- imgName
@@ -3076,8 +3137,23 @@ met.plot_PLS.Crossvalidation <- function (mSetObj = NA, imgName = "PLSDA-CrossVa
     }
   }
   if(export == TRUE){
-    Cairo::Cairo(file = imgName, unit = "in", dpi = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi),
-                 width = w, height = h, type = format, bg = "white")
+    if (format == "pdf") {
+      grDevices::pdf(
+        file = imgName,
+        width = w,
+        height = h,
+        bg = "white",
+        onefile = FALSE
+      )
+    }
+    else {
+      grDevices::png(imgName,
+                     width = w,
+                     height = h,
+                     units = 'in',
+                     res = if_else(is.null(dpi), if_else(format=="pdf", 72, 300), dpi)
+      )
+    }
     p()
     grDevices::dev.off()
     mSetObj$imgSet$pls.crossvalidation <- imgName

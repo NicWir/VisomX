@@ -525,14 +525,4 @@ knitr::include_graphics(Files_list,dpi = 300)
 
 ```
 \pagebreak
-`r rgl::rgl.quit()`
-
-
-
-
-
-
-
-
-
-
+`r rgl::close3d()`
