@@ -1,0 +1,70 @@
+---
+title: "Growth analysis report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+geometry: margin=1.3cm
+urlcolor: blue
+mainfont: Arial
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{makecell}
+output:
+  pdf_document:
+    fig_caption: yes
+    toc: false
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev = "pdf")
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+knit_table <- function(df){
+  if (is_html_output()) {
+    df %>%
+      kable("html", align = "c", escape = F) %>%
+      kable_styling()
+  } else {
+     colnames(df) <- colnames(df) %>% str_replace_all(.,"<br>", "\n") %>%  str_replace_all(., "_", "\\\\char`_") %>% str_replace_all(., "µ~max~", "$\\\\mu_{max}$") %>% str_replace_all(., "λ", "$\\\\lambda$") %>% str_replace_all(., "t~start~", "$t_{start}$") %>% str_replace_all(., "t~end~", "$t_{end}$") %>% str_replace_all(., "R\\^2\\^", "$R^2$")
+     df[,1] <- str_replace_all(df[,1], "_", "\\char`_")
+     df %>% kable("latex", align = "c", booktabs = T, escape = F, linesep = "") 
+   }
+}
+```
+
+
+## Summary
+`r #browser()`
+
+
+\pagebreak
+## Growth fit results
+### `r if(any(c("a", "l") %in% control$fit.opt)){"Exponential fit"}`
+```{r table_linear, echo=F, warning=F, message=F, results='asis'}
+if(any(c("a", "l") %in% control$fit.opt)){
+  table_linear <- data.frame("Sample" = paste(res.table.gc$TestId, res.table.gc$AddId, res.table.gc$concentration, sep = "|"),
+                             "µ~max~" = paste(round(as.numeric(res.table.gc$mu.linfit), 3),"\u00B1", round(as.numeric(res.table.gc$stdmu.linfit),3)),
+                             "λ" = round(as.numeric(res.table.gc$lambda.linfit), 3),
+                             "t~start~(µ~max~)" = res.table.gc$tmu.start.linfit, 
+                             "t~end~(µ~max~)" = res.table.gc$tmu.end.linfit,
+                             "R^2^(linear fit)" = round(as.numeric(res.table.gc$r2mu.linfit), 3),
+                             stringsAsFactors = F, check.names = F)
+  knit_table(table_linear)
+}
+```
+### `r if(any(c("a", "b", "m") %in% control$fit.opt)){"\\pagebreak Exponential fit"}`
+```{r table_model, echo=F, warning=F, message=F, results='asis'}
+if(any(c("a", "b", "m") %in% control$fit.opt)){
+    table_model <- data.frame("Sample" = paste(res.table.gc$TestId, res.table.gc$AddId, res.table.gc$concentration, sep = "|"),
+                              "Model" = res.table.gc$used.model,
+                             "µ~max~" = paste(round(as.numeric(res.table.gc$mu.model), 3),"\u00B1", round(as.numeric(res.table.gc$stdmu.model),3)),
+                             "λ" = paste(round(as.numeric(res.table.gc$lambda.model), 3), "\u00B1", round(as.numeric(res.table.gc$stdlambda.model),3)),
+                             "A" = paste(round(as.numeric(res.table.gc$A.model), 3), "\u00B1", round(as.numeric(res.table.gc$stdA.model),3)),
+                             stringsAsFactors = F, check.names = F)
+  knit_table(table_model)
+}
+```
+```
+

@@ -293,7 +293,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           plot = FALSE, # Shall plots be returned in the Plots pane?
                           export = FALSE, # Shall plots be exported as PDF and PNG files?
                           report = TRUE, # Shall a report (HTML and PDF) be created?
-                          report.nm = NULL, # Folder name for created report (if report = TRUE)
+                          report.dir = NULL, # Folder name for created report (if report = TRUE)
                           pathway_enrichment = FALSE, # Perform pathway over-representation analysis for each tested contrast
                           pathway_kegg = FALSE, # Perform pathway over-representation analysis with gene sets in the KEGG database
                           kegg_organism = NULL, # Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
@@ -569,7 +569,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                 heatmap.show_all = heatmap.show_all,
                 heatmap.kmeans = heatmap.kmeans,
                 k = k,
-                report.nm = report.nm)
+                report.dir = report.dir)
   }
   return(results)
 }
@@ -976,7 +976,7 @@ get_annotation <- function (dep, indicate)
   ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
 }
 ####____prot.report_____####
-prot.report <- function(results, report.nm = NULL, ...){
+prot.report <- function(results, report.dir = NULL, ...){
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se", "norm",
              "imputed", "diff", "dep", "results",
@@ -1008,14 +1008,14 @@ prot.report <- function(results, report.nm = NULL, ...){
   }
   table <- results$results
   message("Render reports...")
-  if(!is.null(report.nm)){
-    wd <- paste0(getwd(), "/", report.nm)
+  if(!is.null(report.dir)){
+    wd <- paste0(getwd(), "/", report.dir)
   } else {
-    wd <- paste(getwd(), "/Report_", format(Sys.time(),
+    wd <- paste(getwd(), "/Report.prot_", format(Sys.time(),
                                             "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
-  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package", "/Report_Prot.Rmd",
+  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/Reports", "/Report_Prot.Rmd",
                 sep = "")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)

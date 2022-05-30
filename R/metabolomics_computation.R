@@ -1690,7 +1690,7 @@ met.read_data <- function (data,
 #' \code{met.report} generates a report of the analysis performed by the \code{met.workflow} wrapper function.
 #'
 #' @param mSetObj Enter name of the created mSet object after a full analysis workflow (see \code{\link[VisomX]{met.workflow}}).
-#' @param report.nm (Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
+#' @param report.dir (Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
 #' @param ... Further arguments passed from other methods.
 #' @return In the specified folder, this function creates a PDF report, an HTML report, and an .RData file including the entire mSet object.
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
@@ -1699,17 +1699,17 @@ met.read_data <- function (data,
 #' @export
 #' @import rgl
 #' @import knitr
-met.report <- function(mSetObj, report.nm = NULL, ...)
+met.report <- function(mSetObj, report.dir = NULL, ...)
   {
   args <- list(...)
   for(i in 1:length(args)){
     assign(names(args)[i], args[[i]])
   }
   message("Render reports...")
-  if(!is.null(report.nm)){
-    wd <- paste0(getwd(), "/", report.nm)
+  if(!is.null(report.dir)){
+    wd <- paste0(getwd(), "/", report.dir)
   } else {
-    wd <- paste(getwd(), "/Report_", format(Sys.time(),
+    wd <- paste(getwd(), "/Report.met_", format(Sys.time(),
                                             "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
@@ -1727,7 +1727,7 @@ met.report <- function(mSetObj, report.nm = NULL, ...)
 #' \code{met.report_test_normalization} generates a report of the analysis performed by the \code{met.test_normalization} wrapper function.
 #'
 #' @param mSetObj Enter name of the created mSet object after a full analysis workflow (see \code{\link[VisomX]{met.workflow}}).
-#' @param report.nm (Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
+#' @param report.dir (Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
 #' @param ... Further arguments passed from other methods.
 #' @return In the specified folder, this function creates a PDF report, an HTML report, and an .RData file including the entire mSet object.
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
@@ -1737,7 +1737,7 @@ met.report <- function(mSetObj, report.nm = NULL, ...)
 #' @import kableExtra
 #' @import knitr
 #' @import rgl
-met.report_test_normalization <- function(mSet_list, report.nm = NULL, ...)
+met.report_test_normalization <- function(mSet_list, report.dir = NULL, ...)
   {
   assertthat::assert_that(is.list(mSet_list))
   args <- list(...)
@@ -1745,8 +1745,8 @@ met.report_test_normalization <- function(mSet_list, report.nm = NULL, ...)
     assign(names(args)[i], args[[i]])
   }
   message("Render reports...")
-  if(!is.null(report.nm)){
-    wd <- paste0(getwd(), "/", report.nm)
+  if(!is.null(report.dir)){
+    wd <- paste0(getwd(), "/", report.dir)
   } else {
     wd <- paste(getwd(), "/met.Test_Normalization/Report_", format(Sys.time(),
                                                                    "%Y%m%d_%H%M%S"), sep = "")
@@ -2197,7 +2197,7 @@ met.UpdateData <- function (mSetObj = NA,
 #' @param permut.num (Numeric) Number of permutations in PLS-DA permutation tests.
 #' @param vip.thresh (Numeric) Enter a chosen relevance threshold for PLS-DA VIP scores.
 #' @param report (Logical) Generate a report with results of this workflow (\code{TRUE}) or not (\code{FALSE}).
-#' @param report.nm (Character) Enter the name or location of the folder in which the
+#' @param report.dir (Character) Enter the name or location of the folder in which the
 #'   report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a
 #'   new folder "Report_\emph{date-time}" is created in your working directory.
 #' @param export (Logical) Export generated plots as PDF or PNG files (\code{TRUE}) or not (\code{FALSE}).
@@ -2222,7 +2222,7 @@ met.test_normalization <- function(mSetObj,
                                    permut.num = 500,
                                    vip.thresh = 1,
                                    report = FALSE,
-                                   report.nm = NULL,
+                                   report.dir = NULL,
                                    export = FALSE,
                                    export.format = "pdf",
                                    export.dir = "met.Test_Normalization")
@@ -2716,7 +2716,7 @@ met.test_normalization <- function(mSetObj,
     stack_size <- getOption("pandoc.stack.size", default = "512m")
     met.report_test_normalization(
       mSet_list,
-      report.nm = report.nm,
+      report.dir = report.dir,
       list_names = list_names,
       contrasts = cntrst,
       alpha = alpha,
@@ -2764,7 +2764,7 @@ met.test_normalization <- function(mSetObj,
 #' @param export.format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
 #' @param dpi (Numeric) Resolution of PNG images (default is 300 dpi).
 #' @param report (Logical) Generate a report with results of this workflow (\code{TRUE}) or not (\code{FALSE}).
-#' @param report.nm (Character) Enter the name or location of the folder in which the report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
+#' @param report.dir (Character) Enter the name or location of the folder in which the report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.
 #' @param export.dir (Character) Enter the name of location of a folder in which all generated files are saved.
 #' @export
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
@@ -2798,7 +2798,7 @@ met.workflow <- function(mSetObj,
          export.format = "pdf",
          dpi = 300,
          report = FALSE, # Shall a report (HTML and PDF) be created?
-         report.nm = NULL, # Folder name for created report (if report = TRUE)
+         report.dir = NULL, # Folder name for created report (if report = TRUE)
          export.dir = "met.ProcessedData"
 )
 {
@@ -3019,7 +3019,7 @@ met.workflow <- function(mSetObj,
   setwd(wd)
   if(report==TRUE){
     stack_size <- getOption("pandoc.stack.size", default = "512m")
-    met.report(mSetObj, report.nm=report.nm, contrasts=cntrst, alpha=alpha, lfc=lfc, vip.thresh=vip.thresh)
+    met.report(mSetObj, report.dir=report.dir, contrasts=cntrst, alpha=alpha, lfc=lfc, vip.thresh=vip.thresh)
   }
   return(mSetObj)
 }
