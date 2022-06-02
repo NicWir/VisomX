@@ -9,13 +9,15 @@ summary.gcFitSpline <- function(object,...)
 
     # object of class gcFitSpline
 
-    contents.fitted.spline  <- c("mu.spline", "lambda.spline", "A.spline", "integral.spline", "reliable_fit.spline")
+    contents.fitted.spline  <- c("mu.spline", "lambda.spline", "A.spline", "integral.spline", "reliable_fit.spline",
+                                 "smooth.spline")
 
     if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
-      table <- c(rep(NA,length(contents.fitted.spline)-1), object$fitFlag)
+      table <- c(rep(NA,length(contents.fitted.spline)-2), object$fitFlag, as.numeric(object$control$smooth.gc))
     }
     else{
-      table <- c(object$parameters$mu, object$parameters$lambda,  object$parameters$A, object$parameters$integral, as.character(object$fitFlag))
+      table <- c(object$parameters$mu, object$parameters$lambda,  object$parameters$A, object$parameters$integral, as.character(object$fitFlag),
+                 as.numeric(object$control$smooth.gc))
     }
 
     table               <- data.frame(t(table))
@@ -28,6 +30,9 @@ summary.gcFitModel <- function(object, ...)
     # object of class gcFitModel
 
     contents.fitted.param     = c("mu.model", "lambda.model", "A.model", "integral.model",
+                                  "parameter_nu.model",
+                                  "parameter_alpha.model",
+                                  "parameter_t_shift.model",
                                   "stdmu.model", "stdlambda.model", "stdA.model", "reliable_fit.model",
                                   "ci90.mu.model.lo", "ci90.mu.model.up",
                                   "ci90.lambda.model.lo", "ci90.lambda.model.up",
@@ -43,14 +48,17 @@ summary.gcFitModel <- function(object, ...)
       table<-rep(NA,length(contents.fitted.param))
     }
     else{
-      table <- c(object$parameter$mu[1], object$parameter$lambda[1],  object$parameter$A[1], object$parameter$integral,
-                 object$parameter$mu[2], object$parameter$lambda[2],  object$parameter$A[2], as.character(object$fitFlag),
-                 object$parameter$mu[1]-1.645*object$parameter$mu[2], object$parameter$mu[1]+1.645*object$parameter$mu[2],
-                 object$parameter$lambda[1]-1.645*object$parameter$lambda[2], object$parameter$lambda[1]+1.645*object$parameter$lambda[2],
-                 object$parameter$A[1]-1.645*object$parameter$A[2], object$parameter$A[1]+1.645*object$parameter$A[2],
-                 object$parameter$mu[1]-1.96*object$parameter$mu[2], object$parameter$mu[1]+1.96*object$parameter$mu[2],
-                 object$parameter$lambda[1]-1.96*object$parameter$lambda[2], object$parameter$lambda[1]+1.96*object$parameter$lambda[2],
-                 object$parameter$A[1]-1.96*object$parameter$A[2], object$parameter$A[1]+1.96*object$parameter$A[2])
+      table <- c(object$parameters$mu[1], object$parameters$lambda[1],  object$parameters$A[1], object$parameters$integral,
+                 ifelse(!is.null(object$parameters$fitpar$nu[1]),object$parameters$fitpar$nu[1], NA),
+                 ifelse(!is.null(object$parameters$fitpar$alpha[1]), object$parameters$fitpar$alpha[1], NA),
+                 ifelse(!is.null(object$parameters$fitpar$t_shift[1]), object$parameters$fitpar$t_shift[1], NA),
+                 object$parameters$mu[2], object$parameters$lambda[2],  object$parameters$A[2], as.character(object$fitFlag),
+                 object$parameters$mu[1]-1.645*object$parameters$mu[2], object$parameters$mu[1]+1.645*object$parameters$mu[2],
+                 object$parameters$lambda[1]-1.645*object$parameters$lambda[2], object$parameters$lambda[1]+1.645*object$parameters$lambda[2],
+                 object$parameters$A[1]-1.645*object$parameters$A[2], object$parameters$A[1]+1.645*object$parameters$A[2],
+                 object$parameters$mu[1]-1.96*object$parameters$mu[2], object$parameters$mu[1]+1.96*object$parameters$mu[2],
+                 object$parameters$lambda[1]-1.96*object$parameters$lambda[2], object$parameters$lambda[1]+1.96*object$parameters$lambda[2],
+                 object$parameters$A[1]-1.96*object$parameters$A[2], object$parameters$A[1]+1.96*object$parameters$A[2])
 
     }
     table <- data.frame(t(table))

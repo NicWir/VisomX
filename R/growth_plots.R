@@ -137,57 +137,59 @@ plot.gcFitModel <- function(x, add=FALSE, raw=TRUE, slope=TRUE, pch=1, colData=1
           }
         }
       }
+        mu     <- as.numeric(x$parameters$mu[1])
+        lambda <- as.numeric(x$parameters$lambda[1])
 
-      # /// add tangent at maximum slope
-      if (slope==TRUE){
-        mu     <- as.numeric(x$parameter$mu[1])
-        lambda <- as.numeric(x$parameter$lambda[1])
-        bla    <- (x$fit.time)*mu
-        bla    <- bla+(-x$parameter$mu[1]*x$parameter$lambda[1])
-        try(lines(x$fit.time, bla, lw=2, lty=2, col=colModel))
-      }
-      if(x$model == "logistic"){
-        text(x=44.45, par("usr")[4],
-             expression(y(t) == frac(A , 1+exp(frac(4 %.% mu, A) %.% (lambda - t) + 2))),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
+      # if(x$model == "logistic"){
+      #   text(x=44.45, par("usr")[4],
+      #        expression(y(t) == frac(A , 1+exp(frac(4 %.% mu, A) %.% (lambda - t) + 2))),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
+      #
+      #   text(x=48.3, par("usr")[4],
+      #        bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+      #                 lambda == .(round(x$parameters$lambda[1],3)) ),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
+      #
+      # }
+      # if(x$model == "richards"){
+      #   text(x=44.5, par("usr")[4],
+      #        expression(y(t) == A%.%(1.0+nu%.%italic(e)^{1+nu}%.%exp(frac(mu,A)%.%(1+nu)^(1+frac(1,nu))%.%( lambda - t )))^(-1/nu)),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
+      #
+      #   text(x=47.5, par("usr")[4],
+      #        bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+      #                 lambda == .(round(x$parameters$lambda[1],3)) ~~~~ nu == .(round(as.numeric(x$parameters$fitpar$nu[1],3))) ),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
+      # }
+      # if(x$model == "gompertz"){
+      #   text(x=44.5, par("usr")[4],
+      #        expression(y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1))),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
+      #
+      #   text(x=48.3, par("usr")[4],
+      #        bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+      #                 lambda == .(round(x$parameters$lambda[1],3)) ),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
+      # }
+      # if(x$model == "gompertz.exp"){
+      #   lambda <- lambda - x$parameters$A[1]*exp(x$parameters$fitpar$alpha[1]*(x$parameters$lambda[1]-x$parameters$fitpar$t_shift[1]))
+      #   text(x=44.5, par("usr")[4],
+      #        expression(y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1)) + A%.%exp(alpha%.%(t-t[shift]))),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
+      #
+      #   text(x=47.8, par("usr")[4],
+      #        bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+      #                 lambda == .(round(x$parameters$lambda[1],2)) ~~~~ alpha == .(round(x$parameters$fitpar$alpha[1],3))  ~~~~
+      #                 t[shift] == .(round(x$parameters$fitpar$t_shift[1],2)) ),
+      #        srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
+      # }
+        # /// add tangent at maximum slope
+        if (slope==TRUE){
+          bla    <- (x$fit.time)*mu
+          bla    <- bla+(-mu*lambda)
+          try(lines(x$fit.time, bla, lw=2, lty=2, col=colModel))
+        }
 
-        text(x=48.3, par("usr")[4],
-             bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
-                      lambda == .(round(x$parameters$lambda[1],3)) ),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
-
-      }
-      if(x$model == "richards"){
-        text(x=44.5, par("usr")[4],
-             expression(y(t) == A%.%(1.0+nu%.%italic(e)^{1+nu}%.%exp(frac(mu,A)%.%(1+nu)^(1+frac(1,nu))%.%( lambda - t )))^(-1/nu)),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
-
-        text(x=47.5, par("usr")[4],
-             bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
-                      lambda == .(round(x$parameters$lambda[1],3)) ~~~~ nu == .(round(as.numeric(x$parameters$fitpar$nu[1],3))) ),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
-      }
-      if(x$model == "gompertz"){
-        text(x=44.5, par("usr")[4],
-             expression(y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1))),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
-
-        text(x=48.3, par("usr")[4],
-             bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
-                      lambda == .(round(x$parameters$lambda[1],3)) ),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
-      }
-      if(x$model == "gompertz.exp"){
-        text(x=44.5, par("usr")[4],
-             expression(y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1)) + A%.%exp(alpha%.%(t-t[shift]))),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.4)
-
-        text(x=47.8, par("usr")[4],
-             bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
-                      lambda == .(round(x$parameters$lambda[1],2)) ~~~~ alpha == .(round(x$parameters$fitpar$alpha[1],3))  ~~~~
-                      t[shift] == .(round(x$parameters$fitpar$t_shift[1],2)) ),
-             srt = 90, xpd = TRUE, pos = 1, offset=20, cex=1.2)
-      }
     }
   }
 
@@ -587,6 +589,7 @@ plot.gcBootSpline <- function(x, pch=1, colData=1, colSpline=ggplot2::alpha("bla
   par(mfrow=c(1,1))
 }
 
+### revise!!!
 plot.gcFit <- function(x, opt="m",raw=TRUE, slope=FALSE, pch=1, colModel=1, colSpline=2, colData=1, cex=1, ...)
 {
   # x an object of class gcFit
@@ -814,7 +817,7 @@ plot.gcFitSpline <- function(x, add=FALSE, raw=TRUE, slope=TRUE, deriv = T, pch=
       time <- seq(lambda, max(x$"fit.time"), length=200)
       y_tangent <- x$parameters["b.tangent"][[1]]+time*mu
       try(lines(time, y_tangent, lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7), ...))
-      try(lines(c(min(x$"raw.time"[1]), lambda), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7)))
+      try(lines(c(min(x$"fit.time"[1]), lambda), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7)))
     }
     if (deriv  == TRUE){
       par(mar=c(3.1, 3.1, 1.1, 2.1), mgp=c(2, 1, 0))
@@ -830,7 +833,7 @@ plot.gcFitSpline <- function(x, add=FALSE, raw=TRUE, slope=TRUE, deriv = T, pch=
   par(mfrow = c(1, 1))
 }
 
-plot.avgFitSpline <- function(x, names = NULL, deriv = T, colors = NULL, basesize = 20, lwd = 1.1)
+plot.grpFitSpline <- function(x, names = NULL, conc = NULL, mean = TRUE, deriv = T, colors = NULL, basesize = 20, lwd = 1.1)
 {
 
   # x an object of class grofit
@@ -842,76 +845,144 @@ plot.avgFitSpline <- function(x, names = NULL, deriv = T, colors = NULL, basesiz
 
 
   # Get name of conditions with multiple replicates
-  nm <- as.character(names(x$gcFit$gcFittedSplines))
+  sample.nm <- nm <- as.character(names(x$gcFit$gcFittedSplines))
   if(!is.null(names)){
     nm <- nm[grep(paste(names, collapse="|"), nm)]
   }
-  conditions <- str_replace_all(nm, "\\| . \\| ", "| ")
-  conditions_unique <- unique(conditions)
-
-  plotdata.ls <- list()
-
-  for(i in 1:length(conditions_unique)){
-    if(x$gcFit$gcFittedSplines[[i]]$fitFlag == TRUE){
-      # find indexes of replicates
-      ndx <- intersect(grep(unlist(str_split(conditions_unique[i], " \\| "))[1], conditions),
-                       which(unlist(str_replace(conditions, ".+\\| ", "")) %in% unlist(str_split(conditions_unique[i], " \\| "))[2]))
-      name <- conditions_unique[i]
-      time <- x$gcFit$gcFittedSplines[[ndx[[1]]]]$fit.time
-      data <- sapply(1:length(ndx), function(i) cbind(x$gcFit$gcFittedSplines[[ndx[[i]]]]$fit.data))
-      mean <- rowMeans(data)
-      sd <- apply(data, 1, sd)
-      plotdata.ls[[i]] <- data.frame(name = name, time = time, mean = mean, upper = mean+sd, lower = mean-sd)
-
-    } else {
-      plotdata.ls[[i]] <- NA
+  if(!is.null(conc)){
+    nm <- nm[grep(paste(paste0(conc, "$"), collapse="|"), nm)]
+  }
+  # remove conditions with fitFlag = FALSE in all replicates
+  ndx.filt <- unique(lapply(1:length(nm), function(i) grep(paste0("^",
+                                                      unlist(str_split(nm[i], " \\| "))[1],
+                                                      ".+[[:space:]]",
+                                                      unlist(str_split(nm[i], " \\| "))[3],
+                                                      "$"), sample.nm)))
+  for(i in 1:length(ndx.filt)){
+    if(!all(unlist(lapply(1:length(ndx.filt[[i]]), function(j) (x[["gcFit"]][["gcFittedSplines"]][[ndx.filt[[i]][j]]][["fitFlag"]]))))){
+      nm <- intersect(nm, sample.nm[-ndx.filt[[i]]])
     }
   }
-  names(plotdata.ls) <- conditions_unique
 
-  plotdata.ls <- plotdata.ls[!is.na(plotdata.ls)]
-  df <- do.call(rbind.data.frame, plotdata.ls)
+  if(mean == TRUE){
+      conditions <- str_replace_all(nm, "\\| . \\| ", "| ")
+      conditions_unique <- unique(conditions)
+
+      plotdata.ls <- list()
+
+      for(i in 1:length(conditions_unique)){
+        # find indexes of replicates
+          ndx <- grep(paste0("^",
+                             unlist(str_split(conditions_unique[i], " \\| "))[1],
+                             ".+[[:space:]]",
+                             unlist(str_split(conditions_unique[i], " \\| "))[2],
+                             "$"), sample.nm)
+          name <- conditions_unique[i]
+          time <- x$gcFit$gcFittedSplines[[ndx[[1]]]]$fit.time
+          data <- sapply(1:length(ndx), function(i) cbind(x$gcFit$gcFittedSplines[[ndx[[i]]]]$fit.data))
+          mean <- rowMeans(data)
+          sd <- apply(data, 1, sd)
+          plotdata.ls[[i]] <- data.frame(name = name, time = time, mean = mean, upper = mean+sd, lower = mean-sd)
+      }
+      names(plotdata.ls) <- conditions_unique
+
+      plotdata.ls <- plotdata.ls[!is.na(plotdata.ls)]
+      df <- do.call(rbind.data.frame, plotdata.ls)
 
 
-  p <- ggplot(df, aes(x=time, y=mean, col = name)) +
-    geom_line(size=lwd) +
-    geom_ribbon(aes(ymin=lower,ymax=upper, fill=name), alpha = 0.3, colour = NA) +
-    theme_classic(base_size = basesize) +
-    xlab("Time") +
-    ylab(if(x$control$log.y.gc==TRUE){
-      "Growth [Ln(y(t)/y0)]"
-    } else {
-      "Growth [y(t)]"
-    }) +
-    scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank())
+      p <- ggplot(df, aes(x=time, y=mean, col = name)) +
+        geom_line(size=lwd) +
+        geom_ribbon(aes(ymin=lower,ymax=upper, fill=name), alpha = 0.3, colour = NA) +
+        theme_classic(base_size = basesize) +
+        xlab("Time") +
+        ylab(if(x$control$log.y.gc==TRUE){
+          "Growth [Ln(y(t)/y0)]"
+        } else {
+          "Growth [y(t)]"
+        }) +
+        scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank())
 
-  if(is.null(colors)){
-    if (length(plotdata.ls) <= 8) {
-      p <- p + scale_fill_brewer(name = "Condition", palette = "Set2") + scale_color_brewer(name = "Condition", palette = "Dark2")
-    } else if (length(plotdata.ls) <= 12) {
-      p <- p + scale_fill_brewer(name = "Condition", palette = "Set3") + scale_color_brewer(name = "Condition", palette = "Set3")
-    } else {
-      p <- p + scale_fill_manual(name = "Condition",
-        values = c(
-          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-          "green1", "yellow4", "yellow3", "darkorange4", "brown"
+      if(is.null(colors)){
+        if (length(plotdata.ls) <= 8) {
+          p <- p + scale_fill_brewer(name = "Condition", palette = "Set2") + scale_color_brewer(name = "Condition", palette = "Dark2")
+        } else {
+          p <- p + scale_fill_manual(name = "Condition",
+                                     values = c(
+                                       "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                                       "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                                       "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                                       "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                                       "green1", "yellow4", "yellow3", "darkorange4", "brown"
+                                     )
+          ) + scale_color_manual(name = "Condition",
+                                 values = c(
+                                   "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                                   "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                                   "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                                   "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                                   "green1", "yellow4", "yellow3", "darkorange4", "brown"
+                                 )
+          )
+        }
+      }
+  } # if(mean == TRUE)
+  else {
+    ndx <- grep(paste0(
+      str_replace_all(nm, "\\|", "\\\\|"), collapse = "|"), sample.nm)
+    df <- data.frame()
+    for(i in 1:length(ndx)){
+      df <- plyr::rbind.fill(df, data.frame("name" = sample.nm[ndx[i]],
+                                      "time" = x$gcFit$gcFittedSplines[[ndx[i]]][["fit.time"]],
+                                      "y" = x$gcFit$gcFittedSplines[[ndx[i]]][["fit.data"]]))
+    }
+    p <- ggplot(df, aes(x=time, y=y, col = name)) +
+      geom_line(size=lwd) +
+      theme_classic(base_size = basesize) +
+      xlab("Time") +
+      ylab(if(x$control$log.y.gc==TRUE){
+        "Growth [Ln(y(t)/y0)]"
+      } else {
+        "Growth [y(t)]"
+      }) +
+      scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+      scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank())
+
+    if(is.null(colors)){
+      if (length(ndx) <= 8) {
+        p <- p + scale_fill_brewer(name = "Condition", palette = "Set2") + scale_color_brewer(name = "Condition", palette = "Dark2")
+      } else if (length(ndx) <= 12) {
+        p <- p + scale_fill_brewer(name = "Condition", palette = "Set3") + scale_color_brewer(name = "Condition", palette = "Set3")
+      } else {
+        p <- p + scale_fill_manual(name = "Condition",
+                                   values = c(
+                                     "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                                     "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                                     "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                                     "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                                     "green1", "yellow4", "yellow3", "darkorange4", "brown"
+                                   )
+        ) + scale_color_manual(name = "Condition",
+                               values = c(
+                                 "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                                 "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                                 "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                                 "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                                 "green1", "yellow4", "yellow3", "darkorange4", "brown"
+                               )
         )
-      ) + scale_color_manual(name = "Condition",
-        values = c(
-          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-          "green1", "yellow4", "yellow3", "darkorange4", "brown"
-        )
-      )
+      }
     }
   }
   p
+}
+
+base_breaks <- function(n = 10){
+  function(x) {
+    axisTicks(log10(range(x, na.rm = TRUE)), log = TRUE, n = n)
+  }
 }

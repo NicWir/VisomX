@@ -5,8 +5,9 @@ geometry: margin=1.3cm
 urlcolor: blue
 mainfont: Arial
 header-includes:
-- \usepackage{booktabs}
-- \usepackage{makecell}
+  - \usepackage{booktabs}
+  - \usepackage{makecell}
+
 output:
   pdf_document:
     fig_caption: yes
@@ -21,27 +22,39 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(dev = "pdf")
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
-knit_table <- function(df){
+knit_table <- function(df, ...){
   if (is_html_output()) {
     df %>%
-      kable("html", align = "c", escape = F) %>%
-      kable_styling()
+      kable("html", align = "c", escape = F, ...) %>%
+      kable_styling(bootstrap_options = "hover")
   } else {
-     colnames(df) <- colnames(df) %>% str_replace_all(.,"<br>", "\n") %>%  str_replace_all(., "_", "\\\\char`_") %>% str_replace_all(., "µ~max~", "$\\\\mu_{max}$") %>% str_replace_all(., "λ", "$\\\\lambda$") %>% str_replace_all(., "t~start~", "$t_{start}$") %>% str_replace_all(., "t~end~", "$t_{end}$") %>% str_replace_all(., "R\\^2\\^", "$R^2$")
+     colnames(df) <- colnames(df) %>% str_replace_all(.,"<br>", "\n") %>%  str_replace_all(., "_", "\\\\char`_") %>% str_replace_all(., "µ~max~", "$\\\\mu_{max}$") %>% str_replace_all(., "λ", "$\\\\lambda$") %>% str_replace_all(., "t~start~", "$t_{start}$") %>% str_replace_all(., "t~end~", "$t_{end}$") %>% str_replace_all(., "R\\^2\\^", "$R^2$") %>% str_replace_all(., "α", "$\\\\alpha$") %>% str_replace_all(., "t~shift~", "$t_{shift}$") %>% str_replace_all(., "ν", "$\\\\nu$")
      df[,1] <- str_replace_all(df[,1], "_", "\\char`_")
-     df %>% kable("latex", align = "c", booktabs = T, escape = F, linesep = "") 
+     df %>% kable("latex", align = "c", booktabs = T, escape = F, linesep = "", ...) %>% kable_styling(latex_options = "hold_position", full_width = F, position = "center")
    }
 }
 ```
-
-
 ## Summary
-`r #browser()`
+The dataset contains _`r nrow(grofit[["time"]])`_ samples.\
 
+_`r length(levels(grofit[["data"]][["Sample"]]))`_ conditions were identified:\
+  `r colFmt(levels(grofit[["data"]][["Sample"]]), 'NavyBlue')`\
+  
+_`r length(levels(grofit[["data"]][["concentration"]]))`_ different concentrations were identified:\
+  `r colFmt(levels(grofit[["data"]][["concentration"]]), 'NavyBlue')`\
+  
+The following parameters were used to fit the data: 
+
+* minimum density considered: `r colFmt(ifelse(!is.null(grofit$control$min.density), grofit$control$min.density, "none"), 'NavyBlue')`
+* minimum time considered for exponential and spline fits (t0): `r colFmt(t0, 'NavyBlue')`
+* log-transform density values for parametric and spline fits: `r colFmt(grofit$control$log.y.gc, 'NavyBlue')`
+* log-transform time values: `r colFmt(grofit$control$log.x.gc, 'NavyBlue')`
+* perform dose-response analysis: `r colFmt(ec50, 'NavyBlue')`
+* parameter used for dose-response analysis: `r if(ec50){colFmt(colnames(grofit$gcFit$gcTable)[grofit$control$parameter], 'NavyBlue')} else{"NA"}`
 
 \pagebreak
+
 ## Growth fit results
-### `r if(any(c("a", "l") %in% control$fit.opt)){"Exponential fit"}`
 ```{r table_linear, echo=F, warning=F, message=F, results='asis'}
 if(any(c("a", "l") %in% control$fit.opt)){
   table_linear <- data.frame("Sample" = paste(res.table.gc$TestId, res.table.gc$AddId, res.table.gc$concentration, sep = "|"),
@@ -51,11 +64,12 @@ if(any(c("a", "l") %in% control$fit.opt)){
                              "t~end~(µ~max~)" = res.table.gc$tmu.end.linfit,
                              "R^2^(linear fit)" = round(as.numeric(res.table.gc$r2mu.linfit), 3),
                              stringsAsFactors = F, check.names = F)
-  knit_table(table_linear)
+  table_linear <- as.data.frame(apply(table_linear, 2, function(x) str_replace_all(x, "NA ± NA", "")))
+  table_linear[is.na(table_linear)] <- ""
+  knit_table(table_linear, caption = "Exponential Fit")
 }
 ```
-### `r if(any(c("a", "b", "m") %in% control$fit.opt)){"\\pagebreak Exponential fit"}`
-```{r table_model, echo=F, warning=F, message=F, results='asis'}
+```{r table_model, echo=F, warning=F, message=F, results='asis', fig.align='center'}
 if(any(c("a", "b", "m") %in% control$fit.opt)){
     table_model <- data.frame("Sample" = paste(res.table.gc$TestId, res.table.gc$AddId, res.table.gc$concentration, sep = "|"),
                               "Model" = res.table.gc$used.model,
@@ -63,7 +77,304 @@ if(any(c("a", "b", "m") %in% control$fit.opt)){
                              "λ" = paste(round(as.numeric(res.table.gc$lambda.model), 3), "\u00B1", round(as.numeric(res.table.gc$stdlambda.model),3)),
                              "A" = paste(round(as.numeric(res.table.gc$A.model), 3), "\u00B1", round(as.numeric(res.table.gc$stdA.model),3)),
                              stringsAsFactors = F, check.names = F)
-  knit_table(table_model)
+    if ( any(res.table.gc$used.model == "richards") ){
+      table_model <- cbind(table_model, data.frame("ν" = round(as.numeric(res.table.gc$parameter_nu.model), 3), stringsAsFactors = F, check.names = F))
+    }
+    if ( any(res.table.gc$used.model == "gompertz.exp") ){
+      table_model <- cbind(table_model, data.frame("α" = round(as.numeric(res.table.gc$parameter_alpha.model), 3), stringsAsFactors = F, check.names = F))
+    }
+    if ( any(res.table.gc$used.model == "gompertz.exp") ){
+      table_model <- cbind(table_model, data.frame("t~shift~" = round(as.numeric(res.table.gc$parameter_t_shift.model), 3), stringsAsFactors = F, check.names = F))
+    }
+    table_model <- as.data.frame(apply(table_model, 2, function(x) str_replace_all(x, "NA ± NA", "")))
+    table_model[is.na(table_model)] <- ""
+    knit_table(table_model, caption = "Parametric Fit")
+}
+```
+
+```{r table_spline, echo=F, warning=F, message=F, results='asis', fig.align='center'}
+if(any(c("a", "b", "s") %in% control$fit.opt)){
+    table_spline <- data.frame("Sample" = paste(res.table.gc$TestId, res.table.gc$AddId, res.table.gc$concentration, sep = "|"),
+                             "µ~max~" = round(as.numeric(res.table.gc$mu.spline), 3),
+                             "λ" = round(as.numeric(res.table.gc$lambda.spline), 3),
+                             "A" = round(as.numeric(res.table.gc$A.spline), 3),
+                             "smooth.fac" = res.table.gc$smooth.spline,
+                             stringsAsFactors = F, check.names = F)
+    if ( grofit$control$nboot.dr > 1 ){
+      table_spline <- cbind(table_spline, data.frame("µ~max~.boot" = paste(round(as.numeric(res.table.gc$mu.bt), 3),"\u00B1", round(as.numeric(res.table.gc$stdmu.bt),3)), 
+                                                   "λ.boot" = paste(round(as.numeric(res.table.gc$lambda.bt), 3),"\u00B1", round(as.numeric(res.table.gc$stdlambda.bt),3)),
+                                                   "A.boot" = paste(round(as.numeric(res.table.gc$A.bt), 3),"\u00B1", round(as.numeric(res.table.gc$stdA.bt),3)),
+                                                   stringsAsFactors = F, check.names = F))
+    }
+  table_spline <- as.data.frame(apply(table_spline, 2, function(x) str_replace_all(x, "NA ± NA", "")))
+  table_spline[is.na(table_spline)] <- ""
+  knit_table(table_spline, caption = "Smooth Spline Fit")
+}
+```
+\clearpage
+## Plots
+### `r if(any(c("a", "l") %in% control$fit.opt)){"Exponential Fits"}`
+```{r figure_linear, out.width = "33%", fig.show='hold', echo=F, warning=F, message=F, results='asis', fig.align='default'}
+if(any(c("a", "l") %in% control$fit.opt)){
+  for(i in 1:length(grofit[["gcFit"]][["gcFittedLinear"]])){
+    if(grofit[["gcFit"]][["gcFittedLinear"]][[i]][["fitFlag"]] == TRUE){
+        x <- grofit[["gcFit"]][["gcFittedLinear"]][[i]]
+        coef <- x[["par"]]
+        lagtime <- coef["lag"]
+        tangent.time  <- seq(lagtime, max(x[["raw.time"]]), length=200)
+        tangent.df <- data.frame("time" = tangent.time,
+                                "y" = coef["y0_lm"] * exp(coef["mumax"]*tangent.time) )
+        fit_df <- data.frame("time" = x[["raw.time"]][x$ndx],
+                             "y" = x[["raw.data"]][x$ndx] )
+
+        df <- data.frame("time" = x[["raw.time"]],
+                         "data" = x[["raw.data"]])
+          
+        p <-    ggplot(df, aes(x = time, y = data)) +
+          geom_point(shape = 1, size = 2) +
+          xlab("Time") +
+          ylab("Growth (density)") +
+          theme_classic(base_size = 20) +
+          scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+          ggtitle(paste(x$gcID, collapse = " | ")) +
+          theme(
+            plot.title = element_text(size = 20),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()
+          )
+        
+        p <-
+          p + geom_point(
+            aes(x = time, y = y),
+            data = fit_df,
+            size = 2,
+            shape = 21,
+            fill = "firebrick"
+          ) +
+          scale_y_continuous(trans = 'log',
+                             breaks = base_breaks(),
+                             expand = expansion(mult = c(0.05, 0.05)))
+        
+        p.yrange.end <- ggplot_build(p)$layout$panel_params[[1]]$y.range[2]
+        print(p + geom_segment(
+          aes(
+            x = time[1],
+            y = y[1],
+            xend = time[which.min(abs(exp(y) - exp(p.yrange.end)))],
+            yend = y[which.min(abs(exp(y) - exp(p.yrange.end)))]
+          ),
+          data = tangent.df,
+          linetype = "dashed",
+          color = ggplot2::alpha("firebrick3", 0.7),
+          size = 0.5
+        ))
+
+    }
+  }
+}
+```
+`r if(any(c("a", "l") %in% control$fit.opt)){"\\clearpage"}`
+
+### `r if(any(c("a", "b", "m") %in% control$fit.opt)){"Parametric Fits"}`
+```{r figure_model, out.width = "33%", fig.show='hold', echo=F, warning=F, message=F, results='asis', fig.align='default'}
+if(any(c("a", "b", "m") %in% control$fit.opt)){
+  for(i in 1:length(grofit[["gcFit"]][["gcFittedModels"]])){
+    if(grofit[["gcFit"]][["gcFittedModels"]][[i]][["fitFlag"]] == TRUE){
+        x <- grofit[["gcFit"]][["gcFittedModels"]][[i]]
+        coef <- x[["parameters"]]
+        lagtime <- coef["lambda"][[1]][1]
+        model <- as.character(x$model)
+        # assign(paste(model.vec), x[["fit.data"]])
+        df <- data.frame("time" = x[["raw.time"]],
+                         "data" = x[["raw.data"]],
+                         "fit.time" = x[["fit.time"]],
+                         "fit.data" = x[["fit.data"]])
+          
+       p <-    ggplot(df, aes(x=time, y=data)) +
+          geom_point(shape=1, size = 2) + 
+          geom_line(aes_(x=as.name(names(df)[3]), y = as.name(names(df)[4]), color = "model"), size = 0.7) +
+          xlab("Time") +
+          ylab(label = ifelse(x$control$log.y.gc == TRUE, "Growth [Ln(y(t)/y0)]", "Growth [y(t)]")) +
+          theme_classic(base_size = 15) +
+          ggtitle(paste(x$gcID, collapse=" | ")) +
+          scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+          scale_y_continuous(breaks = scales::pretty_breaks()) + 
+          theme(plot.title = element_text(size=15),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank())
+       
+       if(x$model == "logistic"){
+         p <- p + annotate(
+              "text",
+              label = "y(t) == frac(A , 1+exp(frac(4 %.% mu, A) %.% (lambda - t) + 2))",
+              x = 1.05 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = TRUE, size = 3.2) +
+          annotate("text",
+              label = bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+                      lambda == .(round(x$parameters$lambda[1],3)) ),
+              x = 1.13 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = F, size = 2.5) + 
+           scale_color_manual(name='Growth Model',
+                       breaks = "logistic",
+                       values=c("model" = ggplot2::alpha("forestgreen", 0.7), "logistic" = ggplot2::alpha("forestgreen", 0.7)))
+      }
+      if(x$model == "richards"){
+        p <- p + annotate(
+                "text",
+                label = "y(t) == A%.%(1.0+nu%.%italic(e)^{1+nu}%.%exp(frac(mu,A)%.%(1+nu)^(1+frac(1,nu))%.%( lambda - t )))^(-1/nu)",
+                x = 1.14 * x$raw.time[length(x$raw.time)],
+                y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+                angle = 90, parse = TRUE, size = 3.2) +
+          annotate("text",
+                label = bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+                      lambda == .(round(x$parameters$lambda[1],3)) ~~~~ nu == .(round(as.numeric(x$parameters$fitpar$nu[1],3)))),
+                x = 1.22 * x$raw.time[length(x$raw.time)],
+                y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+                angle = 90, parse = F, size = 2.5) + 
+          scale_color_manual(name='Growth Model',
+                       breaks = "richards",
+                       values=c("model" = ggplot2::alpha("forestgreen", 0.7), "richards" = ggplot2::alpha("forestgreen", 0.7)))
+      }
+      if(x$model == "gompertz"){
+        p <- p + annotate(
+              "text",
+              label = "y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1))",
+              x = 1.05 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = TRUE, size = 3.4) +
+          annotate("text",
+              label = bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~ 
+                               lambda == .(round(x$parameters$lambda[1],3)) ),
+              x = 1.13 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = F, size = 2.5) + 
+          scale_color_manual(name='Growth Model',
+                       breaks = "gompertz",
+                       values=c("model" = ggplot2::alpha("forestgreen", 0.7), "gompertz" = ggplot2::alpha("forestgreen", 0.7)))
+      }
+      if(x$model == "gompertz.exp"){
+        lagtime <- lagtime - x$parameters$A[1]*exp(x$parameters$fitpar$alpha[1]*(x$parameters$lambda[1]-x$parameters$fitpar$t_shift[1]))
+        p <- p + annotate(
+              "text",
+              label = "y(t) == A%.%exp(-exp(frac(mu%.%italic(e),A)%.%(lambda-t) +1)) + A%.%exp(alpha%.%(t-t[shift]))",
+              x = 1.13 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = TRUE, size = 3.2) +
+          annotate("text",
+              label = bquote(A == .(round(x$parameters$A[1],3)) ~~~~ mu == .(round(x$parameters$mu[1],3)) ~~~~
+                      lambda == .(round(x$parameters$lambda[1],2)) ~~~~ alpha == .(round(x$parameters$fitpar$alpha[1],3))  ~~~~
+                      t[shift] == .(round(x$parameters$fitpar$t_shift[1],2)) ),
+              x = 1.21 * x$raw.time[length(x$raw.time)],
+              y = 0.5 * ggplot_build(p)$layout$panel_params[[1]]$y.range[2],
+              angle = 90, parse = F, size = 2.5) + 
+          scale_color_manual(name='Growth Model',
+                       breaks = "gompertz.exp",
+                       values=c("model" = ggplot2::alpha("forestgreen", 0.7), "gompertz.exp" = ggplot2::alpha("forestgreen", 0.7)))
+          
+      }
+      p <- p + theme(legend.key = element_blank(),
+                     legend.background=element_blank(),
+                     legend.title = element_blank(),
+                     legend.position = c(0.70, 0.1),
+                     plot.margin = unit(c(1, 5, 1, 1), "lines")) +
+          coord_cartesian(
+            xlim = c(
+              ggplot_build(p)$layout$panel_params[[1]]$x.range[1],
+              ggplot_build(p)$layout$panel_params[[1]]$x.range[2]
+            ),
+            ylim = c(
+              ggplot_build(p)$layout$panel_params[[1]]$y.range[1],
+              ggplot_build(p)$layout$panel_params[[1]]$y.range[2]
+            ),
+            clip = "off",
+            expand = F
+          )
+       
+       # /// add tangent at maximum slope
+        mu     <- as.numeric(coef$mu[1])
+        bla    <- (x$fit.time)*mu
+        bla    <- bla+(-mu*lagtime)
+        tangent.df <- data.frame("time" = x$fit.time,
+                                 "y" = bla)
+        df.horizontal <- data.frame("time" = c(x$fit.time[1], lagtime),
+                                    "y" = x[["fit.data"]][1])
+        p.yrange.end <- ggplot_build(p)$layout$panel_params[[1]]$y.range[2]
+        print(p + geom_segment(aes(x = time[which.min(abs(bla))], y = y[which.min(abs(bla))],
+                              xend = time[which.min(abs(y - p.yrange.end))],
+                              yend = y[which.min(abs(y - p.yrange.end))]), 
+                              data = tangent.df, linetype = "dashed", color = ggplot2::alpha("forestgreen", 0.7), size = 0.5) +
+          geom_segment(aes(x = time[1], y = y[1], xend = time[2], yend = y[2]), data = df.horizontal,
+                       linetype = "dashed", color = ggplot2::alpha("forestgreen", 0.7), size = 0.5))
+    }
+  }
+}
+```
+`r if(any(c("a", "b", "l", "m") %in% control$fit.opt)){"\\clearpage"}`
+
+### `r if(any(c("a", "b", "s") %in% control$fit.opt)){"Nonparametric Fits"}`
+```{r figure_spline, out.width = "33%", fig.asp=1.1, fig.show='hold', echo=F, warning=F, message=F, results='asis', fig.align='default'}
+if(any(c("a", "b", "s") %in% control$fit.opt)){
+ for(i in 1:length(grofit[["gcFit"]][["gcFittedSplines"]])){
+   if(grofit[["gcFit"]][["gcFittedSplines"]][[i]][["fitFlag"]] == TRUE){
+       x <- grofit[["gcFit"]][["gcFittedSplines"]][[i]]
+       coef <- x[["parameters"]]
+       lagtime <- coef["lambda"][[1]][1]
+       df <- data.frame("time" = x[["raw.time"]],
+                        "data" = x[["raw.data"]],
+                        "fit.time" = x[["fit.time"]],
+                        "fit.data" = x[["fit.data"]])
+         
+      p <-    ggplot(df, aes(x=time, y=data)) +
+       geom_point(shape=1, size = 2) + 
+       geom_line(aes(x=fit.time, y = fit.data, color = "spline"), size = 0.7) +
+       xlab("Time") +
+       ylab(label = ifelse(x$control$log.y.gc == TRUE, "Growth [Ln(y(t)/y0)]", "Growth [y(t)]")) +
+       theme_classic(base_size = 15) +
+       ggtitle(paste(x$gcID, collapse=" | ")) +
+       scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+       scale_y_continuous(breaks = scales::pretty_breaks()) + 
+       theme(legend.key = element_blank(),
+             legend.background=element_blank(),
+             legend.title = element_blank(),
+             legend.position = c(0.90, 0.08),
+             plot.title = element_text(size=15),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank()) + 
+       scale_color_manual(name='Growth Model',
+                       breaks = "Spline fit",
+                       values=c("spline" = ggplot2::alpha("dodgerblue3", 0.7), "Spline fit" = ggplot2::alpha("dodgerblue3", 0.7)))
+      
+      # /// add tangent at maximum slope
+       p.yrange.end <- ggplot_build(p)$layout$panel_params[[1]]$y.range[2]
+       mu     <- as.numeric(coef$mu[1])
+       time <- seq(lagtime, max(x$"fit.time"), length=200)
+       bla <- coef["b.tangent"][[1]]+time*mu
+       tangent.df <- data.frame("time" = time,
+                                "y" = bla)
+       df.horizontal <- data.frame("time" = c(x$fit.time[1], lagtime),
+                                   "y" = x[["raw.data"]][1])
+       p <- p + geom_segment(aes(x = time[which.min(abs(bla))], y = y[which.min(abs(bla))],
+                             xend = time[which.min(abs(y - p.yrange.end))],
+                             yend = y[which.min(abs(y - p.yrange.end))]), 
+                             data = tangent.df, linetype = "dashed", color = ggplot2::alpha("dodgerblue3", 0.7), size = 0.5) +
+         geom_segment(aes(x = time[1], y = y[1], xend = time[2], yend = y[2]), data = df.horizontal,
+                      linetype = "dashed", color = ggplot2::alpha("dodgerblue3", 0.7), size = 0.5)
+       
+       df.mu <- data.frame(spline(x$spline.deriv1$x, x$spline.deriv1$y))
+       
+       p.mu <- ggplot(df.mu, aes(x=x, y=y)) + 
+          geom_line(color = "dodgerblue3") + 
+          theme_classic(base_size = 15) +
+          xlab("Time") +
+          ylab(label = bquote("Exp. growth rate µ "~(h^-1))) + 
+          scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+          scale_y_continuous(breaks = scales::pretty_breaks(n=10))
+        
+       print(ggpubr::ggarrange(p, p.mu, ncol = 1, nrow = 2, align = "v", heights = c(2,1.3)))
+   }
+ }
 }
 ```
 ```
