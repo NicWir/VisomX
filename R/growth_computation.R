@@ -189,9 +189,9 @@ growth.control <-
   if ((is.numeric(have.atleast) == FALSE) | (length(have.atleast) !=
                                              1) | (have.atleast < 6))
     stop("value of have.atleast must be numeric (>=6) and of one element")
-  if ((is.numeric(parameter) == FALSE) | (length(parameter) !=
+  if (((is.character(parameter) == FALSE) && (is.numeric(parameter) == FALSE)) | (length(parameter) !=
                                           1))
-    stop("value of parameter must be numeric and of one element")
+    stop("value of parameter must be a string or numeric and of one element")
   if ((is.numeric(nboot.dr) == FALSE) | (length(nboot.dr) !=
                                          1) | (nboot.dr < 0))
     stop("value of nboot.dr must be numeric (>=0) and of one element")
@@ -201,6 +201,30 @@ growth.control <-
   if (((is.numeric(smooth.dr) == FALSE) && (is.null(smooth.dr) ==
                                             FALSE)))
     stop("value of smooth.dr must be numeric or NULL")
+
+  parameters.opt <- c('', '', '', '',
+                    '', '', '', '', 'mu.linfit', 'lambda.linfit',
+                    'stdmu.linfit', 'tmu.start.linfit', 'tmu.end.linfit', 'r2mu.linfit',
+                    'reliable_fit.linfit', 'mu.model', 'lambda.model', 'A.model', 'integral.model',
+                    'parameter_nu.model', 'parameter_alpha.model', 'parameter_t_shift.model',
+                    'stdmu.model', 'stdlambda.model', 'stdA.model', 'reliable_fit.model',
+                    'ci90.mu.model.lo', 'ci90.mu.model.up', 'ci90.lambda.model.lo',
+                    'ci90.lambda.model.up', 'ci90.A.model.lo', 'ci90.A.model.up', 'ci95.mu.model.lo',
+                    'ci95.mu.model.up', 'ci95.lambda.model.lo', 'ci95.lambda.model.up', 'ci95.A.model.lo',
+                    'ci95.A.model.up', 'mu.spline', 'lambda.spline', 'A.spline', 'integral.spline',
+                    'reliable_fit.spline', 'smooth.spline', 'mu.bt', 'lambda.bt', 'A.bt', 'integral.bt',
+                    'stdmu.bt', 'stdlambda.bt', 'stdA.bt', 'stdintegral.bt', 'reliable_fit.bt',
+                    'ci90.mu.bt.lo', 'ci90.mu.bt.up', 'ci90.lambda.bt.lo', 'ci90.lambda.bt.up',
+                    'ci90.A.bt.lo', 'ci90.A.bt.up', 'ci90.integral.bt.lo', 'ci90.integral.bt.up',
+                    'ci95.mu.bt.lo', 'ci95.mu.bt.up', 'ci95.lambda.bt.lo', 'ci95.lambda.bt.up',
+                    'ci95.A.bt.lo', 'ci95.A.bt.up', 'ci95.integral.bt.lo', 'ci95.integral.bt.up')
+  parameter.in <- parameter
+  if(is.character(parameter)){
+    parameter <- match(parameter, parameters.opt)
+    if(is.na(parameter)){
+      stop(paste0(parameter.in, " is not a valid parameter for the dose-response analysis. See ?growth.drFit for possible options"))
+    }
+  }
   grofit.control <- list(neg.nan.act = neg.nan.act, clean.bootstrap = clean.bootstrap,
                          suppress.messages = suppress.messages, fit.opt = fit.opt, min.density = min.density,
                          log.x.gc = log.x.gc, log.y.gc = log.y.gc, log.y.model=log.y.model, interactive = interactive,
@@ -216,7 +240,7 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
                         neg.nan.act = FALSE, clean.bootstrap = TRUE,
                         suppress.messages = FALSE, fit.opt = "b", min.density = NA,
                         log.x.gc = FALSE, log.y.gc = TRUE, log.y.model = FALSE,
-                        lin.h = NULL, lin.R2 = 0.95, lin.RSD = 0.05,
+                        lin.h = NULL, lin.R2 = 0.95, lin.RSD = 0.10,
                         interactive = TRUE, nboot.gc = 100,
                         smooth.gc= 0.55, model.type=c("logistic",
                                                       "richards","gompertz", "gompertz.exp"),
@@ -234,17 +258,11 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
     time <- data$time
     data <- data$data
   }
-  if(is.numeric(min.density) && min.density != 0){
-    if(!is.na(min.density) && all(as.vector(data[,4]) < min.density)){
-      stop(paste0("Start density values need to be greater than 'min.density'.\nThe minimum start value in your dataset is: ",
-                  min(as.vector(data[,4]))), call. = FALSE)
-    }
-  }
   control <- growth.control(neg.nan.act = neg.nan.act, clean.bootstrap = clean.bootstrap,
                             suppress.messages = suppress.messages, fit.opt = fit.opt, min.density = min.density,
                             log.x.gc = log.x.gc, log.y.gc = log.y.gc, log.y.model = log.y.model, interactive = interactive,
                             nboot.gc = round(nboot.gc), smooth.gc = smooth.gc, smooth.dr = smooth.dr,
-                            have.atleast = round(have.atleast), parameter = round(parameter),
+                            have.atleast = round(have.atleast), parameter = parameter,
                             log.x.dr = log.x.dr, log.y.dr = log.y.dr, nboot.dr = round(nboot.dr),
                             model.type = model.type)
   nboot.gc <- control$nboot.gc
@@ -331,10 +349,11 @@ growth.report <- function(grofit, report.dir = NULL, ...)
 growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = NULL, lin.R2 = 0.95, lin.RSD = 0.05)
 {
   # /// check if start density values are above min.density in all samples
+  max.density <- apply(data[,4:length(data)], 2, max)
   if(is.numeric(control$min.density) && control$min.density != 0){
-    if(all(as.vector(data[,4]) < control$min.density)){
-      stop(paste0("Start density values need to be below 'min.density'.\nThe minimum start value in your dataset is: ",
-                  min(as.vector(data[,4]))), call. = FALSE)
+    if(!is.na(control$min.density) && all(as.numeric(max.density) < control$min.density)){
+      stop(paste0("The chosen global start density value (min.density) is larger than every value in your dataset.\nThe maximum start value in your dataset is: ",
+                  max(as.numeric(max.density))))
     }
   }
   # /// check input parameters
@@ -400,7 +419,6 @@ growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = N
     # /// plot linear fit
     if ((control$interactive == TRUE)) {
       if (("l" %in% control$fit.opt) || ("a"  %in% control$fit.opt)) {
-        if (fitlinear$fitFlag == TRUE) {
           answer_satisfied <- "n"
           reliability_tag_linear <- NA
           while ("n" %in% answer_satisfied) {
@@ -421,23 +439,23 @@ growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = N
               } # end if ("n" %in% test_answer)
               else {
                 new_params <- unlist(strsplit(test_answer, split = ","))
-                t0_new <- as.numeric(new_params[1])
-                h_new <- as.numeric(new_params[2])
+                t0_new <- dplyr::if_else(!is.na(as.numeric(new_params[1])), as.numeric(new_params[1]), t0)
+                h_new <- dplyr::if_else(!is.na(as.numeric(new_params[2])), as.numeric(new_params[2]), lin.h)
                 quota_new <- as.numeric(new_params[3])
                 min.density_new <- as.numeric(new_params[4])
-                R2_new <- as.numeric(new_params[5])
-                RSD_new <-as.numeric(new_params[6])
-                control.new <- control
+                R2_new <- dplyr::if_else(!is.na(as.numeric(new_params[5])), as.numeric(new_params[5]), lin.R2)
+                RSD_new <- dplyr::if_else(!is.na(as.numeric(new_params[6])), as.numeric(new_params[6]), lin.RSD)
+                control_new <- control
                 if(is.numeric(min.density_new)){
                   if(!is.na(min.density_new) && all(as.vector(actwell) < min.density_new)){
                     message(paste0("Start density values need to be greater than 'min.density'.\nThe minimum start value in your dataset is: ",
                                 min(as.vector(actwell)),". 'min.density' was not adjusted."), call. = FALSE)
-                  } else {
-                    control.new$min.density <- min.density_new
+                  } else if(!is.na(min.density_new)){
+                    control_new$min.density <- min.density_new
                   }
                 }
                 fitlinear <- growth.gcFitLinear(acttime, actwell,
-                                                         gcID = gcID, control = control.new,
+                                                         gcID = gcID, control = control_new,
                                                          t0 = t0_new, h = h_new, quota = quota_new,
                                                 R2 = R2_new, RSD = RSD_new)
                 fitlinear.all[[i]] <- fitlinear
@@ -450,7 +468,6 @@ growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = N
               cat("Sample was (more ore less) o.k.\n")
             } # end else
           } # end while ("n" %in% answer_satisfied)
-        } # end if (fitlinear$fitFlag == TRUE)
       } # end if (("l" %in% control$fit.opt) || ("a"  %in% control$fit.opt))
     } # end if ((control$interactive == TRUE))
     else {
@@ -537,20 +554,20 @@ growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = N
                     t0_new <- t0
                   }
                   smooth.gc_new <- as.numeric(new_params[1])
-                  control.new <- control
+                  control_new <- control
                   if(!is.na(smooth.gc_new) && smooth.gc_new != ""){
-                    control.new$smooth.gc <- smooth.gc_new
+                    control_new$smooth.gc <- smooth.gc_new
                   }
                   min.density_new <- as.numeric(new_params[3])
-                  if(is.numeric(min.density_new) && min.density != 0){
-                    if(!is.na(min.density_new) && all(as.vector(actwell) < min.density_new)){
+                  if(!is.na(min.density_new)){
+                    if(is.numeric(min.density_new) && min.density_new != 0 && all(as.vector(actwell) < min.density_new)){
                       message(paste0("Start density values need to be below 'min.density'.\nThe minimum start value in your dataset is: ",
                                      min(as.vector(data[,4])),". 'min.density' was not adjusted."), call. = FALSE)
-                    } else {
-                      control.new$min.density <- min.density_new
+                    } else if(!is.na(min.density_new)){
+                      control_new$min.density <- min.density_new
                     }
                   }
-                  nonpara <- growth.gcFitSpline(acttime, actwell, gcID, control.new, t0=t0_new)
+                  nonpara <- growth.gcFitSpline(acttime, actwell, gcID, control_new, t0=t0_new)
                   fitnonpara.all[[i]] <- nonpara
                 } #end else
               } # end if ("n" %in% answer_satisfied)
@@ -616,11 +633,20 @@ growth.gcFitModel <- function(time, data, gcID ="undefined", control=grofit.cont
 
   # /// check length of input data
   if (length(time)!=length(data)) stop("gcFitModel: length of time and data input vectors differ!")
-
+  if(max(data) < 2*data[1]){
+    message("No significant growth detected (with all values below 2 * start_value).")
+    gcFitModel   <- list(raw.time = time, raw.data = data, gcID = gcID, fit.time = NA,
+                         fit.data = NA, parameters = list(A=NA, mu=0, lambda=NA, integral=NA),
+                         model = NA, nls = NA, reliable=NULL, fitFlag=FALSE, control = control)
+    class(gcFitModel) <- "gcFitModel"
+    return(gcFitModel)
+  }
   # /// check if there are enough data points
   if (length(data)<5){
     warning("gcFitModel: There is not enough valid data. Must have at least 5 unique values!")
-    gcFitModel   <- list(raw.time = time, raw.data = data, gcID = gcID, fit.time = NA, fit.data = NA, parameters = list(A=NA, mu=NA, lambda=NA, integral=NA), model = NA, nls = NA, reliable=NULL, fitFlag=FALSE, control = control)
+    gcFitModel   <- list(raw.time = time, raw.data = data, gcID = gcID, fit.time = NA,
+                         fit.data = NA, parameters = list(A=NA, mu=NA, lambda=NA, integral=NA),
+                         model = NA, nls = NA, reliable=NULL, fitFlag=FALSE, control = control)
     class(gcFitModel) <- "gcFitModel"
     return(gcFitModel)
   }
@@ -906,21 +932,28 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
     } else {
       data
     }
-    if(!is.null(control$min.density) && control$min.density != 0){
-      if (control$log.y.gc == TRUE) {
-        min.density <- log(control$min.density / data[1])
-        time <- time[max(which.min(abs(time-t0)), which.min(abs(data.log-min.density))):length(time)]
-        data.log <- data.log[max(which.min(abs(time.raw-t0)), which.min(abs(data.log-min.density))) : length(data.log)]
-      } else {
-        min.density <- control$min.density
-        time <- time[max(which.min(abs(time-t0)), which.min(abs(data-min.density))):length(data)]
-        data <- data[max(which.min(abs(time.raw-t0)), which.min(abs(data-min.density))) : length(data)]
+    # Implement t0 and min.density into dataset
+    if(!is.null(control$min.density)) {
+      if (!is.na(control$min.density) && control$min.density != 0) {
+        if (control$log.y.gc == TRUE) {
+          min.density <- log(control$min.density / data[1])
+          time <-
+            time[max(which.min(abs(time - t0)), which.min(abs(data.log - min.density))):length(time)]
+          data.log <-
+            data.log[max(which.min(abs(time.raw - t0)), which.min(abs(data.log - min.density))):length(data.log)]
+        } else {
+          min.density <- control$min.density
+          time <-
+            time[max(which.min(abs(time - t0)), which.min(abs(data - min.density))):length(data)]
+          data <-
+            data[max(which.min(abs(time.raw - t0)), which.min(abs(data - min.density))):length(data)]
+        }
       }
     } else {
       if (control$log.y.gc == TRUE) {
         data.log <- data.log[which.min(abs(time-t0)):length(data.log)]
       }
-      time <- time[which.min(abs(time-t0)):length(time)]
+      time <- time[which.min(abs(time.raw-t0)):length(time)]
       data <- data[which.min(abs(time.raw-t0)):length(data)]
     }
     halftime <- (min(time) + max(time))/2
@@ -951,7 +984,7 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
       mu.spl <- dydt.max # maximum growth rate
       y.max <- y.spl$y[mumax.index] # cell density at time of max growth rate
       b.spl <- y.max - mu.spl * t.max # the y-intercept of the tangent at µmax
-      lambda.spl <- -b.spl/mu.spl + t0 # lag time
+      lambda.spl <- -b.spl/mu.spl  # lag time
       integral <- low.integrate(y.spl$x, y.spl$y)
       low <- lowess(time, y = if(control$log.y.gc == TRUE){
         data.log
@@ -1104,8 +1137,10 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
     RSD <- 0.05
   }
   data.log <- log(data.in/data.in[1])
-  if(!is.null(control$min.density) && control$min.density != 0){
-    min.density <- log(control$min.density / data[1])
+  if(!is.null(control$min.density)){
+    if(!is.na(control$min.density) && control$min.density != 0){
+      min.density <- log(control$min.density / data[1])
+    }
   }
   bad.values <- ((is.na(data.log))|(is.infinite(data.log))|(is.na(time))|(is.na(data.log)))
   # /// remove bad values or stop program
@@ -1124,6 +1159,17 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
   obs <- data.frame(time, data)
   obs$ylog <- data.log
 
+  if(max(data.in) < 2*data.in[1]){
+    message("No significant growth detected (with all values below 2 * start_value).")
+    gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
+                        log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
+                          y0 = NA, y0_lm = NA, mumax = 0, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                        ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
+    )
+    class(gcFitLinear) <- "gcFitLinear"
+    message("No data range in accordance with the chosen parameters identified with appropriate linearity.")
+    return(gcFitLinear)
+  }
   ## number of values
   N <- nrow(obs)
 
@@ -1134,7 +1180,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
         ret[i, ] <- c(i, with(obs, (lm_parms(lm_window(time, ylog, i0 = i, h = h)))))
       }
       colnames(ret) <- c("index", "y-intersect", "slope", "X4", "R2", "RSD")
-      # add time values as column in ret
+      # add time and density values as columns in ret
       ret <- data.frame(ret, time = time[ret[,1]], data = obs$ylog[ret[,1]])
       bad <- is.na(ret[,5]) | is.na(ret[,6])
       ret <- ret[!bad,]
@@ -1156,18 +1202,18 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
             ret.check <- ret[which.min(abs(time-t0)):nrow(ret),] # consider only slopes from defined t0
           }
 
-        if(nrow(ret.check)<2){
-          gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
-                              log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-                                y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
-                              ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
-          )
-          class(gcFitLinear) <- "gcFitLinear"
-          message("No data range in accordance with the chosen parameters identified with appropriate linearity.")
-          return(gcFitLinear)
-        } else {
+          if(nrow(ret.check)<2){
+            gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
+                                log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
+                                  y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                                ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
+            )
+            class(gcFitLinear) <- "gcFitLinear"
+            message("No data range in accordance with the chosen parameters identified with appropriate linearity.")
+            return(gcFitLinear)
+          } else {
 
-          ## Determine indices of windows with high growth rate
+          ## Determine index of window with maximum growth rate, iterate until regression is found that meets R2 and RSD criterion
           success <- FALSE
           if(any(ret.check[,5] >= R2 & ret.check[,6] <= RSD)){
             while (!success){
@@ -1179,14 +1225,14 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
                 ret.check <- ret.check[-index.max,]
               }
             }
-            index.max.ret <- ret.check[which(ret.check[,3]==slope.max),1] # index of maximum slope in original fit table
+            index.max.ret <- ret.check[which(ret.check[,3]==slope.max),1] # index of maximum slope in fit table
             slope.quota <- quota * slope.max
             if(exists("min.density")){
               candidates <- which(ret[, 3] >= slope.quota & # indices of slopes greater than slope.quota
                                     ret[, 5] >= 0.95*R2 & # R2 criterion for candidates
                                     ret[, 6] <= 1.05 * RSD & # RSD criterion for candidates
                                     ret[, 7] >= t0 & # consider only slopes after defined t0
-                                    ret[, 8] >= min.density # cosider only slopes at densities higher than "min.density"
+                                    ret[, 8] >= min.density # consider only slopes at densities higher than "min.density"
                                   )
             } else{
               candidates <- which(ret[, 3] >= slope.quota & # indices of slopes greater than slope.quota
@@ -1237,7 +1283,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
                                   ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
               )
               class(gcFitLinear) <- "gcFitLinear"
-              message(paste0("No linear fit in accordance with the chosen parameters identified with an R2 value of >= ", RSD, " and an RSD of <= ", RSD, "."))
+              message(paste0("No linear fit in accordance with the chosen parameters identified with: R2 >= ", RSD, ", RSD <= ", RSD, ", t0 = ", t0, ", and min.density = ", control$min.density, "."))
               return(gcFitLinear)
             } # if(N >= 6)
           } # if(any(ret.check[,5] >= R2 & ret.check[,6] <= RSD))
@@ -1253,9 +1299,9 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
           }
         } # else of if(nrow(ret.check)<2)
       } # else of if(nrow(ret)<1)
-  } # if(N >= 6)
+  } # if(N >= 3)
   else {
-    message("Not enough observations in the dataset to perform exponential fit. growth.gcFitLinear requires at least 6 data points (5 of which have a value greater than y0).")
+    message("Not enough observations in the dataset to perform exponential fit. growth.gcFitLinear requires at least 3 data points between t0 and the time of maximum density.")
     gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
                         log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
                           y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
@@ -1458,8 +1504,8 @@ growth.drFit <- function (gcFitData, control = grofit.control())
     for (i in 1:length(distinct)) {
       conc <- (gcFitData[, 3])[which(gcFitData[, 1] ==
                                        distinct[i])]
-      test <- (gcFitData[, control$parameter])[which(gcFitData[,
-                                                               1] == distinct[i])]
+      test <- (gcFitData[, control$parameter])[grep(distinct[i], gcFitData[, 1])]
+      names(test) <- rep(names(gcFitData)[control$parameter], length(test))
       drID <- distinct[i]
       EC50[[i]] <- growth.drFitSpline(conc, test, drID, control)
       if (control$nboot.dr > 0) {
@@ -1490,6 +1536,7 @@ growth.drFitSpline <- function (conc, test, drID = "undefined", control = grofit
 {
   if (is(control) != "grofit.control")
     stop("control must be of class grofit.control!")
+  test.nm <- names(test)[1]
   test <- as.vector(as.numeric(as.matrix(test)))
   conc <- as.vector(as.numeric(as.matrix(conc)))
   if (is.vector(conc) == FALSE || is.vector(test) == FALSE)
@@ -1624,7 +1671,7 @@ growth.drFitSpline <- function (conc, test, drID = "undefined", control = grofit
   drFitSpline <- list(raw.conc = conc, raw.test = test, drID = drID,
                       fit.conc = ytest$x, fit.test = ytest$y, spline = spltest,
                       parameters = list(EC50 = EC.test[1], yEC50 = yEC.test,
-                                        EC50.orig = EC.orig[1], yEC50.orig = EC.orig[2]),
+                                        EC50.orig = EC.orig[1], yEC50.orig = EC.orig[2], test = test.nm),
                       fitFlag = fitFlag, reliable = NULL, control = control)
   class(drFitSpline) <- "drFitSpline"
   drFitSpline
@@ -1686,6 +1733,7 @@ growth.drBootSpline <- function (conc, test, drID = "undefined", control = grofi
   boot.x <- array(NA, c(control$nboot.dr, 1000))
   boot.y <- array(NA, c(control$nboot.dr, 1000))
   ECtest.boot <- seq(0, 0, length.out = control$nboot.dr)
+  y.EC50.boot <- seq(0, 0, length.out = control$nboot.dr)
   splinefit <- list()
   sa <- seq(1, length(conc.boot))
   for (b in 1:control$nboot.dr) {
@@ -1711,6 +1759,7 @@ growth.drBootSpline <- function (conc, test, drID = "undefined", control = grofi
       stop("Error in drBootSpline")
     }
     ECtest.boot[b] <- splinefit[[b]]$parameters$EC50
+    y.EC50.boot[b] <- splinefit[[b]]$parameters$yEC50
   }
   ECtest.boot[which(!is.finite(ECtest.boot))] <- NA
   if (control$clean.bootstrap == TRUE)
@@ -1750,7 +1799,7 @@ growth.drBootSpline <- function (conc, test, drID = "undefined", control = grofi
   }
   drBootSpline <- list(raw.conc = conc, raw.test = test, drID = drID,
                        boot.conc = boot.x, boot.test = boot.y, boot.drSpline = splinefit,
-                       ec50.boot = ECtest.boot, bootFlag = TRUE, control = control)
+                       ec50.boot = ECtest.boot, ec50y.boot = y.EC50.boot, bootFlag = TRUE, control = control)
   class(drBootSpline) <- "drBootSpline"
   drBootSpline
 }

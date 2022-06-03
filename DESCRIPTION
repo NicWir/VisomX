@@ -23,7 +23,8 @@ Depends:
     magrittr,
     methods,
     R (>= 4.0),
-    stringr
+    stringr,
+    tidyr
 Imports: 
     assertthat,
     Biobase,
@@ -57,6 +58,7 @@ Imports:
     memoise,
     MSnbase,
     pcaMethods,
+    PCAtools,
     pheatmap,
     plotly,
     pls,
@@ -77,7 +79,6 @@ Imports:
     stats,
     SummarizedExperiment,
     tibble,
-    tidyr,
     UpSetR,
     vsn
 Suggests: 
@@ -100,6 +101,7 @@ Remotes:
     bioc::release/globaltest,
     bioc::release/KEGGgraph,
     bioc::release/sva,
+    bioc::release/PCAtools,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA

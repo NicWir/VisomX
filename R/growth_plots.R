@@ -8,17 +8,17 @@ setMethod("plot", c("gcFitLinear", "missing"),
             switch(which,
                    fit = {
 
-                     plot(x$"raw.data" ~ x$"raw.time", xlab="Time", ylab="Ln(density)",
-                          log=log, las=1, main = "Exponential fit", ...)
-                     points(x$raw.data[x$ndx] ~ x$raw.time[x$ndx], pch=21, col="black", bg="red")
+                     plot(x$"raw.data" ~ x$"raw.time", xlab="Time", ylab=ifelse(log == "y", "Ln(density)", "Density"),
+                          log=log, las=1, main = "Linear fit", ...)
+                     try(points(x$raw.data[x$ndx] ~ x$raw.time[x$ndx], pch=21, col="black", bg="red"))
 
                      ## lag phase
                      lag <- x$par["lag"]
 
-                     time <- seq(lag, max(x$"raw.time"), length=200)
+                     try(time <- seq(lag, max(x$"raw.time"), length=200), silent = T)
                      coef_ <- x$par
-                     lines(time, x$FUN(time, c(y0=unname(coef_["y0_lm"]), mumax=unname(coef_["mumax"])))[,"y"], lty=2, lwd=2, col=ggplot2::alpha("firebrick3", 0.7), ...)
-                     lines(c(min(x$"raw.time"[1]), lag), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha("firebrick3", 0.7))
+                     try(lines(time, x$FUN(time, c(y0=unname(coef_["y0_lm"]), mumax=unname(coef_["mumax"])))[,"y"], lty=2, lwd=2, col=ggplot2::alpha("firebrick3", 0.7), ...), silent = T)
+                     try(lines(c(min(x$"raw.time"[1]), lag), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha("firebrick3", 0.7)), silent = T)
                    },
                    diagnostics = {
                      opar <- par(no.readonly = TRUE)
@@ -254,7 +254,7 @@ plot.drBootSpline <- function (x,
     global.miny <- min(min(x$boot.test))
     global.maxy <- max(max(x$boot.test))
 
-    dev.new()
+    plot.new()
     # initialize plot
     if ((x$control$log.x.dr == TRUE) &&
         (x$control$log.y.dr == FALSE)) {
@@ -319,11 +319,12 @@ plot.drBootSpline <- function (x,
         pch = 0,
         colSpline = colSpline[i],
         colData = 0,
-        cex = cex
+        cex = cex,
+        lwd = 1
       )
     }
 
-    dev.new()
+    plot.new()
     if (sum(!is.na(x$ec50.boot)) == length(x$ec50.boot)) {
       hist(
         x$ec50.boot,
@@ -363,6 +364,7 @@ plot.drFitSpline <-
             colSpline = 1,
             colData = 1,
             cex = 1,
+            lwd = 2,
             ...)
   {
     # x an object of class drFitSpline
@@ -416,8 +418,8 @@ plot.drFitSpline <-
               pch = pch,
               cex = cex,
               col = colData,
-              xlab = "ln(1+concentration)",
-              ylab = "response"
+              xlab = "Ln(1+concentration)",
+              ylab = paste0("Response", ifelse(!is.na(x$parameters$test), paste0(" (", x$parameters$test, ")"), ""))
             )
           }
           else
@@ -429,8 +431,8 @@ plot.drFitSpline <-
                 pch = pch,
                 cex = cex,
                 col = colData,
-                xlab = "concentration",
-                ylab = "response"
+                xlab = "Concentration",
+                ylab = paste0("Response", ifelse(!is.na(x$parameters$test), paste0(" (", x$parameters$test, ")"), ""))
               )
             }
           }
@@ -489,7 +491,7 @@ plot.drFitSpline <-
       x$fit.conc,
       x$fit.test,
       type = "l",
-      lwd = 2,
+      lwd = lwd,
       col = colSpline
     ))
 
@@ -817,7 +819,7 @@ plot.gcFitSpline <- function(x, add=FALSE, raw=TRUE, slope=TRUE, deriv = T, pch=
       time <- seq(lambda, max(x$"fit.time"), length=200)
       y_tangent <- x$parameters["b.tangent"][[1]]+time*mu
       try(lines(time, y_tangent, lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7), ...))
-      try(lines(c(min(x$"fit.time"[1]), lambda), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7)))
+      try(lines(c(min(x$"raw.time"[1]), lambda), rep(x$"raw.data"[1], 2), lty=2, lwd=2, col=ggplot2::alpha(colSpline, 0.7)))
     }
     if (deriv  == TRUE){
       par(mar=c(3.1, 3.1, 1.1, 2.1), mgp=c(2, 1, 0))

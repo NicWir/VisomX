@@ -16,12 +16,12 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(dev = "pdf")
-diff_true <- nrow(rowData(dep[rowData(dep, use.names = FALSE)$significant, 
+diff_true <- nrow(SummarizedExperiment::rowData(dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant, 
     ])) != 0
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
 ```
 ````{r,echo=FALSE}
-contrasts <- rowData(dep) %>% 
+contrasts <- SummarizedExperiment::rowData(dep) %>% 
     data.frame(check.names = FALSE) %>% 
     select(ends_with("_diff")) %>% 
     colnames() %>% str_replace_all("_diff", "")
@@ -42,12 +42,12 @@ Samples were grouped into _`r length(unique(data[['condition']]))`_ conditions:
 `r colFmt(unique(data[['condition']]), 'blue')` 
 
 
-#### `r nrow(dep[rowData(dep)[['significant']], ])` proteins differ significantly between samples.
+#### `r nrow(dep[SummarizedExperiment::rowData(dep)[['significant']], ])` proteins differ significantly between samples.
 ```{r signif_conditions, echo=FALSE,  results="asis"}
 if (length(contrasts) > 1){
   for (i in 1:length(contrasts)) {
     cat(paste0("* _",
-               nrow(dep[rowData(dep)[[paste0(contrasts[i], "_significant")]],]),
+               nrow(dep[SummarizedExperiment::rowData(dep)[[paste0(contrasts[i], "_significant")]],]),
                "_ proteins for contrast ", contrasts[i], "\n"))
   }
 }
@@ -55,10 +55,10 @@ if (length(contrasts) > 1){
 
 Parameters used for the analysis:  
 
-* missing data was imputed using _`r colFmt(paste0("'", metadata(imp)$imp_fun, "'"),'blue')`_
+* missing data was imputed using _`r colFmt(paste0("'", imp@metadata$imp_fun, "'"),'blue')`_
 * selected contrast type: `r colFmt(paste0("'", param[['type']], "'"),'blue')`
 * tested contrasts:
-  `r colFmt(gsub("_p.adj", "", colnames(rowData(dep))[grep("p.adj", colnames(rowData(dep)))]),'blue')`
+  `r colFmt(gsub("_p.adj", "", colnames(SummarizedExperiment::rowData(dep))[grep("p.adj", colnames(SummarizedExperiment::rowData(dep)))]),'blue')`
 * adjusted p-value <= `r colFmt(param[['alpha']],'blue')`
 * |logFC| >= `r colFmt(param[['lfc']],'blue')`
 
@@ -152,7 +152,7 @@ _[MSnbase](https://bioconductor.org/packages/3.15/bioc/html/MSnbase.html)_ vigne
 \begin{center}
 ```
 ```{r missval, echo=FALSE, fig.width = 7, fig.height = 6}
-if (any(is.na(data.frame(assay(data))))) {
+if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
   suppressMessages(prot.plot_missval(norm, fontsize = 12, export = F))
 }
 ```
@@ -166,7 +166,7 @@ To check whether missing values are biased toward low-intensity proteins (i.e., 
 \begin{center}
 ```
 ```{r missval2, echo=FALSE, fig.width = 7, fig.height = 7}
-if (any(is.na(data.frame(assay(data))))) {
+if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
   suppressMessages(prot.plot_detect(norm, basesize = 10, plot = T, export = F))
 }
 ```
@@ -196,11 +196,11 @@ To get a high-level overview of the data, the unsupervised method _principal com
 ```
 ```{r screeplot, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F}
 ncomp <- 10
-if(length(getComponents(pca)) < 10) ncomp = length(getComponents(pca))
+if(length(PCAtools::getComponents(pca)) < 10) ncomp = length(PCAtools::getComponents(pca))
 withCallingHandlers(
     suppressWarnings(
         prot.plot_screeplot(pca, axisLabSize = 16, titleLabSize = 17, plot = T, export = F, 
-                            components = getComponents(pca)[1:ncomp])
+                            components = PCAtools::getComponents(pca)[1:ncomp])
     ), warning = suppress_ggrepel)
 ```
 ```{=latex}
@@ -278,7 +278,7 @@ if (width < 7) { width = 7 }
 if (width > 12) { width = 12 }
 ```
 ```{r,echo=FALSE, warning=F, message=F}
-len = nrow(dep[rowData(dep)$significant, ]) / 13
+len = nrow(dep[SummarizedExperiment::rowData(dep)$significant, ]) / 13
 if (len < 5) { len = 5 }
 ```
 ```{=latex}
@@ -338,7 +338,7 @@ Volcano plots can be used to visualize a particular contrast (comparison between
 for (i in 1:length(contrasts)){
   prot.plot_volcano(dep, contrast = contrasts[i], 
                           add_names = T, label_size = 2.5, adjusted =  volcano.adjusted,
-                          plot = T, export = F, lfc = metadata(dep)$lfc, alpha = metadata(dep)$alpha)
+                          plot = T, export = F, lfc = dep@metadata$lfc, alpha = dep@metadata$alpha)
 }
 
 ```

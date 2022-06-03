@@ -7,7 +7,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
   if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (any(!c("label", "condition", "replicate") %in%
@@ -609,7 +609,7 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
                                       ...)
     SummarizedExperiment::assay(se) <- MSnbase::exprs(MSnSet_imputed)
   }
-  metadata(se)$imp_fun <- fun
+  se@metadata["imp_fun"] <- fun
   return(se)
 }
 
@@ -635,18 +635,18 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     grDevices::pdf("Plots/meanSDPlot.pdf")
-    plot_meanSdPlot <- suppressWarnings(vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
     grDevices::dev.off()
 
     grDevices::png("Plots/meanSDPlot.png",
         width = 6, height = 6, units = 'in', res = 300)
-    plot_meanSdPlot <- suppressWarnings(vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+    plot_meanSdPlot <- suppressWarnings(meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD"))
     grDevices::dev.off()
     message(paste0("Exporting meanSdPlot to:\n\"", getwd(), "\"/Plots/meanSdPlot.pdf\" and \".../meanSdPlot.png\""))
   }
 
   if (plot == TRUE){
-    vsn::meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD")
+    meanSdPlot(se_vsn, plot = T, xlab = "Rank(mean)", ylab = "SD")
   }
 
 
@@ -676,7 +676,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
   .center <- if (center)
     NULL
   else 0
-  vars <- colVars(DelayedArray::DelayedArray(mat), center = .center)
+  vars <- matrixStats::colVars(as.matrix(DelayedArray::DelayedArray(mat)), center = .center)
   if (!is.null(removeVar)) {
     message("-- removing the lower ", removeVar * 100,
             "% of variables based on variance")
@@ -824,13 +824,13 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
     res <- tibble::rownames_to_column(res)
     return(res)
   }
-  limma_res <- map_df(cntrst, retrieve_fun)
+  limma_res <- purrr::map_df(cntrst, retrieve_fun)
   table <- limma_res %>% select(rowname, logFC, CI.L, CI.R,
                                 P.Value, qval, comparison) %>% mutate(comparison = gsub(" - ",
                                                                                         "_vs_", comparison)) %>% gather(variable, value,
                                                                                                                         -c(rowname, comparison)) %>% mutate(variable = recode(variable,
                                                                                                                                                                               logFC = "diff", P.Value = "p.val", qval = "p.adj")) %>%
-    unite(temp, comparison, variable) %>% spread(temp, value)
+    unite(temp, comparison, variable) %>% tidyr::spread(temp, value)
   SummarizedExperiment::rowData(se) <- merge(SummarizedExperiment::rowData(se, use.names = FALSE), table,
                        by.x = "name", by.y = "rowname", all.x = TRUE,
                        sort = FALSE)
@@ -881,8 +881,8 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
     SummarizedExperiment::rowData(diff) <- merge(SummarizedExperiment::rowData(diff, use.names = FALSE),
                            sign_df, by = "name")
   }
-  metadata(diff)$alpha <- as.numeric(alpha)
-  metadata(diff)$lfc <- as.numeric(lfc)
+  diff@metadata["alpha"] <- as.numeric(alpha)
+  diff@metadata["lfc"] <- as.numeric(lfc)
   return(diff)
 }
 ####____prot.get_results____####
@@ -908,7 +908,7 @@ prot.get_results <- function (dep)
                                             by = "ID")
   centered <- group_by(centered, rowname, condition) %>% summarize(val = mean(val,
                                                                               na.rm = TRUE)) %>% mutate(val = signif(val, digits = 3)) %>%
-    spread(condition, val)
+    tidyr::spread(condition, val)
   colnames(centered)[2:ncol(centered)] <- paste(colnames(centered)[2:ncol(centered)],
                                                 "_centered", sep = "")
   ratio <- as.data.frame(row_data) %>% tibble::column_to_rownames("name") %>%
@@ -1186,3 +1186,107 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
 }
 
 
+make_se <- function (proteins_unique, columns, expdesign)
+{
+  assertthat::assert_that(is.data.frame(proteins_unique), is.integer(columns),
+                          is.data.frame(expdesign))
+  if (any(!c("name", "ID") %in% colnames(proteins_unique))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(proteins_unique)), "'.\nRun make_unique() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(!c("label", "condition", "replicate") %in% colnames(expdesign))) {
+    stop("'label', 'condition' and/or 'replicate' columns",
+         "are not present in the experimental design", call. = FALSE)
+  }
+  if (any(!apply(proteins_unique[, columns], 2, is.numeric))) {
+    stop("specified 'columns' should be numeric", "\nRun make_se_parse() with the appropriate columns as argument",
+         call. = FALSE)
+  }
+  if (tibble::is_tibble(proteins_unique))
+    proteins_unique <- as.data.frame(proteins_unique)
+  if (tibble::is_tibble(expdesign))
+    expdesign <- as.data.frame(expdesign)
+  rownames(proteins_unique) <- proteins_unique$name
+  raw <- proteins_unique[, columns]
+  raw[raw == 0] <- NA
+  raw <- log2(raw)
+  expdesign <- mutate(expdesign, condition = make.names(condition)) %>%
+    tidyr::unite(ID, condition, replicate, remove = FALSE)
+  rownames(expdesign) <- expdesign$ID
+  matched <- match(make.names(delete_prefix(expdesign$label)),
+                   make.names(delete_prefix(colnames(raw))))
+  if (any(is.na(matched))) {
+    stop("None of the labels in the experimental design match ",
+         "with column names in 'proteins_unique'", "\nRun make_se() with the correct labels in the experimental design",
+         "and/or correct columns specification")
+  }
+  colnames(raw)[matched] <- expdesign$ID
+  raw <- raw[, !is.na(colnames(raw))][rownames(expdesign)]
+  row_data <- proteins_unique[, -columns]
+  rownames(row_data) <- row_data$name
+  se <- SummarizedExperiment::SummarizedExperiment(assays = as.matrix(raw), colData = expdesign,
+                                                   rowData = row_data)
+  return(se)
+}
+
+delete_prefix <- function (words)
+{
+  prefix <- get_prefix(words)
+  gsub(paste0("^", prefix), "", words)
+}
+
+get_prefix <- function (words)
+{
+  assertthat::assert_that(is.character(words))
+  if (length(words) <= 1) {
+    stop("'words' should contain more than one element")
+  }
+  if (any(is.na(words))) {
+    stop("'words' contains NAs")
+  }
+  minlen <- min(nchar(words))
+  truncated <- substr(words, 1, minlen)
+  if (minlen < 1) {
+    stop("At least one of the elements is too short")
+  }
+  mat <- data.frame(strsplit(truncated, ""), stringsAsFactors = FALSE)
+  identical <- apply(mat, 1, function(x) length(unique(x)) ==
+                       1)
+  prefix <- as.logical(cumprod(identical))
+  paste(mat[prefix, 1], collapse = "")
+}
+
+filter_missval <- function (se, thr = 0)
+{
+  if (is.integer(thr))
+    thr <- as.numeric(thr)
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"),
+                          is.numeric(thr), length(thr) == 1)
+  if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se, use.names = FALSE)))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_unique() and make_se() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(!c("label", "condition", "replicate") %in% colnames(SummarizedExperiment::colData(se)))) {
+    stop("'label', 'condition' and/or 'replicate' columns are not present in '",
+         deparse(substitute(se)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
+         call. = FALSE)
+  }
+  max_repl <- max(SummarizedExperiment::colData(se)$replicate)
+  if (thr < 0 | thr > max_repl) {
+    stop("invalid filter threshold applied", "\nRun filter_missval() with a threshold ranging from 0 to ",
+         max_repl)
+  }
+  bin_data <- SummarizedExperiment::assay(se)
+  idx <- is.na(SummarizedExperiment::assay(se))
+  bin_data[!idx] <- 1
+  bin_data[idx] <- 0
+  keep <- bin_data %>% data.frame() %>% tibble::rownames_to_column() %>%
+    gather(ID, value, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(se)),
+                                              by = "ID") %>% group_by(rowname, condition) %>% summarize(miss_val = n() -
+                                                                                                          sum(value)) %>% filter(miss_val <= thr) %>% tidyr::spread(condition,
+                                                                                                                                                             miss_val)
+  se_fltrd <- se[keep$rowname, ]
+  return(se_fltrd)
+}

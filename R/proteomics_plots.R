@@ -23,11 +23,11 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
                           is.logical(plot), length(plot) == 1)
-  df <- assay(se) %>% data.frame() %>% rownames_to_column() %>%
+  df <- SummarizedExperiment::assay(se) %>% data.frame() %>% tibble::rownames_to_column() %>%
     gather(ID, bin, -rowname) %>% mutate(bin = ifelse(is.na(bin),
                                                       0, 1))
   stat <- df %>% group_by(ID) %>% summarize(n = n(), sum = sum(bin)) %>%
-    left_join(., data.frame(colData(se)), by = "ID")
+    left_join(., data.frame(SummarizedExperiment::colData(se)), by = "ID")
   p <- ggplot(stat, aes(x = ID, y = sum, fill = condition)) +
     geom_col() + geom_hline(yintercept = unique(stat$n)) +
     labs(title = "Proteins per sample", x = "",
@@ -86,7 +86,7 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
     assertthat::assert_that(inherits(x, "SummarizedExperiment"),
                             msg = "input objects need to be of class 'SummarizedExperiment'")
     if (any(!c("label", "ID", "condition",
-               "replicate") %in% colnames(colData(x)))) {
+               "replicate") %in% colnames(SummarizedExperiment::colData(x)))) {
       stop("'label', 'ID', 'condition' and/or 'replicate' ",
            "columns are not present in (one of) the input object(s)",
            "\nRun make_se() or make_se_parse() to obtain the required columns",
@@ -94,10 +94,10 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
     }
   })
   gather_join <- function(se) {
-    assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(.,
-                                                                                    data.frame(colData(se)), by = "ID", check.names = FALSE)
+    SummarizedExperiment::assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(.,
+                                                                                    data.frame(SummarizedExperiment::colData(se)), by = "ID", check.names = FALSE)
   }
-  df <- map_df(arglist, gather_join, .id = "var") %>%
+  df <- purrr::map_df(arglist, gather_join, .id = "var") %>%
     mutate(var = factor(var, levels = names(arglist)))
   p <- ggplot(df, aes(val, col = condition)) +
     geom_density(na.rm = TRUE, show.legend = F) +
@@ -155,12 +155,12 @@ prot.plot_density <- function(se1,
 
 
     # Create data frame from SummarizedExperiment with normalized data
-    se.df1 <- data.frame(assay(se1), check.names = FALSE) %>% rownames_to_column()
+    se.df1 <- data.frame(SummarizedExperiment::assay(se1), check.names = FALSE) %>% tibble::rownames_to_column()
     if (!is.null(se2)){
-      se.df2 <- data.frame(assay(se2), check.names = FALSE) %>% rownames_to_column()
+      se.df2 <- data.frame(SummarizedExperiment::assay(se2), check.names = FALSE) %>% tibble::rownames_to_column()
     }
     if (!is.null(se3)){
-      se.df3 <- data.frame(assay(se3), check.names = FALSE) %>% rownames_to_column()
+      se.df3 <- data.frame(SummarizedExperiment::assay(se3), check.names = FALSE) %>% tibble::rownames_to_column()
     }
     # Convert into long format
     se.tall1 <-
@@ -319,7 +319,7 @@ prot.plot_density <- function(se1,
 prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
-  se_assay <- assay(se)
+  se_assay <- SummarizedExperiment::assay(se)
   if (!any(is.na(se_assay))) {
     stop("No missing values in '", deparse(substitute(se)),
          "'", call. = FALSE)
@@ -357,12 +357,12 @@ prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
 prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
-  se_assay <- assay(se)
+  se_assay <- SummarizedExperiment::assay(se)
   if (!any(is.na(se_assay))) {
     stop("No missing values in '", deparse(substitute(se)),
          "'", call. = FALSE)
   }
-  df <- se_assay %>% data.frame(check.names = FALSE) %>% rownames_to_column() %>%
+  df <- se_assay %>% data.frame(check.names = FALSE) %>% tibble::rownames_to_column() %>%
     gather(ID, val, -rowname)
   stat <- df %>% group_by(rowname) %>% summarize(mean = mean(val,
                                                              na.rm = TRUE), missval = any(is.na(val)))
@@ -460,7 +460,7 @@ prot.plot_pca <- function (dep,
                            indicate = c("condition", "replicate"),
                            title = NULL,
                            label = FALSE,
-                           n = ncol(t(assay(dep))),
+                           n = ncol(t(SummarizedExperiment::assay(dep))),
                            point_size = 4,
                            label_size = 3,
                            hline = 0,
@@ -527,7 +527,7 @@ prot.plot_pca <- function (dep,
       call. = FALSE
     )
   }
-  columns <- colnames(colData(dep))
+  columns <- colnames(SummarizedExperiment::colData(dep))
   if (!is.null(indicate)) {
     if (length(indicate) > 3) {
       stop(
@@ -549,11 +549,11 @@ prot.plot_pca <- function (dep,
       )
     }
   }
-  var <- apply(assay(dep), 1, sd)
-  df <- assay(dep)[order(var, decreasing = TRUE)[seq_len(n)],]
+  var <- apply(SummarizedExperiment::assay(dep), 1, sd)
+  df <- SummarizedExperiment::assay(dep)[order(var, decreasing = TRUE)[seq_len(n)],]
   pca <- stats::prcomp(t(df), scale = FALSE)
-  pca_df <- pca$x %>% data.frame(check.names = FALSE) %>% rownames_to_column() %>%
-    left_join(., data.frame(colData(dep), check.names = FALSE), by = c(rowname = "ID"))
+  pca_df <- pca$x %>% data.frame(check.names = FALSE) %>% tibble::rownames_to_column() %>%
+    left_join(., data.frame(SummarizedExperiment::colData(dep), check.names = FALSE), by = c(rowname = "ID"))
   percent <- round(100 * pca$sdev ^ 2 / sum(pca$sdev ^ 2), 1)
   if (!is.null(title)){
     title <- as.character(title)
@@ -686,7 +686,7 @@ prot.plot_volcano <-
       is.logical(plot),
       length(plot) == 1
     )
-    row_data <- rowData(dep, use.names = FALSE)
+    row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
     if (any(!c("name", "ID") %in% colnames(row_data))) {
       stop(
         paste0(
@@ -804,7 +804,7 @@ prot.plot_volcano <-
       theme(legend.position = "bottom", title = element_text(size = exp(-nchar(str_replace(contrast, "_vs_", " vs. "))/40)*38),
             axis.title = element_text(size = 22),
             legend.title = element_text(size = 22)) +
-      force_panelsizes(rows = unit(6.5, "in"),
+      ggh4x::force_panelsizes(rows = unit(6.5, "in"),
                        cols = unit(6.5, "in")) +
       scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1))
 
@@ -910,7 +910,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
     stop("'lower' and/or 'upper' arguments are not valid\n         Run plot_pca() with 'lower' and 'upper' between -1 and 1",
          call. = FALSE)
   }
-  pals <- RColorBrewer::brewer.pal.info %>% rownames_to_column() %>%
+  pals <- RColorBrewer::brewer.pal.info %>% tibble::rownames_to_column() %>%
     filter(category != "qual")
   if (!pal %in% pals$rowname) {
     stop("'", pal, "' is not a valid color panel",
@@ -919,13 +919,13 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
          paste(pals$rowname, collapse = "', '"), "'",
          call. = FALSE)
   }
-  if (any(is.na(assay(dep)))) {
+  if (any(is.na(SummarizedExperiment::assay(dep)))) {
     stop("Missing values in '", deparse(substitute(dep)),
          "'. Use plot_dist() instead")
   }
   if (!is.null(indicate)) {
     assertthat::assert_that(is.character(indicate))
-    col_data <- colData(dep) %>% as.data.frame()
+    col_data <- SummarizedExperiment::colData(dep) %>% as.data.frame()
     columns <- colnames(col_data)
     if (any(!indicate %in% columns)) {
       stop("'", paste0(indicate, collapse = "' and/or '"),
@@ -933,7 +933,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
            ".\nValid columns are: '", paste(columns,
                                             collapse = "', '"), "'.", call. = FALSE)
     }
-    anno <- colData(dep) %>% data.frame() %>% select(indicate)
+    anno <- SummarizedExperiment::colData(dep) %>% data.frame() %>% select(indicate)
     names <- colnames(anno)
     anno_col <- vector(mode = "list", length = length(names))
     names(anno_col) <- names
@@ -957,15 +957,15 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
     ha1 <- NULL
   }
   if (significant) {
-    if (!"significant" %in% colnames(rowData(dep, use.names = FALSE))) {
+    if (!"significant" %in% colnames(SummarizedExperiment::rowData(dep, use.names = FALSE))) {
       stop("'significant' column is not present in '",
            deparse(substitute(dep)), "'\nRun add_rejections() to obtain the required column",
            call. = FALSE)
     }
-    dep <- dep[rowData(dep, use.names = FALSE)$significant,
+    dep <- dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant,
     ]
   }
-  cor_mat <- cor(assay(dep))
+  cor_mat <- cor(SummarizedExperiment::assay(dep))
   ht1 = ComplexHeatmap::Heatmap(cor_mat, col = circlize::colorRamp2(seq(lower,
                                                                         upper, ((upper - lower)/7)), if (pal_rev) {
                                                                           rev(RColorBrewer::brewer.pal(8, pal))
@@ -1009,7 +1009,7 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
   {
     assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
                             is.character(indicate))
-    col_data <- colData(dep) %>% data.frame(check.names = FALSE)
+    col_data <- SummarizedExperiment::colData(dep) %>% data.frame(check.names = FALSE)
     columns <- colnames(col_data)
     if (all(!indicate %in% columns)) {
       stop("'", paste0(indicate, collapse = "' and/or '"),
@@ -1055,13 +1055,13 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
     ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
   }
   if(is.null(contrast) & show_all == FALSE){
-    contrast <- rowData(dep, use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(ends_with("_diff")) %>%
+    contrast <- SummarizedExperiment::rowData(dep, use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(ends_with("_diff")) %>%
       colnames(.) %>% gsub("_diff", "", .)
   }
   if (length(grep(paste(paste(contrast, collapse = "|"), "_diff", sep = ""),
-                  colnames(rowData(dep, use.names = FALSE)))) == 0) {
+                  colnames(SummarizedExperiment::rowData(dep, use.names = FALSE)))) == 0) {
     valid_cntrsts <-
-      rowData(dep, use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(ends_with("_diff")) %>%
+      SummarizedExperiment::rowData(dep, use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(ends_with("_diff")) %>%
       colnames(.) %>% gsub("_diff", "", .)
     valid_cntrsts_msg <- paste0("Valid contrasts are: '",
                                 paste0(valid_cntrsts, collapse = "', '"),
@@ -1086,8 +1086,8 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
                             1, is.logical(plot), length(plot) == 1)
   type <- match.arg(type)
   clustering_distance <- match.arg(clustering_distance)
-  row_data <- rowData(dep, use.names = FALSE)
-  col_data <- colData(dep) %>% data.frame(check.names = FALSE)
+  row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
+  col_data <- SummarizedExperiment::colData(dep) %>% data.frame(check.names = FALSE)
   if (any(!c("label", "condition", "replicate") %in%
           colnames(col_data))) {
     stop(paste0("'label', 'condition' and/or 'replicate' columns are not present in '",
@@ -1115,10 +1115,10 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
     ha1 <- NULL
   }
   filtered <- dep[row_data$significant, ]
-  if (nrow(assay(filtered)) == 0){
+  if (nrow(SummarizedExperiment::assay(filtered)) == 0){
     stop("No proteins with significantly different abundance were found.")
   }
-  if (any(is.na(assay(filtered)))) {
+  if (any(is.na(SummarizedExperiment::assay(filtered)))) {
     warning("Missing values in '", deparse(substitute(dep)),
             "'. ", "Using clustering_distance = 'gower'",
             call. = FALSE)
@@ -1128,16 +1128,16 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
     obs_NA <- FALSE
   }
   if (type == "centered") {
-    rowData(filtered)$mean <- rowMeans(assay(filtered), na.rm = TRUE)
-    df <- assay(filtered) - rowData(filtered, use.names = FALSE)$mean
+    SummarizedExperiment::rowData(filtered)$mean <- rowMeans(SummarizedExperiment::assay(filtered), na.rm = TRUE)
+    df <- SummarizedExperiment::assay(filtered) - SummarizedExperiment::rowData(filtered, use.names = FALSE)$mean
     if (!is.null(contrast) && show_all == FALSE){
       df <- data.frame(df, check.names = FALSE)[,str_detect(colnames(df),paste(contrast_samples, collapse = "|"))]
     }
   }
   if (type == "contrast") {
-    df <- rowData(filtered, use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
-      column_to_rownames(var = "name") %>% select(ends_with("_diff"))
-    if(length(grep("_diff", colnames(rowData(filtered)))) == 1){
+    df <- SummarizedExperiment::rowData(filtered, use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+       tibble::column_to_rownames(var = "name") %>% select(ends_with("_diff"))
+    if(length(grep("_diff", colnames(SummarizedExperiment::rowData(filtered)))) == 1){
       df[[1]] <- df[[1]] %>% sort()
     }
     colnames(df) <- gsub("_diff", "", colnames(df)) %>%
@@ -1189,7 +1189,7 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
   col_limit = if(!is.na(col_limit)){
     col_limit
   } else {
-    df_cent <- assay(filtered) - rowMeans(assay(filtered))
+    df_cent <- SummarizedExperiment::assay(filtered) - rowMeans(SummarizedExperiment::assay(filtered))
     col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95)) - ceiling(stats::quantile(df_cent, probs= 0.05))
   }
   breaks =  if (col_limit == 1){
@@ -1246,9 +1246,9 @@ prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     w <- 6+length(dep$condition)/10
     if (show_row_names == TRUE){
-      len = nrow(dep[rowData(dep)$significant, ]) / 12
+      len = nrow(dep[SummarizedExperiment::rowData(dep)$significant, ]) / 12
     } else {
-      len = nrow(dep[rowData(dep)$significant, ]) / 45
+      len = nrow(dep[SummarizedExperiment::rowData(dep)$significant, ]) / 45
     }
     if (len < 6) { len = 6 }
     message(paste0("Exporting heat map to:\n\"",
@@ -1322,8 +1322,8 @@ prot.plot_heatmap_all <- function (se,
                             1, is.numeric(col_font_size), length(col_font_size) ==
                             1, is.logical(plot), length(plot) == 1)
   clustering_distance <- match.arg(clustering_distance)
-  row_data <- rowData(se, use.names = FALSE)
-  col_data <- colData(se) %>% data.frame(check.names = FALSE)
+  row_data <- SummarizedExperiment::rowData(se, use.names = FALSE)
+  col_data <- SummarizedExperiment::colData(se) %>% data.frame(check.names = FALSE)
   if (any(!c("label", "condition", "replicate") %in%
           colnames(col_data))) {
     stop(paste0("'label', 'condition' and/or 'replicate' columns are not present in '",
@@ -1331,8 +1331,8 @@ prot.plot_heatmap_all <- function (se,
   }
   ha1 <- get_annotation(se, indicate)
   obs_NA <- FALSE
-  rowData(se)$mean <- rowMeans(assay(se), na.rm = TRUE)
-  df <- assay(se) - rowData(se, use.names = FALSE)$mean
+  SummarizedExperiment::rowData(se)$mean <- rowMeans(SummarizedExperiment::assay(se), na.rm = TRUE)
+  df <- SummarizedExperiment::assay(se) - SummarizedExperiment::rowData(se, use.names = FALSE)$mean
 
 
   df <- as.matrix(df)
@@ -1368,7 +1368,7 @@ prot.plot_heatmap_all <- function (se,
   col_limit = if(!is.na(col_limit)){
     col_limit
   } else {
-    df_cent <- assay(se) - rowMeans(assay(se))
+    df_cent <- SummarizedExperiment::assay(se) - rowMeans(SummarizedExperiment::assay(se))
     col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95, na.rm=TRUE)) - ceiling(stats::quantile(df_cent, probs= 0.05, na.rm=TRUE))
   }
   breaks =  if (col_limit == 1){
@@ -1422,9 +1422,9 @@ prot.plot_heatmap_all <- function (se,
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     w <- 6+length(se$condition)/10
     if (show_row_names == TRUE){
-      len = nrow(se[rowData(se)$significant, ]) / 12
+      len = nrow(se[SummarizedExperiment::rowData(se)$significant, ]) / 12
     } else {
-      len = nrow(se[rowData(se)$significant, ]) / 45
+      len = nrow(se[SummarizedExperiment::rowData(se)$significant, ]) / 45
     }
     if (len < 6) { len = 6 }
     message(paste0("Exporting heat map to:\n\"",
@@ -1482,8 +1482,8 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
                                  borderColour = "black", plot = TRUE, export = TRUE)
 {
   PC <- Variance <- NULL
-  components <- getComponents(pcaobj)[1:length(pcaobj$components)]
-  if(length(getComponents(pcaobj)) > 10){
+  components <- PCAtools::getComponents(pcaobj)[1:length(pcaobj$components)]
+  if(length(PCAtools::getComponents(pcaobj)) > 10){
     components <- components[1:10]
   }
   plotobj <- data.frame(components, pcaobj$variance[components], check.names = FALSE)
@@ -1563,7 +1563,7 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
   }
 }
 ####____prot.plot_loadings____####
-prot.plot_loadings <- function (pcaobj, components = getComponents(pcaobj, seq_len(5)),
+prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pcaobj, seq_len(5)),
                                 rangeRetain = 0.05, absolute = FALSE, col = c("gold",
                                                                               "white", "royalblue"), colMidpoint = 0, shape = 21,
                                 shapeSizeRange = c(10, 10), legendPosition = "top",
@@ -1661,7 +1661,7 @@ prot.plot_loadings <- function (pcaobj, components = getComponents(pcaobj, seq_l
     p <- p + theme(panel.grid.minor = element_blank())
   }
   if (drawConnectors == TRUE) {
-    p <- p + geom_text_repel(data = plotobj, aes(label = as.character(var)),
+    p <- p + ggrepel::geom_text_repel(data = plotobj, aes(label = as.character(var)),
                              size = labSize, nudge_x = ifelse(positionConnectors ==
                                                                 "left", -0.75, ifelse(positionConnectors ==
                                                                                         "right", 0.75, 0)), direction = "y",
@@ -1819,15 +1819,15 @@ prot.plot_bar <- function (dep,
                           length(plot) == 1)
   type <- match.arg(type)
   # Replace rownames of dep with column of original data frame defined in "col.id" argument
-  row_data <- rowData(dep, use.names = F)
+  row_data <- SummarizedExperiment::rowData(dep, use.names = F)
   GeneID <- match(col.id,
                   colnames(row_data))
   rownames(dep) <- row_data[, GeneID]
   rownames(dep)[is.na(rownames(dep))] <- 0
-  row_data <- rowData(dep, use.names = FALSE)
+  row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
 
   if (any(!c("label", "condition", "replicate") %in%
-          colnames(colData(dep)))) {
+          colnames(SummarizedExperiment::colData(dep)))) {
     stop("'label', 'condition' and/or 'replicate' columns are not present in '",
          deparse(substitute(dep)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
          call. = FALSE)
@@ -1919,10 +1919,10 @@ prot.plot_bar <- function (dep,
 
   for(i in 1:length(subset_list)) {
     if (type == "centered") {
-      means <- rowMeans(assay(subset_list[[i]]), na.rm = TRUE)
+      means <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
       df_reps <-
-        data.frame(assay(subset_list[[i]]) - means, check.names = FALSE) %>% rownames_to_column() %>%
-        gather(ID, val, -rowname) %>% left_join(., data.frame(colData(subset_list[[i]]), check.names = FALSE),
+        data.frame(SummarizedExperiment::assay(subset_list[[i]]) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
                                                 by = "ID")
       if (convert_name == TRUE) {
         df_reps$rowname <- transform(df_reps,
@@ -1995,7 +1995,7 @@ prot.plot_bar <- function (dep,
       if (convert_name == TRUE) {
         if (!is.null(contrast)) {
           df <-
-            rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+            SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
             select(
               name,
               paste0(contrast, "_diff"),
@@ -2009,7 +2009,7 @@ prot.plot_bar <- function (dep,
             spread(var, val)
         } else {
           df <-
-            rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+            SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
             select(name,
                    ends_with("_diff"),
                    ends_with("_CI.L"),
@@ -2048,7 +2048,7 @@ prot.plot_bar <- function (dep,
       } else {
         if (!is.null(contrast)) {
           df <-
-            rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+            SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
             select(
               ID,
               paste0(contrast, "_diff"),
@@ -2062,7 +2062,7 @@ prot.plot_bar <- function (dep,
             spread(var, val)
         } else {
           df <-
-            rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+            SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
             select(ID,
                    ends_with("_diff"),
                    ends_with("_CI.L"),
@@ -2190,7 +2190,7 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
     assertthat::assert_that(inherits(x, "SummarizedExperiment"),
                             msg = "input objects need to be of class 'SummarizedExperiment'")
     if (any(!c("label", "ID", "condition",
-               "replicate") %in% colnames(colData(x)))) {
+               "replicate") %in% colnames(SummarizedExperiment::colData(x)))) {
       stop("'label', 'ID', 'condition' and/or 'replicate' ",
            "columns are not present in (one of) the input object(s)",
            "\nRun make_se() or make_se_parse() to obtain the required columns",
@@ -2198,10 +2198,10 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
     }
   })
   gather_join <- function(se) {
-    assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>%
-      left_join(., data.frame(colData(se), check.names = FALSE), by = "ID")
+    SummarizedExperiment::assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>%
+      left_join(., data.frame(SummarizedExperiment::colData(se), check.names = FALSE), by = "ID")
   }
-  df <- map_df(arglist, gather_join, .id = "var") %>%
+  df <- purrr::map_df(arglist, gather_join, .id = "var") %>%
     mutate(var = factor(var, levels = names(arglist)))
   p <- ggplot(df, aes(x = ID, y = val, fill = condition)) +
     geom_boxplot(notch = TRUE, na.rm = TRUE) +
@@ -2252,4 +2252,43 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
   if (plot == TRUE){
     print(p)
   }
+}
+
+theme_DEP2 <- function ()
+{
+  theme <- theme_DEP1()
+  theme$axis.text.x$angle <- 90
+  theme$axis.text.x$hjust <- 1
+  theme$axis.text.x$vjust <- 0.5
+  return(theme)
+}
+
+plot_coverage <- function (se, plot = TRUE)
+{
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"),
+                          is.logical(plot), length(plot) == 1)
+  df <- SummarizedExperiment::assay(se) %>% data.frame() %>% tibble::rownames_to_column() %>%
+    gather(ID, bin, -rowname) %>% mutate(bin = ifelse(is.na(bin),
+                                                      0, 1))
+  stat <- df %>% group_by(rowname) %>% summarize(sum = sum(bin))
+  table <- table(stat$sum) %>% data.frame()
+  p <- ggplot(table, aes(x = "all", y = Freq, fill = Var1)) +
+    geom_col(col = "white") + scale_fill_grey(start = 0.8,
+                                              end = 0.2) + labs(title = "Protein coverage", x = "",
+                                                                y = "Number of proteins", fill = "Samples") + theme_DEP1()
+  if (plot) {
+    return(p)
+  }
+  else {
+    df <- as.data.frame(table)
+    colnames(df) <- c("samples", "proteins")
+    return(df)
+  }
+}
+
+meanSdPlot <- function (x, ranks = TRUE, xlab = ifelse(ranks, "rank(mean)",
+                                         "mean"), ylab = "sd", pch, plot = TRUE, bins = 50, ...)
+{
+  vsn::meanSdPlot(SummarizedExperiment::assay(x), ranks = ranks, xlab = xlab, ylab = ylab,
+                  pch = pch, plot = plot, ...)
 }

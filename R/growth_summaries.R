@@ -13,7 +13,7 @@ summary.gcFitSpline <- function(object,...)
                                  "smooth.spline")
 
     if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
-      table <- c(rep(NA,length(contents.fitted.spline)-2), object$fitFlag, as.numeric(object$control$smooth.gc))
+      table <- c(0, rep(NA,length(contents.fitted.spline)-3), object$fitFlag, as.numeric(object$control$smooth.gc))
     }
     else{
       table <- c(object$parameters$mu, object$parameters$lambda,  object$parameters$A, object$parameters$integral, as.character(object$fitFlag),
@@ -43,9 +43,11 @@ summary.gcFitModel <- function(object, ...)
 
 
     if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
-
-
-      table<-rep(NA,length(contents.fitted.param))
+      if(is.na(object$parameters$mu)){
+        table<-rep(NA,length(contents.fitted.param))
+      } else {
+        table<-c(0, rep(NA,length(contents.fitted.param)-1))
+      }
     }
     else{
       table <- c(object$parameters$mu[1], object$parameters$lambda[1],  object$parameters$A[1], object$parameters$integral,
@@ -111,7 +113,7 @@ summary.gcBootSpline <- function(object, ...)
 summary.drBootSpline <- function(object, ...)
   {
     # object of class drBootSpline
-    contents.bootstrap <- c("drboot.meanEC50", "drboot.sdEC50", "drboot.ci90EC50.lo", "drboot.ci90EC50.up", "drboot.ci95EC50.lo", "drboot.ci95EC50.up",
+    contents.bootstrap <- c("drboot.meanEC50", "drboot.sdEC50", "drboot.meanEC50y", "drboot.sdEC50y", "drboot.ci90EC50.lo", "drboot.ci90EC50.up", "drboot.ci95EC50.lo", "drboot.ci95EC50.up",
                             "drboot.meanEC50.orig", "drboot.ci90EC50.orig.lo", "drboot.ci90EC50.orig.up", "drboot.ci95EC50.orig.lo", "drboot.ci95EC50.orig.up")
     if (object$bootFlag==FALSE){
       table                <- rep(NA,length(contents.bootstrap))
@@ -119,7 +121,9 @@ summary.drBootSpline <- function(object, ...)
     else{
       m.test <- mean(object$ec50.boot, na.rm=TRUE)
       s.test <- sd(object$ec50.boot, na.rm=TRUE)
-      EC50   <- c(m.test, s.test, m.test-1.645*s.test, m.test+1.645*s.test, m.test-1.96*s.test, m.test+1.96*s.test)
+      m.ECy <- mean(object$ec50y.boot, na.rm = TRUE)
+      s.ECy <- sd(object$ec50y.boot, na.rm = TRUE)
+      EC50   <- c(m.test, s.test, m.ECy, s.ECy, m.test-1.645*s.test, m.test+1.645*s.test, m.test-1.96*s.test, m.test+1.96*s.test)
       if (object$control$log.x.dr==TRUE){
         EC50.orig <- c(exp(m.test)-1, exp(m.test-1.645*s.test)-1, exp(m.test+1.645*s.test)-1, exp(m.test-1.96*s.test)-1, exp(m.test+1.96*s.test)-1)
       }
@@ -152,7 +156,11 @@ summary.gcFitLinear <- function(object,...)
 
 
   if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
-    table<-rep(NA,length(contents.fitted.param))
+    if(is.na(object$par[3])){
+      table<-rep(NA,length(contents.fitted.param))
+    } else {
+      table<-c(0, rep(NA,length(contents.fitted.param)-1))
+    }
   }
   else{
     table <- c(object$par[3], object$par[5],
