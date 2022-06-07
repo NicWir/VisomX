@@ -1695,7 +1695,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
     p
   }
 }
-####____prot.plot_enrichment____####
+####____prot.plot_enrichment____#### REQUIRE(forcats)
 prot.plot_enrichment <- function(enrichset,
                                  title = "Differentially enriched pathways",
                                  subtitle = "",
@@ -1703,6 +1703,7 @@ prot.plot_enrichment <- function(enrichset,
                                  export = FALSE,
                                  kegg = TRUE) {
 
+  require(forcats)
   p <- ggplot(enrichset, showCategory = 30,
               aes(richFactor, fct_reorder(Description, richFactor))) +
     geom_segment(aes(xend = 0, yend = Description)) +
@@ -1794,7 +1795,7 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 {
   upsetlist <- enrichset$geneID %>% str_replace_all(., "/", ", ") %>% strsplit(., ", ")
   names(upsetlist) <- enrichset$Description
-  UpSetR::upset(fromList(upsetlist), order.by = order.by, nsets = length(upsetlist),
+  UpSetR::upset(UpSetR::fromList(upsetlist), order.by = order.by, nsets = length(upsetlist),
                 point.size = point.size, line.size = line.size, text.scale = text.scale, ...)
 }
 

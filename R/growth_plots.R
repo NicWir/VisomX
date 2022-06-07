@@ -196,7 +196,7 @@ plot.gcFitModel <- function(x, add=FALSE, raw=TRUE, slope=TRUE, pch=1, colData=1
 plot.drBootSpline <- function (x,
                                pch = 1,
                                colData = 1,
-                               colSpline = 1,
+                               colSpline = scales::alpha("black", 0.15),
                                cex = 0.5,
                                ...)
 {
@@ -231,8 +231,6 @@ plot.drBootSpline <- function (x,
   # /// check input parameters
   if (FALSE %in% (colData %in% c(colors(), 0:8)))
     stop("colData needs to be numeric from 0:8 or a string from colors()")
-  if (FALSE %in% (colSpline %in% c(colors(), 0:8)))
-    stop("colSpline needs to be numeric from 0:8 or a string from colors()")
   if (is.numeric(pch) == FALSE)
     stop("Need numeric value for: pch")
   if (is.numeric(cex) == FALSE)
@@ -372,9 +370,6 @@ plot.drFitSpline <-
     # /// check input parameters
     if (FALSE %in% (colData %in% c(colors(), 0:8)))
       stop("colData needs to be numeric from 0:8 or a string from colors()")
-    if (FALSE %in% (colSpline %in% c(colors(), 0:8)))
-      stop("colSpline needs to be numeric from 0:8 or a string from colors()")
-
     if (is.logical(add) == FALSE)
       stop("Need logical value for: add")
     if (is.logical(ec50line) == FALSE)

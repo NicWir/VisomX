@@ -237,6 +237,7 @@ growth.control <-
 }
 
 growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
+                             mean.grp = NA,
                         neg.nan.act = FALSE, clean.bootstrap = TRUE,
                         suppress.messages = FALSE, fit.opt = "b", min.density = NA,
                         log.x.gc = FALSE, log.y.gc = TRUE, log.y.model = FALSE,
@@ -273,13 +274,13 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
   # /// fit of growth curves -----------------------------------
   out.gcFit <- growth.gcFit(time, data, control, t0, lin.h, lin.R2, lin.RSD)
 
-  # /// Estimate EC50 values -----------------------------------
+  # /// Estimate EC50 values
   if (ec50 == TRUE) {
     out.drFit <- growth.drFit(summary.gcFit(out.gcFit), control)
     EC50.table <- out.drFit$drTable
     boot.ec <- out.drFit$boot.ec
   }
-
+  # ///
   grofit <- list(time = time, data = data, gcFit = out.gcFit,
                  drFit = out.drFit, control = control)
   class(grofit) <- "grofit"
@@ -307,7 +308,7 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
   }
   if(report == TRUE){
     growth.report(grofit, report.dir = gsub(paste0(getwd(), "/"), "", wd), res.table.gc=res.table.gc,
-                  res.table.dr=res.table.dr, ec50=ec50, t0 = t0)
+                  res.table.dr=res.table.dr, ec50=ec50, t0 = t0, mean.grp = mean.grp)
   }
 
   grofit
