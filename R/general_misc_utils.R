@@ -10,6 +10,9 @@
   k0 <- "\n"
   k2 <- paste("https://github.com/NicWir/VisomX")
   packageStartupMessage(c(k1,k0,k2))
+  if(!tinytex::is_tinytex()){
+    packageStartupMessage("TinyTex was not found on your system. To ensure full functionality of Visomx, please execute tinytex::install_tinytex().")
+  }
 }
 
 #' Format font color for Markdown reports

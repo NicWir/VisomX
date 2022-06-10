@@ -82,6 +82,7 @@ Imports:
     SummarizedExperiment,
     tibble,
     tidyr,
+    tinytex,
     UpSetR,
     vsn
 Suggests: 

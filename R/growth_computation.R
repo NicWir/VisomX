@@ -238,7 +238,7 @@ growth.control <-
 }
 
 growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
-                             mean.grp = NA,
+                             mean.grp = NA, mean.conc = NA,
                         neg.nan.act = FALSE, clean.bootstrap = TRUE,
                         suppress.messages = FALSE, fit.opt = "b", min.density = NA,
                         log.x.gc = FALSE, log.y.gc = TRUE, log.y.model = FALSE,
@@ -311,7 +311,7 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
   }
   if(report == TRUE){
     growth.report(grofit, report.dir = gsub(paste0(getwd(), "/"), "", wd), res.table.gc=res.table.gc,
-                  res.table.dr=res.table.dr, ec50=ec50, t0 = t0, mean.grp = mean.grp)
+                  res.table.dr=res.table.dr, ec50=ec50, t0 = t0, mean.grp = mean.grp, mean.conc = mean.conc)
   }
 
   grofit
@@ -1553,7 +1553,7 @@ growth.drFit <- function (gcFitData, control = grofit.control())
       }
       description <- data.frame(Test = distinct[i], log.x = control$log.x.dr,
                                 log.y = control$log.y.dr, Samples = control$nboot.dr)
-      out.row <- cbind(description, summary(EC50[[i]]),
+      out.row <- cbind(description, summary.drFitSpline(EC50[[i]]),
                        summary.drBootSpline(EC50.boot[[i]]))
       EC50.table <- rbind(EC50.table, out.row)
     }

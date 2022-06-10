@@ -1,7 +1,7 @@
 ---
 title: "Growth analysis report"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-geometry: margin=1.3cm
+geometry: margin=0.8cm
 urlcolor: blue
 mainfont: Arial
 header-includes:
@@ -72,7 +72,7 @@ if(any(c("a", "l") %in% control$fit.opt)){
                              stringsAsFactors = F, check.names = F)
   table_linear <- as.data.frame(apply(table_linear, 2, function(x) str_replace_all(x, "NA ± NA", "")))
   table_linear[is.na(table_linear)] <- ""
-  knit_table(table_linear, caption = "Exponential Fit", longtable = TRUE) %>% column_spec(column=1, width_max = "3.5cm")
+  knit_table(table_linear, caption = "Exponential Fit", longtable = TRUE) %>% column_spec(column=1, width = "4cm")
 }
 ```
 `r if(any(c("a", "l") %in% control$fit.opt)){"\\clearpage"}`
@@ -96,7 +96,7 @@ if(any(c("a", "b", "m") %in% control$fit.opt)){
     }
     table_model <- as.data.frame(apply(table_model, 2, function(x) str_replace_all(x, "NA ± NA", "")))
     table_model[is.na(table_model)] <- ""
-    knit_table(table_model, caption = "Parametric Fit", longtable = TRUE) %>% column_spec(column=1, width_max = "4.0cm")
+    knit_table(table_model, caption = "Parametric Fit", longtable = TRUE) %>% column_spec(column=1, width = "3.1cm")
 }
 ```
 `r if(any(c("a", "m", "b") %in% control$fit.opt)){"\\clearpage"}`
@@ -110,7 +110,7 @@ if(any(c("a", "b", "s") %in% control$fit.opt)){
                              "Δy" = round(as.numeric(res.table.gc$dY.spline), 3),
                              "smooth.<br>fac" = res.table.gc$smooth.spline,
                              stringsAsFactors = F, check.names = F)
-    if ( grofit$control$nboot.dr > 1 ){
+    if ( grofit$control$nboot.gc > 1 ){
       table_spline <- cbind(table_spline, data.frame("µ~max~<br>boot" = paste(round(as.numeric(res.table.gc$mu.bt), 3),"\u00B1", round(as.numeric(res.table.gc$stdmu.bt),3)), 
                                                    "λ<br>boot" = paste(round(as.numeric(res.table.gc$lambda.bt), 2),"\u00B1", round(as.numeric(res.table.gc$stdlambda.bt),2)),
                                                    "A<br>boot" = paste(round(as.numeric(res.table.gc$A.bt), 3),"\u00B1", round(as.numeric(res.table.gc$stdA.bt),3)),
@@ -118,7 +118,7 @@ if(any(c("a", "b", "s") %in% control$fit.opt)){
     }
   table_spline <- as.data.frame(apply(table_spline, 2, function(x) str_replace_all(x, "NA ± NA", "")))
   table_spline[is.na(table_spline)] <- ""
-  knit_table(table_spline, caption = "Smooth Spline Fit", longtable = TRUE) %>% column_spec(column=1, width_max = "4.0cm")
+  knit_table(table_spline, caption = "Smooth Spline Fit", longtable = TRUE) %>% column_spec(column=1, width = "4.0cm")
 }
 ```
 \clearpage
@@ -147,7 +147,7 @@ if(any(c("a", "l") %in% control$fit.opt)){
           geom_point(shape = 1, size = 1.7, alpha = 0.25, stroke=0.15) +
           xlab("Time") +
           ylab("Growth (density)") +
-          theme_classic(base_size = 20) +
+          theme_classic(base_size = 16) +
           scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
           ggtitle(gsub(" \\| NA", "", paste(x$gcID, collapse=" | "))) +
           theme(
@@ -219,7 +219,7 @@ if(any(c("a", "b", "m") %in% control$fit.opt)){
           geom_line(aes_(x=as.name(names(df)[3]), y = as.name(names(df)[4]), color = "model"), size = 0.7) +
           xlab("Time") +
           ylab(label = ifelse(x$control$log.y.gc == TRUE, "Growth [Ln(y(t)/y0)]", "Growth [y(t)]")) +
-          theme_classic(base_size = 15) +
+          theme_classic(base_size = 16) +
           ggtitle(gsub(" \\| NA", "", paste(x$gcID, collapse=" | "))) +
           scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
           scale_y_continuous(breaks = scales::pretty_breaks()) + 
@@ -355,7 +355,7 @@ if(any(c("a", "b", "s") %in% control$fit.opt)){
        geom_line(aes(x=fit.time, y = fit.data, color = "spline"), size = 0.7) +
        xlab("Time") +
        ylab(label = "Growth [y(t)]") +
-       theme_classic(base_size = 15) +
+       theme_classic(base_size = 16) +
        ggtitle(gsub(" \\| NA", "", paste(x$gcID, collapse=" | "))) + 
        scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
        theme(legend.key = element_blank(),
@@ -439,7 +439,7 @@ boot.ec50.df <- data.frame()
       plyr::rbind.fill(
         boot.ec50.df,
         data.frame(
-          "Condition" = growth_fit$drFit$drTable$Test[i],
+          "Condition" = grofit$drFit$drTable$Test[i],
           "EC50.boot" = paste(round(as.numeric(grofit$drFit$drTable$drboot.meanEC50[i]), 3),"\u00B1", round(as.numeric(grofit$drFit$drTable$drboot.sdEC50[i]),3)),
           "Response.boot" = paste(round(as.numeric(grofit$drFit$drTable$drboot.meanEC50y[i]), 3),"\u00B1", round(as.numeric(grofit$drFit$drTable$drboot.sdEC50y[i]),3))
         )
@@ -462,6 +462,11 @@ for(i in 1:length(grofit$drFit$drBootSplines)){
 if(!all(is.na(mean.grp))){
   for(i in 1:length(mean.grp)){
     print(plot.grpFitSpline(grofit, names = unlist(mean.grp[i]), basesize = 15))
+  }
+}
+if(!all(is.na(mean.conc))){
+  for(i in 1:length(mean.conc)){
+    print(plot.grpFitSpline(grofit, conc = unlist(mean.conc[i]), basesize = 15))
   }
 }
 ```
