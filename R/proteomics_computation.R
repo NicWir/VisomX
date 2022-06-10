@@ -67,6 +67,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                             expdesign = NULL, # Experimental design as file path or data frame, if made previously
                             csvsep = ";", # optional: delimiter if reading CSV file
                             filter = c("Reverse", "Potential contaminant"),
+                            rsd_thresh = NULL, # in %!
                             name = 'Gene Symbol', # Header of column containing primary protein IDs
                             id = 'Ensembl Gene ID', # Header of column containing alternative protein IDs
                             pfx = "abundances.", # Prefix in headers of columns containing protein abundances
@@ -178,9 +179,9 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
 
 
     if (length(row.rm) > 1) {
-      prot_unique <- DEP::make_unique(proteins = prot.rm, names = name, ids = id, delim = ";")
+      prot_unique <- prot.make_unique(proteins = prot.rm, names = name, ids = id, delim = ";")
     } else {
-      prot_unique <- DEP::make_unique(proteins = prot, names = name, ids = id, delim = ";")
+      prot_unique <- prot.make_unique(proteins = prot, names = name, ids = id, delim = ";")
     }
 
   } else if (!any(colnames(prot) %in% name) && !any(colnames(prot) %in% id)) {
@@ -259,8 +260,44 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
   message("Generating SummarizedExperiment.")
   prot_se <- make_se(prot_unique, abundance_columns, experimental_design)
 
+  # Apply RSD threshold
+  if(!is.null(rsd_thresh)){
+    rsd_thresh <- rsd_thresh/100
+
+    int.mat <- 2^assay(prot_se)
+    # replace NA with 0
+    int.mat[is.na(int.mat)] <- 0
+
+    # Calculate the standard deviation for each compound in each group. Create a list of n vectors for n sample groups.
+    ls.sd <- lapply(1:length(unique(se$condition)), function (x)
+      apply(int.mat[,unique(se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))], 1, stats::sd, na.rm = F))
+    # Calculate the average for each compound in each group. Create a list of n vectors for n sample groups.
+    ls.mns <-
+      lapply(1:length(unique(se$condition)), function (x)
+        apply(int.mat[,unique(se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))], 1, mean, na.rm = F))
+    # Calculate the RSD for each compound in each group. Create a list of n vectors for n sample groups.
+    ls.rsd <- mapply("/", ls.sd, ls.mns, SIMPLIFY = FALSE)
+    # Combine group vectors in RSD list into matrix
+    mat.rsd <- do.call(rbind, ls.rsd)
+    # Create vector with the maximum RSD value among all groups for each compound.
+    filter.val <- apply(mat.rsd, 2, max, na.rm = T)
+    # Check if each compound has an RSD value below the threshold.
+    keep <- filter.val <= rsd_thresh
+
+    # Apply RSD filter to data matrix
+    filtered_rsd <- prot_se[keep, ]
+  } else {
+    filtered_rsd <- prot_se
+  }
+  if( (nrow(SummarizedExperiment::assay(prot_se)) - nrow(SummarizedExperiment::assay(filtered_rsd))) != 0 ){
+    number_removed_rsd <- nrow(SummarizedExperiment::assay(prot_se)) - nrow(SummarizedExperiment::assay(filtered_rsd))
+    cat(paste0(number_removed_rsd, " out of ",
+               nrow(SummarizedExperiment::assay(se)), " proteins were removed from the dataset due to too high RSD.\n\n"))
+    filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
+  }
+
   ## Drop proteins with missing values based on defined type filter "filt_thr"
-  prot_se <- prot.filter_missing(prot_se, type = filt_type, thr = filt_thr, min = filt_min)
+  prot_se <- prot.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
 
   cat(paste0("Identified conditions:\n ", paste(str_c(unique(prot_se$condition), collapse = ", ")), "\n"))
 
@@ -586,7 +623,7 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
   if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun prot.make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (!any(is.na(SummarizedExperiment::assay(se)))) {
@@ -724,7 +761,7 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
   if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(se)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(se)), "'\nRun prot.make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (any(!c("label", "condition", "replicate") %in%
@@ -849,7 +886,7 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
   row_data <- SummarizedExperiment::rowData(diff, use.names = FALSE) %>% as.data.frame()
   if (any(!c("name", "ID") %in% colnames(row_data))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(diff)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(diff)), "'\nRun prot.make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (length(grep("_p.adj|_diff", colnames(row_data))) <
@@ -892,7 +929,7 @@ prot.get_results <- function (dep)
   row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
   if (any(!c("name", "ID") %in% colnames(row_data))) {
     stop("'name' and/or 'ID' columns are not present in '",
-         deparse(substitute(dep)), "'\nRun DEP::make_unique() and make_se() to obtain the required columns",
+         deparse(substitute(dep)), "'\nRun prot.make_unique() and make_se() to obtain the required columns",
          call. = FALSE)
   }
   if (length(grep("_p.adj|_diff", colnames(row_data))) <
@@ -1289,4 +1326,106 @@ filter_missval <- function (se, thr = 0)
                                                                                                                                                              miss_val)
   se_fltrd <- se[keep$rowname, ]
   return(se_fltrd)
+}
+
+####____prot.make_unique(fromDEP)____####
+prot.make_unique <- function (proteins, names, ids, delim = ";")
+{
+  assertthat::assert_that(is.data.frame(proteins), is.character(names),
+                          length(names) == 1, is.character(ids), length(ids) ==
+                            1, is.character(delim), length(delim) == 1)
+  col_names <- colnames(proteins)
+  if (!names %in% col_names) {
+    stop("'", names, "' is not a column in '", deparse(substitute(proteins)),
+         "'", call. = FALSE)
+  }
+  if (!ids %in% col_names) {
+    stop("'", ids, "' is not a column in '", deparse(substitute(proteins)),
+         "'", call. = FALSE)
+  }
+  if (tibble::is_tibble(proteins))
+    proteins <- as.data.frame(proteins)
+  double_NAs <- apply(proteins[, c(names, ids)], 1, function(x) all(is.na(x)))
+  if (any(double_NAs)) {
+    stop("NAs in both the 'names' and 'ids' columns")
+  }
+  proteins_unique <- proteins %>% mutate(name = gsub(paste0(delim,
+                                                            ".*"), "", get(names)), ID = gsub(paste0(delim, ".*"),
+                                                                                              "", get(ids)), name = make.unique(ifelse(name == "" |
+                                                                                                                                         is.na(name), ID, name)))
+  return(proteins_unique)
+}
+
+####____make_se_parse____(fromDEP)####
+make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
+          chars = 1, sep = "_")
+{
+  assertthat::assert_that(is.data.frame(proteins_unique), is.integer(columns),
+                          is.character(mode), is.numeric(chars), length(chars) ==
+                            1, is.character(sep), length(sep) == 1)
+  mode <- match.arg(mode)
+  if (any(!c("name", "ID") %in% colnames(proteins_unique))) {
+    stop("'name' and/or 'ID' columns are not present in '",
+         deparse(substitute(proteins_unique)), "'.\nRun make_unique() to obtain the required columns",
+         call. = FALSE)
+  }
+  if (any(!apply(proteins_unique[, columns], 2, is.numeric))) {
+    stop("specified 'columns' should be numeric", "\nRun make_se_parse() with the appropriate columns as argument",
+         call. = FALSE)
+  }
+  if (tibble::is_tibble(proteins_unique))
+    proteins_unique <- as.data.frame(proteins_unique)
+  rownames(proteins_unique) <- proteins_unique$name
+  raw <- proteins_unique[, columns]
+  raw[raw == 0] <- NA
+  raw <- log2(raw)
+  colnames(raw) <- delete_prefix(colnames(raw)) %>% make.names()
+  row_data <- proteins_unique[, -columns]
+  rownames(row_data) <- row_data$name
+  if (mode == "char") {
+    col_data <- data.frame(label = colnames(raw), stringsAsFactors = FALSE) %>%
+      mutate(condition = substr(label, 1, nchar(label) -
+                                  chars), replicate = substr(label, nchar(label) +
+                                                               1 - chars, nchar(label))) %>% unite(ID, condition,
+                                                                                                   replicate, remove = FALSE)
+  }
+  if (mode == "delim") {
+    col_data <- data.frame(label = colnames(raw), stringsAsFactors = FALSE) %>%
+      separate(label, c("condition", "replicate"), sep = sep,
+               remove = FALSE, extra = "merge") %>% unite(ID,
+                                                          condition, replicate, remove = FALSE)
+  }
+  rownames(col_data) <- col_data$ID
+  colnames(raw)[match(col_data$label, colnames(raw))] <- col_data$ID
+  raw <- raw[, !is.na(colnames(raw))]
+  se <- SummarizedExperiment(assays = as.matrix(raw), colData = col_data,
+                             rowData = row_data)
+  return(se)
+}
+
+####____manual_impute____(fromDEP)
+manual_impute <- function (se, scale = 0.3, shift = 1.8)
+{
+  if (is.integer(scale))
+    scale <- is.numeric(scale)
+  if (is.integer(shift))
+    shift <- is.numeric(shift)
+  assertthat::assert_that(inherits(se, "SummarizedExperiment"),
+                          is.numeric(scale), length(scale) == 1, is.numeric(shift),
+                          length(shift) == 1)
+  se_assay <- SummarizedExperiment::assay(se)
+  if (!any(is.na(se_assay))) {
+    stop("No missing values in '", deparse(substitute(se)),
+         "'", call. = FALSE)
+  }
+  stat <- se_assay %>% data.frame() %>% rownames_to_column() %>%
+    gather(samples, value, -rowname) %>% filter(!is.na(value)) %>%
+    group_by(samples) %>% summarise(mean = mean(value), median = median(value),
+                                    sd = sd(value), n = n(), infin = nrow(se_assay) - n)
+  for (a in seq_len(nrow(stat))) {
+    SummarizedExperiment::assay(se)[is.na(SummarizedExperiment::assay(se)[, stat$samples[a]]), stat$samples[a]] <- rnorm(stat$infin[a],
+                                                                             mean = stat$median[a] - shift * stat$sd[a], sd = stat$sd[a] *
+                                                                               scale)
+  }
+  return(se)
 }

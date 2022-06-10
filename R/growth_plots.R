@@ -844,14 +844,15 @@ plot.grpFitSpline <- function(x, names = NULL, conc = NULL, mean = TRUE, deriv =
   # Get name of conditions with multiple replicates
   sample.nm <- nm <- as.character(names(x$gcFit$gcFittedSplines))
   if(!is.null(names)){
+    names <- gsub("\\.", "\\\\.",gsub("\\+", "\\\\+", names))
     nm <- nm[grep(paste(names, collapse="|"), nm)]
   }
   if(!is.null(conc)){
-    nm <- nm[grep(paste(paste0(conc, "$"), collapse="|"), nm)]
+    nm <- nm[which(conc == str_extract(nm, "[:alnum:]+$"))]
   }
   # remove conditions with fitFlag = FALSE in all replicates
   ndx.filt <- unique(lapply(1:length(nm), function(i) grep(paste0("^",
-                                                      unlist(str_split(nm[i], " \\| "))[1],
+                                                                  gsub("\\.", "\\\\.",gsub("\\+", "\\\\+", unlist(str_split(nm[i], " \\| "))[1])),
                                                       ".+[[:space:]]",
                                                       unlist(str_split(nm[i], " \\| "))[3],
                                                       "$"), sample.nm)))
@@ -870,7 +871,7 @@ plot.grpFitSpline <- function(x, names = NULL, conc = NULL, mean = TRUE, deriv =
       for(i in 1:length(conditions_unique)){
         # find indexes of replicates
           ndx <- grep(paste0("^",
-                             unlist(str_split(conditions_unique[i], " \\| "))[1],
+                             gsub("\\.", "\\\\.",gsub("\\+", "\\\\+", unlist(str_split(conditions_unique[i], " \\| "))[1])),
                              ".+[[:space:]]",
                              unlist(str_split(conditions_unique[i], " \\| "))[2],
                              "$"), sample.nm)
@@ -881,11 +882,11 @@ plot.grpFitSpline <- function(x, names = NULL, conc = NULL, mean = TRUE, deriv =
           sd <- apply(data, 1, sd)
           plotdata.ls[[i]] <- data.frame(name = name, time = time, mean = mean, upper = mean+sd, lower = mean-sd)
       }
-      names(plotdata.ls) <- conditions_unique
+      names(plotdata.ls) <- gsub(" \\| NA", "", conditions_unique)
 
       plotdata.ls <- plotdata.ls[!is.na(plotdata.ls)]
       df <- do.call(rbind.data.frame, plotdata.ls)
-
+      df$name <- gsub(" \\| NA", "", df$name)
 
       p <- ggplot(df, aes(x=time, y=mean, col = name)) +
         geom_line(size=lwd) +
@@ -924,6 +925,9 @@ plot.grpFitSpline <- function(x, names = NULL, conc = NULL, mean = TRUE, deriv =
                                  )
           )
         }
+      }
+      if(deriv){
+
       }
   } # if(mean == TRUE)
   else {

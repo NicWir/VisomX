@@ -73,7 +73,7 @@ growth.read_data <- function(data, data.format = "col", csvsep = ";")
     }
   }
   # Create time matrix
-  time.ndx <- grep("time", unlist(dat[,1]))
+  time.ndx <- grep("time", unlist(dat[,1]), ignore.case = TRUE)
   if(length(time.ndx)==1){
     time <- as.numeric(unlist(dat[time.ndx[1],4:ncol(dat)]))
     t.mat <- data.matrix(data.frame(matrix(
@@ -202,22 +202,23 @@ growth.control <-
                                             FALSE)))
     stop("value of smooth.dr must be numeric or NULL")
 
-  parameters.opt <- c('', '', '', '',
-                    '', '', '', '', 'mu.linfit', 'lambda.linfit',
-                    'stdmu.linfit', 'tmu.start.linfit', 'tmu.end.linfit', 'r2mu.linfit',
-                    'reliable_fit.linfit', 'mu.model', 'lambda.model', 'A.model', 'integral.model',
-                    'parameter_nu.model', 'parameter_alpha.model', 'parameter_t_shift.model',
-                    'stdmu.model', 'stdlambda.model', 'stdA.model', 'reliable_fit.model',
-                    'ci90.mu.model.lo', 'ci90.mu.model.up', 'ci90.lambda.model.lo',
-                    'ci90.lambda.model.up', 'ci90.A.model.lo', 'ci90.A.model.up', 'ci95.mu.model.lo',
-                    'ci95.mu.model.up', 'ci95.lambda.model.lo', 'ci95.lambda.model.up', 'ci95.A.model.lo',
-                    'ci95.A.model.up', 'mu.spline', 'lambda.spline', 'A.spline', 'integral.spline',
-                    'reliable_fit.spline', 'smooth.spline', 'mu.bt', 'lambda.bt', 'A.bt', 'integral.bt',
-                    'stdmu.bt', 'stdlambda.bt', 'stdA.bt', 'stdintegral.bt', 'reliable_fit.bt',
-                    'ci90.mu.bt.lo', 'ci90.mu.bt.up', 'ci90.lambda.bt.lo', 'ci90.lambda.bt.up',
-                    'ci90.A.bt.lo', 'ci90.A.bt.up', 'ci90.integral.bt.lo', 'ci90.integral.bt.up',
-                    'ci95.mu.bt.lo', 'ci95.mu.bt.up', 'ci95.lambda.bt.lo', 'ci95.lambda.bt.up',
-                    'ci95.A.bt.lo', 'ci95.A.bt.up', 'ci95.integral.bt.lo', 'ci95.integral.bt.up')
+  parameters.opt <- c('TestId', 'AddId', 'concentration', 'reliability_tag', 'used.model', 'log.x',
+    'log.y', 'nboot.gc', 'mu.linfit', 'lambda.linfit', 'stdmu.linfit', 'dY.linfit',
+    'A.linfit', 'tmu.start.linfit', 'tmu.end.linfit', 'r2mu.linfit',
+    'reliable_fit.linfit', 'mu.model', 'lambda.model', 'A.model', 'integral.model',
+    'parameter_nu.model', 'parameter_alpha.model', 'parameter_t_shift.model',
+    'stdmu.model', 'stdlambda.model', 'stdA.model', 'reliable_fit.model',
+    'ci90.mu.model.lo', 'ci90.mu.model.up', 'ci90.lambda.model.lo',
+    'ci90.lambda.model.up', 'ci90.A.model.lo', 'ci90.A.model.up', 'ci95.mu.model.lo',
+    'ci95.mu.model.up', 'ci95.lambda.model.lo', 'ci95.lambda.model.up',
+    'ci95.A.model.lo', 'ci95.A.model.up', 'mu.spline', 'lambda.spline', 'y0.spline',
+    'A.spline', 'dY.spline', 'integral.spline', 'reliable_fit.spline', 'smooth.spline',
+    'mu.bt', 'lambda.bt', 'A.bt', 'integral.bt', 'stdmu.bt', 'stdlambda.bt', 'stdA.bt',
+    'stdintegral.bt', 'reliable_fit.bt', 'ci90.mu.bt.lo', 'ci90.mu.bt.up',
+    'ci90.lambda.bt.lo', 'ci90.lambda.bt.up', 'ci90.A.bt.lo', 'ci90.A.bt.up',
+    'ci90.integral.bt.lo', 'ci90.integral.bt.up', 'ci95.mu.bt.lo', 'ci95.mu.bt.up',
+    'ci95.lambda.bt.lo', 'ci95.lambda.bt.up', 'ci95.A.bt.lo', 'ci95.A.bt.up',
+    'ci95.integral.bt.lo', 'ci95.integral.bt.up')
   parameter.in <- parameter
   if(is.character(parameter)){
     parameter <- match(parameter, parameters.opt)
@@ -248,7 +249,7 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
                         have.atleast = 6, parameter = 34, smooth.dr = NULL,
                         log.x.dr = FALSE, log.y.dr = FALSE, nboot.dr = 0, report = TRUE, report.dir = NULL)
 {
-  if(!(class(test_data)=="list")){
+  if(!(class(data)=="list")){
     if (is.numeric(as.matrix(time)) == FALSE)
       stop("Need a numeric matrix for 'time'")
     if (is.numeric(as.matrix(data[-1:-3])) == FALSE)
@@ -297,7 +298,7 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
   res.table.gc <- Filter(function(x) !all(is.na(x)),gcTable)
   utils::write.table(res.table.gc, paste(wd, "results.gc.txt",
                                   sep = "/"), row.names = FALSE, sep = "\t")
-  cat(paste0("Results of growth fit analysis saved as tab-delimited in:\n",
+  cat(paste0("Results of growth fit analysis saved as tab-delimited text file in:\n",
              getwd(), "/results.gc.txt\n"))
   if (ec50 == TRUE) {
     res.table.dr <- Filter(function(x) !all(is.na(x)),EC50.table)
@@ -305,6 +306,8 @@ growth.workflow <- function (time, data, t0 = 0, ec50 = FALSE,
                                            sep = "/"), row.names = FALSE, sep = "\t")
     cat(paste0("Results of EC50 analysis saved as tab-delimited in:\n",
                getwd(), "/results.dr.txt\n"))
+  } else {
+    res.table.dr <- NULL
   }
   if(report == TRUE){
     growth.report(grofit, report.dir = gsub(paste0(getwd(), "/"), "", wd), res.table.gc=res.table.gc,
@@ -634,8 +637,8 @@ growth.gcFitModel <- function(time, data, gcID ="undefined", control=grofit.cont
 
   # /// check length of input data
   if (length(time)!=length(data)) stop("gcFitModel: length of time and data input vectors differ!")
-  if(max(data) < 2*data[1]){
-    message("No significant growth detected (with all values below 2 * start_value).")
+  if(max(data) < 1.5*data[1]){
+    message("No significant growth detected (with all values below 1.5 * start_value).")
     gcFitModel   <- list(raw.time = time, raw.data = data, gcID = gcID, fit.time = NA,
                          fit.data = NA, parameters = list(A=NA, mu=0, lambda=NA, integral=NA),
                          model = NA, nls = NA, reliable=NULL, fitFlag=FALSE, control = control)
@@ -879,10 +882,10 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
       stop("Bad values in gcFitSpline")
     }
   }
-  if(max(data) < 2*data[1]){
-    message("No significant growth detected (with all values below 2 * start_value).")
-    gcFitSpline <- list(raw.time = time, raw.data = data,
-                        fit.time = rep(NA, length(time.in)), fit.data = rep(NA, length(data.in)), parameters = list(A = 0,
+  if(max(data) < 1.5*data[1]){
+    message("No significant growth detected (with all values below 1.5 * start_value).")
+    gcFitSpline <- list(time.in = time.in, data.in = data.in, raw.time = time, raw.data = data,
+                        fit.time = rep(NA, length(time.in)), fit.data = rep(NA, length(data.in)), parameters = list(A = 0, dY = NA,
                                                                                                               mu = 0, lambda = Inf, integral = NA), spline = NA,
                         parametersLowess = list(A = 0, mu = 0, lambda = Inf),
                         spline = NA, reliable = NULL, fitFlag = FALSE,
@@ -892,8 +895,8 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
   }
   if (length(data) < 5) {
     cat("gcFitSpline: There is not enough valid data. Must have at least 5!")
-    gcFitSpline <- list(raw.time = time, raw.data = data,
-                        gcID = gcID, fit.time = NA, fit.data = NA, parameters = list(A = NA,
+    gcFitSpline <- list(time.in = time.in, data.in = data.in, raw.time = time, raw.data = data,
+                        gcID = gcID, fit.time = NA, fit.data = NA, parameters = list(A = NA, dY = NA,
                                                                                      mu = NA, lambda = NA, integral = NA), parametersLowess = list(A = NA,
                                                                                                                                                    mu = NA, lambda = NA), spline = NA, reliable = NULL,
                         fitFlag = FALSE, control = control)
@@ -968,22 +971,23 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
       if (is.null(control$smooth.gc) == TRUE) {
         cat("This might be caused by usage of smoothing parameter NULL\n")
       }
-      gcFitSpline <- list(raw.time = time, raw.data = data,
-                          fit.time = rep(NA, length(time.in)), fit.data = rep(NA, length(data.in)), parameters = list(A = NA,
+      gcFitSpline <- list(time.in = time.in, data.in = data.in, raw.time = time, raw.data = data,
+                          fit.time = rep(NA, length(time.in)), fit.data = rep(NA, length(data.in)), parameters = list(A = NA, dY = NA,
                                                                     mu = NA, lambda = NA, integral = NA), spline = NA,
                           parametersLowess = list(A = NA, mu = NA, lambda = NA),
                           spline = NA, reliable = NULL, fitFlag = FALSE,
                           control = control)
       class(gcFitSpline) <- "gcFitSpline"
       return(gcFitSpline)
-    }
+    } # if(!exists("y.spl") || is.null(y.spl) == TRUE)
     else {
       dydt.spl <- predict(y.spl, time, deriv = 1)
-      mumax.index <- which.max(dydt.spl$y) # index of data point with maximum growth rate
+      mumax.index <- which.max(dydt.spl$y) # index of data point with maximum growth rate in first derivative fit
+      mumax.index.spl <- which(y.spl$x == dydt.spl$x[mumax.index]) # index of data point with maximum growth rate in spline fit
       t.max <- dydt.spl$x[mumax.index] # time of maximum growth rate
       dydt.max <- max(dydt.spl$y) # maximum value of first derivative of spline fit (i.e., greatest slope in growth curve spline fit)
       mu.spl <- dydt.max # maximum growth rate
-      y.max <- y.spl$y[mumax.index] # cell density at time of max growth rate
+      y.max <- y.spl$y[mumax.index.spl] # cell density at time of max growth rate
       b.spl <- y.max - mu.spl * t.max # the y-intercept of the tangent at µmax
       lambda.spl <- -b.spl/mu.spl  # lag time
       integral <- low.integrate(y.spl$x, y.spl$y)
@@ -1005,6 +1009,8 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
   } # else of if (length(data) < 5)
     gcFitSpline <-
       list(
+        time.in = time.in,
+        data.in = data.in,
         raw.time = time.raw,
         raw.data = data.raw,
         gcID = gcID,
@@ -1017,12 +1023,22 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
           } else {
            max(y.spl$y)
           },
+          dY = if (control$log.y.gc == TRUE) {
+            data[1] * exp(max(y.spl$y)) -  data[1] * exp(y.spl$y[1])
+          } else {
+            max(y.spl$y) - y.spl$y[1]
+          },
           mu = mu.spl,
           lambda = lambda.spl,
           b.tangent = b.spl,
           integral = integral),
         parametersLowess = list(
-          A = max(y.low),
+          A = if (control$log.y.gc == TRUE) {
+            # Correct ln(N/N0) transformation for max density value
+            data[1] * exp(max(y.low))
+          } else {
+            max(y.low)
+          },
           mu = mu.low,
           lambda = lambda.low
         ),
@@ -1096,7 +1112,7 @@ growth.gcFitSpline <- function (time, data, gcID = "undefined", control = grofit
 #'
 #' @export
 #'
-growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL, quota = 0.95, R2 = 0.95, RSD = 0.1, control)
+growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL, quota = 0.95, R2 = 0.95, RSD = 0.05, control)
   {
   bad.values <- ((is.na(time))|(is.na(data)) | data < 0)
   data.in <- data <- data[!bad.values]
@@ -1115,7 +1131,11 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
     # determine number of data points in period until maximum density
     n.spl <- length(t.growth)
     # Calculate h via log-transformation of the number of data points
-    h <- round((log(n.spl+5, base=2.4))/0.92)
+    if(n.spl <= 100){
+      h <- round((log(n.spl+5, base=2.1))/0.88)
+    } else {
+      h <- round((log(n.spl, base=1.6)))
+    }
   }
 
   if(!is.null(quota) && !is.na(quota) && quota != ""){
@@ -1160,11 +1180,11 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
   obs <- data.frame(time, data)
   obs$ylog <- data.log
 
-  if(max(data.in) < 2*data.in[1]){
-    message("No significant growth detected (with all values below 2 * start_value).")
+  if(max(data.in) < 1.5*data.in[1]){
+    message("No significant growth detected (with all values below 1.5 * start_value).")
     gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
                         log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-                          y0 = NA, y0_lm = NA, mumax = 0, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                          y0 = NA, dY = NA, y0_lm = NA, mumax = 0, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
                         ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
     )
     class(gcFitLinear) <- "gcFitLinear"
@@ -1188,7 +1208,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
       if(nrow(ret)<2){
         gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
           log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-            y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+            y0 = NA, dY = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
           ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
         )
         class(gcFitLinear) <- "gcFitLinear"
@@ -1206,7 +1226,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
           if(nrow(ret.check)<2){
             gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
                                 log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-                                  y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                                  y0 = NA, dY = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
                                 ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
             )
             class(gcFitLinear) <- "gcFitLinear"
@@ -1219,7 +1239,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
           if(any(ret.check[,5] >= R2 & ret.check[,6] <= RSD)){
             while (!success){
               index.max <- which.max(ret.check[, 3])
-              if(ret.check[index.max,5] >= R2 & ret.check[index.max,6] <= RSD && !is.na(ret.check[index.max,6])){ # prerequisites for suitable µmax candidate: R2 and RSD
+              if(ret.check[index.max,5] >= R2 && ret.check[index.max,6] <= RSD && !is.na(ret.check[index.max,6])){ # prerequisites for suitable µmax candidate: R2 and RSD
                 slope.max <- ret.check[index.max,3]
                 success <- TRUE
               } else {
@@ -1240,7 +1260,17 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
                                     ret[, 5] >= 0.95*R2 & # R2 criterion for candidates
                                     ret[, 6] <= 1.05 * RSD & # RSD criterion for candidates
                                     ret[, 7] >= t0) # consider only slopes after defined t0
-              }
+            }
+            #consider only candidate windows next to index.max.ret
+            candidate_intervals <- split(candidates, cumsum(c(1, diff(candidates) != 1)))
+            candidates <-
+              candidate_intervals[as.numeric(which(
+                sapply(
+                  candidate_intervals,
+                  FUN = function(X)
+                    index.max.ret %in% X
+                )
+              ))][[1]]
 
 
             if(length(candidates) > 0) {
@@ -1280,7 +1310,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
             else { # of if(length(candidates) > 0)
               gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
                                   log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-                                    y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                                    y0 = NA, dY = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
                                   ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
               )
               class(gcFitLinear) <- "gcFitLinear"
@@ -1291,7 +1321,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
           else{
             gcFitLinear <- list(raw.time = time.in, raw.data = data.in, filt.time = obs$time, filt.data = obs$data,
                                 log.data = obs$ylog, gcID = gcID, FUN = grow_exponential, fit = NA, par = c(
-                                  y0 = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
+                                  y0 = NA, dY = NA, y0_lm = NA, mumax = NA, mu.se = NA, lag = NA, tmax_start = NA, tmax_end = NA ),
                                 ndx = NA, rsquared = NA, control = control, fitFlag = FALSE
             )
             class(gcFitLinear) <- "gcFitLinear"
@@ -1325,6 +1355,8 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
     fit = m,
     par = c(
       y0 = y0_data,
+      dY = max(obs$data)-obs$data[1],
+      A = max(obs$data),
       y0_lm = y0_lm,
       mumax = mumax,
       mu.se = mu.se,

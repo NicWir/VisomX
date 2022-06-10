@@ -81,6 +81,7 @@ Imports:
     stats,
     SummarizedExperiment,
     tibble,
+    tidyr,
     UpSetR,
     vsn
 Suggests: 
@@ -94,6 +95,7 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
+    bioc::release/BiocParallel,
     bioc::release/clusterProfiler,
     bioc::release/DEP,
     bioc::release/DESeq2,

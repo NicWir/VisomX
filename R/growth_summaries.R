@@ -9,14 +9,14 @@ summary.gcFitSpline <- function(object,...)
 
     # object of class gcFitSpline
 
-    contents.fitted.spline  <- c("mu.spline", "lambda.spline", "A.spline", "integral.spline", "reliable_fit.spline",
+    contents.fitted.spline  <- c("mu.spline", "lambda.spline", "y0.spline", "A.spline", "dY.spline", "integral.spline", "reliable_fit.spline",
                                  "smooth.spline")
 
     if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
       table <- c(0, rep(NA,length(contents.fitted.spline)-3), object$fitFlag, as.numeric(object$control$smooth.gc))
     }
     else{
-      table <- c(object$parameters$mu, object$parameters$lambda,  object$parameters$A, object$parameters$integral, as.character(object$fitFlag),
+      table <- c(object$parameters$mu, object$parameters$lambda,  object$parameters$A-object$parameters$dY, object$parameters$A, object$parameters$dY, object$parameters$integral, as.character(object$fitFlag),
                  as.numeric(object$control$smooth.gc))
     }
 
@@ -77,7 +77,8 @@ summary.drFit <- function(object, ...)
 summary.gcBootSpline <- function(object, ...)
   {
     # object of class gcBootSpline
-    contents.bootstrap        <- c("mu.bt", "lambda.bt", "A.bt", "integral.bt", "stdmu.bt", "stdlambda.bt", "stdA.bt", "stdintegral.bt", "reliable_fit.bt",
+    contents.bootstrap        <- c("mu.bt", "lambda.bt", "A.bt", "integral.bt", "stdmu.bt", "stdlambda.bt", "stdA.bt", "stdintegral.bt",
+                                   "reliable_fit.bt",
                                    "ci90.mu.bt.lo", "ci90.mu.bt.up", "ci90.lambda.bt.lo", "ci90.lambda.bt.up",
                                    "ci90.A.bt.lo", "ci90.A.bt.up", "ci90.integral.bt.lo", "ci90.integral.bt.up",
                                    "ci95.mu.bt.lo", "ci95.mu.bt.up", "ci95.lambda.bt.lo", "ci95.lambda.bt.up",
@@ -98,7 +99,8 @@ summary.gcBootSpline <- function(object, ...)
       A.sd        <- sd(object$A, na.rm=TRUE)
       integral.sd <- sd(object$integral, na.rm=TRUE)
 
-      table <- c(mu, lambda, A, integral, mu.sd, lambda.sd, A.sd, integral.sd, as.character(object$fitFlag),
+      table <- c(mu, lambda, A, integral, mu.sd, lambda.sd, A.sd, integral.sd,
+                 as.character(object$bootFlag),
                  mu-1.645*mu.sd, mu+1.645*mu.sd, lambda-1.645*lambda.sd,     lambda+1.645*lambda.sd,
                  A-1.645*A.sd,   A+1.645*A.sd,   integral-1.645*integral.sd, integral+1.645*integral.sd,
                  mu-1.96*mu.sd,  mu+1.96*mu.sd,  lambda-1.96*lambda.sd,      lambda+1.96*lambda.sd,
@@ -151,22 +153,25 @@ summary.gcFitLinear <- function(object,...)
   # object of class gcFitLinear
 
   contents.fitted.param     = c("mu.linfit", "lambda.linfit",
-                                "stdmu.linfit", "tmu.start.linfit",
-                                "tmu.end.linfit", "r2mu.linfit", "reliable_fit.linfit")
+                                "stdmu.linfit", "dY.linfit",
+                                "A.linfit", "tmu.start.linfit",
+                                "tmu.end.linfit",
+                                "r2mu.linfit", "reliable_fit.linfit")
 
 
   if ((is.na(object$fitFlag)==TRUE)|(object$fitFlag==FALSE)){
-    if(is.na(object$par[3])){
+    if(is.na(object$par[5])){
       table<-rep(NA,length(contents.fitted.param))
     } else {
       table<-c(0, rep(NA,length(contents.fitted.param)-1))
     }
   }
   else{
-    table <- c(object$par[3], object$par[5],
-               object$par[4], object$par[6],
-               object$par[7], object$rsquared,
-               as.character(object$fitFlag))
+    table <- c(object$par[5], object$par[7],
+               object$par[6], object$par[2],
+               object$par[3], object$par[8],
+               object$par[9],
+               object$rsquared, as.character(object$fitFlag))
 
   }
   table <- data.frame(t(table))
