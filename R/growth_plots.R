@@ -1,7 +1,4 @@
-#' @rdname plot
-#'
-setMethod("plot", c("gcFitLinear", "missing"),
-          function(x, y, log="", which=c("fit", "diagnostics"), ...)
+plot.gcFitLinear <- function(x, y, log="", which=c("fit", "diagnostics"), ...)
             {
             which <- match.arg(which)
 
@@ -36,7 +33,6 @@ setMethod("plot", c("gcFitLinear", "missing"),
                    }
             )
           }
-)
 
 plot.gcFitModel <- function(x, add=FALSE, raw=TRUE, slope=TRUE, pch=1, colData=1, colModel=1, colLag = 1, cex=1, ...)
   {

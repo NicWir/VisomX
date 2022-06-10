@@ -23,6 +23,8 @@ summary.gcFitSpline <- function(object,...)
     table               <- data.frame(t(table))
     colnames(table)     <- contents.fitted.spline
     summary.gcFitSpline <- table
+    class(summary.gcFitSpline) <- "summary.gcFitSpline"
+    summary.gcFitSpline
 }
 
 summary.gcFitModel <- function(object, ...)
@@ -66,12 +68,16 @@ summary.gcFitModel <- function(object, ...)
     table <- data.frame(t(table))
     colnames(table) <- contents.fitted.param
     summary.gcFitModel <- table
+    class(summary.gcFitModel) <- "summary.gcFitModel"
+    summary.gcFitModel
 }
 
 summary.drFit <- function(object, ...)
   {
     # object of class drFit
-    data.frame(object$drTable)
+  summary.drFit <- data.frame(object$drTable)
+  class(summary.drFit) <- "summary.drFit"
+  summary.drFit
 }
 
 summary.gcBootSpline <- function(object, ...)
@@ -110,6 +116,8 @@ summary.gcBootSpline <- function(object, ...)
     table               <- data.frame(t(table))
     colnames(table)     <- contents.bootstrap
     summary.gcBootSpline <- table
+    class(summary.gcBootSpline) <- "summary.gcBootSpline"
+    summary.gcBootSpline
 }
 
 summary.drBootSpline <- function(object, ...)
@@ -140,12 +148,16 @@ summary.drBootSpline <- function(object, ...)
     table                <- data.frame(t(table))
     colnames(table)      <- contents.bootstrap
     summary.drBootSpline <- table
+    class(summary.drBootSpline) <- "summary.drBootSpline"
+    summary.drBootSpline
 }
 
 summary.gcFit <- function(object,...)
   {
     # object of class gcFit
-    data.frame(object$gcTable)
+  summary.gcFit <- data.frame(object$gcTable)
+  class(summary.gcFit) <- "summary.gcFit"
+  summary.gcFit
 }
 
 summary.gcFitLinear <- function(object,...)
@@ -177,4 +189,6 @@ summary.gcFitLinear <- function(object,...)
   table <- data.frame(t(table))
   colnames(table) <- contents.fitted.param
   summary.gcFitLinear <- table
+  class(summary.gcFitLinear) <- "summary.gcFitLinear"
+  summary.gcFitLinear
 }
