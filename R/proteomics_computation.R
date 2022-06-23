@@ -79,6 +79,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                           length(name) == 1,
                           is.character(id),
                           length(id) == 1)
+  data.object <- data
   if (is.character(data)) {
     # Read table file
     if (file.exists(data)) {
@@ -140,7 +141,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
   # Test for occurence of prefix for abundance columns.
   if (!(any(grepl(pfx, colnames(prot))))) {
     stop(paste0("The prefix '", pfx, "' does not exist in any column of '",
-                data, "'. Please provide a valid prefix to identify columns with protein abundances."), call. = F)
+                paste(quote(data.object)), "'. Please provide a valid prefix to identify columns with protein abundances."), call. = F)
   }
 
   # Filter out the positive proteins (indicated by '+')
@@ -295,7 +296,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                nrow(SummarizedExperiment::assay(se)), " proteins were removed from the dataset due to too high RSD.\n\n"))
     filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
   }
-
+  filtered@metadata$rsd.thresh <- rsd_thresh
   ## Drop proteins with missing values based on defined type filter "filt_thr"
   prot_se <- prot.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
 
@@ -306,8 +307,8 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
 
 ####____prot.workflow____####
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
-                          imp_fun = c("man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
-                                      "MinProb", "min", "zero", "mixed", "nbavg", "SampMin"),
+                          imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
+                                      "MinProb", "min", "zero", "mixed", "nbavg"),
                           q = 0.01, # q value for imputing missing values with method "fun = 'MinProb'".
                           knn.rowmax = 0.5, # The maximum percent missing data allowed in any row (default 50%).
                           # For any rows with more than rowmax% missing are imputed using the overall mean per sample.
@@ -346,6 +347,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           is.numeric(lfc),
                           length(lfc) == 1)
 
+  imp_fun <- match.arg(imp_fun)
   # Show error if inputs are not valid
   if (!type %in% c("all", "control", "manual")) {
     stop("run workflow_proteomics() with a valid type",
@@ -386,108 +388,12 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                  " = ", alpha,
                  " and |log2(fold change)| > ",
                  lfc, "."))
+  # Perform pathway enrichment analysis
   if (pathway_enrichment) {
-    ls.significant_df <- list()
-    ls.significant_up <- list()
-    ls.significant_dn <- list()
-
-    for (i in 1:length(contrasts)) {
-      ls.significant_df[[i]] <-
-        SummarizedExperiment::rowData(prot_dep[SummarizedExperiment::rowData(prot_dep)[[paste0(contrasts[i], "_significant")]],]) %>% data.frame()
-      ls.significant_up[[i]] <-
-        ls.significant_df[[i]][ls.significant_df[[i]][paste0(contrasts[i], "_diff")] > 0,]
-      ls.significant_dn[[i]] <-
-        ls.significant_df[[i]][ls.significant_df[[i]][paste0(contrasts[i], "_diff")] < 0,]
-    }
-    if(!pathway_kegg && is.null(custom_pathways)) {
-      stop(
-        "Cannot perform custom pathway over-representation analysis without a table of pathways and corresponding genes.\nPlease provide a dataframe containing 'Pathway' and 'Accession' columns in the 'custom_pathways =' argument. Alternatively, choose 'pathway_kegg = TRUE' and a valid KEGG organism identifier in the 'kegg_organism = ' argument."
-      )
-    }
-    if (pathway_kegg) {
-      if (is.null(kegg_organism)) {
-        stop(
-          "Cannot perform KEGG pathway over-representation analysis without specifying a valid KEGG organism id in the 'kegg_organism' argument."
-        )
-      } else {
-
-        ls.pora_kegg_up <- rep(list(0), length(contrasts))
-        kegg_pathway_up <- function(x) {
-          prot.pathway_enrich(
-            gene = ls.significant_up[[x]]$ID,
-            organism = kegg_organism,
-            keyType = 'kegg',
-            pvalueCutoff = alpha_pathways,
-            pAdjustMethod = "BH",
-            minGSSize = 2)
-        }
-        ls.pora_kegg_up <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_up))
-
-        ls.pora_kegg_dn <- rep(list(0), length(contrasts))
-        kegg_pathway_dn <- function(x) {
-          prot.pathway_enrich(
-            gene = ls.significant_dn[[x]]$ID,
-            organism = kegg_organism,
-            keyType = 'kegg',
-            pvalueCutoff = alpha_pathways,
-            pAdjustMethod = "BH",
-            minGSSize = 2)
-        }
-        ls.pora_kegg_dn <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_dn))
-
-        for (i in 1:length(contrasts)) {
-
-          if(is.null(nrow(ls.pora_kegg_up[[i]]))){
-            cat(paste0("No significantly upregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
-          }
-          if(is.null(nrow(ls.pora_kegg_dn[[i]]))){
-            cat(paste0("No significantly downregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
-          }
-
-        }
-        names(ls.pora_kegg_up) <- contrasts
-        names(ls.pora_kegg_dn) <- contrasts
-      }
-    }
-    if (!is.null(custom_pathways)) {
-
-      ls.pora_custom_up <- rep(list(0), length(contrasts))
-      custom_pathway_up <- function(x) {
-        prot.pathway_enrich(
-          gene = ls.significant_up[[x]]$ID,
-          pvalueCutoff = alpha_pathways,
-          pAdjustMethod = "BH",
-          custom_gene_sets = T,
-          custom_pathways = custom_pathways,
-          minGSSize = 2)
-      }
-      ls.pora_custom_up <- suppressMessages(lapply(1:length(contrasts), custom_pathway_up))
-
-      ls.pora_custom_dn <- rep(list(0), length(contrasts))
-      custom_pathway_dn <- function(x) {
-        prot.pathway_enrich(
-          gene = ls.significant_dn[[x]]$ID,
-          pvalueCutoff = alpha_pathways,
-          pAdjustMethod = "BH",
-          custom_gene_sets = T,
-          custom_pathways = custom_pathways,
-          minGSSize = 2)
-      }
-      ls.pora_custom_dn <- suppressMessages(lapply(1:length(contrasts), custom_pathway_dn))
-
-      for (i in 1:length(contrasts)) {
-        if(is.null(nrow(ls.pora_custom_up[[i]]))){
-          cat(paste0("No significantly upregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
-        }
-        if(is.null(nrow(ls.pora_custom_dn[[i]]))){
-          cat(paste0("No significantly downregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
-        }
-      }
-      names(ls.pora_custom_up) <- contrasts
-      names(ls.pora_custom_dn) <- contrasts
-    }
+    res.pathway <- enrich_pathways(dep, contrasts, alpha_pathways = alpha_pathways,
+                                   pathway_kegg = pathway_kegg, kegg_organism = kegg_organism,
+                                   custom_pathways = custom_pathways)
   }
-
   suppress_ggrepel <- function(w) {
     if (any(grepl("ggrepel", w)))
       invokeRestart("muffleWarning")
@@ -548,17 +454,17 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     }
     if (pathway_kegg) {
       for (i in 1:length(contrasts)) {
-        if(!(nrow(as.data.frame(ls.pora_kegg_up[[i]])) == 0)){
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_up[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(
-              prot.plot_enrichment(ls.pora_kegg_up[[i]], title = paste0("Upregulated pathways", " - KEGG"),
+              prot.plot_enrichment(res.pathway$ls.pora_kegg_up[[i]], title = paste0("Upregulated pathways", " - KEGG"),
                                    subtitle =  str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
             ) )
         }
-        if(!(nrow(as.data.frame(ls.pora_kegg_dn[[i]])) == 0)){
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_dn[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(
-              prot.plot_enrichment(ls.pora_kegg_dn[[i]], title = paste0("Downregulated pathways", " - KEGG"),
+              prot.plot_enrichment(res.pathway$ls.pora_kegg_dn[[i]], title = paste0("Downregulated pathways", " - KEGG"),
                                    subtitle = str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
             ) )
         }
@@ -566,17 +472,17 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     }
     if(!is.null(custom_pathways)){
       for (i in 1:length(contrasts)) {
-        if(!(nrow(as.data.frame(ls.pora_custom_up[[i]])) == 0)){
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_up[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(
-              prot.plot_enrichment(ls.pora_custom_up[[i]], title = "Upregulated pathways",
+              prot.plot_enrichment(res.pathway$ls.pora_custom_up[[i]], title = "Upregulated pathways",
                                    subtitle =  str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
             ) )
         }
-        if(!(nrow(as.data.frame(ls.pora_custom_dn[[i]])) == 0)){
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_dn[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(
-              prot.plot_enrichment(ls.pora_custom_dn[[i]], title = "Downregulated pathways",
+              prot.plot_enrichment(res.pathway$ls.pora_custom_dn[[i]], title = "Downregulated pathways",
                                    subtitle = str_replace(contrasts[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
             ) )
         }
@@ -592,11 +498,35 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   results <- list(data = SummarizedExperiment::rowData(se), se = se, norm = prot_norm,
                   imputed = prot_imp, pca = prot_pca, diff = prot_diff, dep = prot_dep,
                   results = results, param = param)
+
+  message(paste0("Save results as tab-delimited table to: ", getwd(), "/results.txt"))
+  utils::write.table(results$results, paste(getwd(), "results.txt",
+                                  sep = "/"), row.names = FALSE, sep = "\t")
+
+
   if (pathway_enrichment == T && pathway_kegg) {
-    results <- c(results, pora_kegg_up = list(ls.pora_kegg_up), pora_kegg_dn = list(ls.pora_kegg_dn))
+    results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
+    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", getwd(), "'pora_kegg_contrast...txt'"))
+    for(i in 1:length(res.pathway$ls.pora_kegg_up)){
+      utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
+                                                sep = "/"), row.names = FALSE, sep = "\t")
+    }
+    for(i in 1:length(res.pathway$ls.pora_kegg_dn)){
+      utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
+                                                sep = "/"), row.names = FALSE, sep = "\t")
+    }
   }
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
-    results <- c(results, pora_custom_up = list(ls.pora_custom_up), pora_custom_dn = list(ls.pora_custom_dn))
+    results <- c(results, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
+    message(paste0("Writing results of custom pathway enrichment analysis to: ", getwd(), "'pora_custom_contrast...txt'"))
+    for(i in 1:length(res.pathway$ls.pora_custom_up)){
+      utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
+                                                sep = "/"), row.names = FALSE, sep = "\t")
+    }
+    for(i in 1:length(res.pathway$ls.pora_custom_dn)){
+      utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
+                                                sep = "/"), row.names = FALSE, sep = "\t")
+    }
   }
 
   if(report == TRUE){
@@ -605,6 +535,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                 pathway_enrichment = pathway_enrichment,
                 heatmap.show_all = heatmap.show_all,
                 heatmap.kmeans = heatmap.kmeans,
+                volcano.add_names = volcano.add_names,
                 k = k,
                 report.dir = report.dir)
   }
@@ -1018,7 +949,7 @@ prot.report <- function(results, report.dir = NULL, ...){
   if (any(!c("data", "se", "norm",
              "imputed", "diff", "dep", "results",
              "param") %in% names(results))) {
-    stop("run report() with appropriate input generated by prot.workflow",
+    stop("run prot.report() with appropriate input generated by prot.workflow",
          call. = FALSE)
   }
   args <- list(...)
@@ -1043,7 +974,6 @@ prot.report <- function(results, report.dir = NULL, ...){
   if("pora_custom_dn" %in% names(results)){
     pora_custom_dn <- results$pora_custom_dn
   }
-  table <- results$results
   message("Render reports...")
   if(!is.null(report.dir)){
     wd <- paste0(getwd(), "/", report.dir)
@@ -1056,9 +986,6 @@ prot.report <- function(results, report.dir = NULL, ...){
                 sep = "")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)
-  message("Save tab-delimited table")
-  utils::write.table(table, paste(wd, "results.txt",
-                                  sep = "/"), row.names = FALSE, sep = "\t")
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
   message(paste0("Files saved in: '", wd, "'"))
@@ -1066,8 +993,8 @@ prot.report <- function(results, report.dir = NULL, ...){
 
 
 
-####____prot.pathway_enrich____####
-prot.pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
+####____pathway_enrich____####
+pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
                                  pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                                  minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
 {

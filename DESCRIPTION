@@ -96,6 +96,7 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
+    bioc::release/apeglm,
     bioc::release/BiocParallel,
     bioc::release/clusterProfiler,
     bioc::release/DEP,
@@ -105,12 +106,14 @@ Remotes:
     bioc::release/genefilter,
     bioc::release/GlobalAncova,
     bioc::release/globaltest,
+    bioc::release/IHW,
     bioc::release/KEGGgraph,
     bioc::release/sva,
     bioc::release/PCAtools,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
-    github::NicWir/SSPA
+    github::NicWir/SSPA,
+    github::stephenslab/mixsqp
 biocViews: 
 Encoding: UTF-8
 GithubRepo: VisomX

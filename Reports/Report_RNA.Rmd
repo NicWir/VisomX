@@ -1,5 +1,5 @@
 ---
-title: "Proteomics analysis report"
+title: "Transcriptomics analysis report"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 geometry: margin=1.5cm
 urlcolor: blue
@@ -16,22 +16,21 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(dev = "pdf")
-diff_true <- nrow(SummarizedExperiment::rowData(dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant, 
-    ])) != 0
+diff_true <- nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) != 0
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
 ```
 ````{r,echo=FALSE}
-contrasts <- SummarizedExperiment::rowData(dep) %>% 
+contrasts <- SummarizedExperiment::rowData(dds) %>% 
     data.frame(check.names = FALSE) %>% 
-    select(ends_with("_diff")) %>% 
-    colnames() %>% str_replace_all("_diff", "")
+    select(starts_with("lfc.")) %>% 
+    colnames() %>% str_replace_all("lfc.", "")
 ````
 
 ## Summary
 `r #browser()`
-Original file contains _`r data@metadata$n.pre_filt`_ proteins, of which _`r ifelse(!is.null(data@metadata$n.filtered), data@metadata$n.filtered, 0)`_ were removed due to missing values (_filt_type = '`r data@metadata$filt_type`'_), and `r ifelse(!is.null(data@metadata$n.filtered.rsd), data@metadata$n.filtered.rsd, 0)` due to too high RSD (threshold: `r ifelse(!is.null(data@metadata$rsd.thresh), data@metadata$rsd.thresh, NA)`).
+Original file contains _`r data@metadata$n.pre_filt`_ genes, of which _`r ifelse(!is.null(data@metadata$n.filtered), data@metadata$n.filtered, 0)`_ were removed due to missing values (_filt_type = '`r data@metadata$filt_type`'_), and `r ifelse(!is.null(data@metadata$n.filtered.rsd), data@metadata$n.filtered.rsd, 0)` due to too high RSD (threshold: `r ifelse(!is.null(data@metadata$rsd.thresh), data@metadata$rsd.thresh, NA)`). 
 
-_`r nrow(dep)`_ proteins were reproducibly quantified. 
+_`r nrow(dds)`_ genes were reproducibly quantified. 
 
 In total _`r ncol(data)`_ samples were detected:
 
@@ -42,13 +41,13 @@ Samples were grouped into _`r length(unique(data[['condition']]))`_ conditions:
 `r colFmt(unique(data[['condition']]), 'blue')` 
 
 
-#### `r nrow(dep[SummarizedExperiment::rowData(dep)[['significant']], ])` proteins differ significantly between samples.
+#### `r nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ])` genes differ significantly between samples.
 ```{r signif_conditions, echo=FALSE,  results="asis"}
 if (length(contrasts) > 1){
   for (i in 1:length(contrasts)) {
     cat(paste0("* _",
-               nrow(dep[SummarizedExperiment::rowData(dep)[[paste0(contrasts[i], "_significant")]],]),
-               "_ proteins for contrast ", contrasts[i], "\n"))
+               nrow(dds[SummarizedExperiment::rowData(dds)[[paste0("significant.", contrasts[i])]][!is.na(SummarizedExperiment::rowData(dds)[[paste0("significant.", contrasts[i])]])],]),
+               "_ genes for contrast ", contrasts[i], "\n"))
   }
 }
 ```
@@ -58,14 +57,17 @@ Parameters used for the analysis:
 * missing data was imputed using _`r colFmt(paste0("'", imp@metadata$imp_fun, "'"),'blue')`_
 * selected contrast type: `r colFmt(paste0("'", param[['type']], "'"),'blue')`
 * tested contrasts:
-  `r colFmt(gsub("_p.adj", "", colnames(SummarizedExperiment::rowData(dep))[grep("p.adj", colnames(SummarizedExperiment::rowData(dep)))]),'blue')`
+  `r colFmt(gsub("_p.adj", "", colnames(SummarizedExperiment::rowData(dds))[grep("p.adj", colnames(SummarizedExperiment::rowData(dds)))]),'blue')`
 * adjusted p-value <= `r colFmt(param[['alpha']],'blue')`
 * |logFC| >= `r colFmt(param[['lfc']],'blue')`
+* alternative Hypothesis: `r colFmt(ifelse(!is.na(param$altHypothesis), paste0(param$altHypothesis, " ", lfc), "null hypothesis"), 'blue')`
+* p-value adjustment method: `r colFmt(param[['pAdjustMethod']],'blue')`
+* log2(fold change) shrinkage method:  `r colFmt(ifelse(param$lfcShrink, param[['shrink.method']], "none"),'blue')`
 
 \pagebreak
-## Protein numbers
+## Gene numbers
 
-Protein identifications per sample:
+Gene identifications per sample:
 ```{r,echo=FALSE}
 pg_width = ncol(data) / 2
 if (pg_width > 10) { pg_width = 10 }
@@ -74,39 +76,33 @@ suppress_ggrepel <- function(w) {
       invokeRestart("muffleWarning")
   }
 ```
-```{r numbers, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = pg_width, fig.align='center'}
-prot.plot_numbers(data, plot = T, export = F)
+
+```{r numbers, echo=FALSE, warning=FALSE, fig.height = 5, fig.width = pg_width*0.8, fig.align='center'}
+rna.plot_numbers(data, plot = T, export = F, basesize = 9)
 ```
 
-Gene coverage in all samples:
-```{r coverage, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = 3, fig.align='center'}
-plot_coverage(data)
+Cooks distance in all samples for outlier detection.
+```{r cooks, echo=FALSE, warning=FALSE, fig.height = 4.2, fig.width = 6, fig.align='center'}
+par(mar=c(8,5,2,2))
+boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+title("Box plot of Cook's distance")
 ```
 \pagebreak
 ## Normalization
 
-The data was background corrected and normalized by variance stabilizing transformation (_vsn_).
-VSN transforms the data in such a way that the variance remains nearly constant over the whole intensity spectrum. Without this (or another) normalization a dependency between intensity and variance can be observed in may cases which deteriorates the analysis results.
+The data was normalized with automatically estimated size factors using the "median ratio method" (see _?DESeq2::`estimateSizeFactors,DESeqDataSet-method`_) and by adding a pseudocount of 1/2 to allow for log scale plotting.
 
-#### Verify the variance stabilisation.\
-  The purpose of the following graph is to determine if there is a systematic trend in the standard deviation of the data as a function of overall expression. These graphs are based on the assumption that most genes are not differentially expressed, so the running median is a reasonable estimate of the standard deviation of the data at the feature level, as a function of the mean. After vsn normalization, the running median should be approximately a horizontal line. While a completely flat curve of the square root of variance over the mean may seem like the goal of such transformations, this may be unreasonable in the case of datasets with many true differences due to the experimental conditions. There may be random fluctuations, but there should not be a general trend. If this is not the case, it usually indicates a data quality problem or is the result of inadequate data preprocessing.
-
-SD-Rank(mean) plot before normalization:
-```{r meanSDplot1,echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
-  suppressWarnings(meanSdPlot(data, ranks = TRUE, plot = T, xlab = "Rank(mean)", ylab = "SD"))
-```
-SD-Rank(mean) plot after normalization:
-```{r meanSDplot2,echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
-  suppressWarnings(meanSdPlot(norm, plot = T, xlab = "Rank(mean)", ylab = "SD"))
-```
-\pagebreak
 ```{r,echo=FALSE}
 norm_height = ncol(data) / 2.2
 if (norm_height > 9.5) {norm_height = 9.5}
 ```
  Box plots of the distributions before and after normalization:
 ```{r norm, echo=FALSE, warning=FALSE, fig.height = norm_height, fig.align='center'}
-prot.boxplot_intensity(data, norm, plot = T, export = F)
+data.log <- data
+assay(data.log) <- log2(assay(data.log))
+norm.log <- dds
+assay(norm.log) <- log2(assay(norm.log))
+prot.boxplot_intensity(data.log, norm.log, plot = T, export = F)
 ```
 \pagebreak
 ## Missing values
@@ -120,22 +116,29 @@ If the missing data is biased to certain samples (e.g. controls) which are expec
 _[MSnbase](https://bioconductor.org/packages/3.15/bioc/html/MSnbase.html)_ vignette and in particular the _impute_ function description. The "__SampMin__" method was proposed by  [Liu and Dongre (2020)](https://doi.org/10.1093/bib/bbaa112)) and shown to outperform other common methods for MNAR, left-censored datasets.
 ```{r missval, echo=FALSE, fig.width = 7, fig.height = 6, fig.align='center'}
 if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
-  suppressMessages(prot.plot_missval(norm, fontsize = 12, export = F))
+  suppressMessages(prot.plot_missval(data, fontsize = 12, export = F))
 }
 ```
 \pagebreak
 To check whether missing values are biased toward low-intensity genes (i.e., 'left-censored'), densities and cumulative proportions are plotted for genes with and without missing values.
 
-```{r missval2, echo=FALSE, fig.width = 7, fig.height = 7, fig.align='center'}
-if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
-  suppressMessages(prot.plot_detect(norm, basesize = 10, plot = T, export = F))
-}
+```{r missval2, echo=FALSE, fig.width = 7, fig.height = 7, fig.align='center', eval = any(is.na(data.frame(SummarizedExperiment::assay(data))))}
+  se_log2 <- data
+  assay(se_log2) <- log2(assay(se_log2))
+  try(suppressMessages(
+    prot.plot_detect(se_log2, basesize = 10, plot = T, export = F)
+  ))
 ```
 \pagebreak
 The effects of data normalization and imputation on the distributions are visualized via density distributions:
 
-```{r density, echo=FALSE, fig.width = 7, fig.height = 9, fig.align='center'}
-prot.plot_imputation(data, norm, imp, basesize = 13, plot = T, export = F)
+```{r density, echo=FALSE, fig.width = 7, fig.height = 9, fig.align='center', eval = any(is.na(data.frame(SummarizedExperiment::assay(data))))}
+suppressMessages(
+    rna.plot_imputation(log2(SummarizedExperiment::assay(data)+1),
+                        "Imputed" = log2(SummarizedExperiment::assay(imp)+1),
+                        "Normalized" = log2(counts(dds, normalized = TRUE)+1), colData = SummarizedExperiment::colData(data),
+                        plot = T, export = F, basesize = 12)
+  )
 ```
 \pagebreak
 ## Quality control
@@ -157,12 +160,12 @@ withCallingHandlers(
 Notice that the new coordinates (PCs) are no longer real variables generated by the system. Thus, applying PCA to your dataset loses its interpretability. However, PCA can be very useful to observe batch effects and helps to assess which original samples are similar and different from each other. 
 ```{r plot_pca_1_2, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
 suppressMessages(
-      prot.plot_pca(imp,x = 1, y = 2, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC2 vs. PC1")
+      rna.plot_pca(dds,x = 1, y = 2, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC2 vs. PC1")
     )
 ```
 ```{r plot_pca_1_3, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
 suppressMessages(
-      prot.plot_pca(imp,x = 1, y = 3, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC3 vs. PC1")
+      rna.plot_pca(dds,x = 1, y = 3, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC3 vs. PC1")
     )
 ```
 \pagebreak
@@ -188,52 +191,69 @@ PCA loadings are the coefficients of the linear combination of the original vari
 \pagebreak
 ### Heatmaps
 The heat map gives an overview of all genes with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of genes (rows) can indicate genes that behave in a similar way.
-```{r,echo=FALSE, warning=F, message=F}
-width = ncol(data) / 2
+```{r heatmap_contrast,echo=FALSE, warning=F, message=F}
+width = 6+length(dds$condition)/10
 if (width < 7) { width = 7 }
 if (width > 12) { width = 12 }
-len = nrow(dds[SummarizedExperiment::rowData(dds)$significant, ]) / 13
+len = nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) / 55
 if (len < 5) { len = 5 }
 ```
 ```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
-try(suppressMessages(
-  prot.plot_heatmap(
-    dds,
-    type = "contrast",
-    kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
-    k = if_else(exists("k"), k, 6),
-    show_all = heatmap.show_all,
-    show_row_names = T,
-    row_font_size = 5,
-    plot = T,
-    export = F
-  )
-))
+if(export==TRUE){
+  knitr::include_graphics(paste0(dirname(wd), "/Plots/HeatMap_contrast.pdf"), dpi = 300)
+} else {
+  try(suppressMessages(
+    rna.plot_heatmap(
+      dds,
+      type = "contrast",
+      kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
+      k = ifelse(exists("k"), k, 6),
+      show_all = heatmap.show_all,
+      show_row_names = T,
+      row_font_size = heatmap.row_font_size,
+      plot = T,
+      export = F
+    )
+  ))
+}
 ```
 \pagebreak
-```{r heatmap_2, echo=FALSE, fig.width = width, fig.height = len, fig.align='center'}
-try(suppressMessages(
-      prot.plot_heatmap(dds, type = "centered", 
-                        kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
-                        k = ifelse(exists("k"), k, 6),
-                        show_all = T, 
-                        show_row_names = T, 
-                        row_font_size = 4.5, 
-                        indicate = c("condition"),
-                        plot = T, 
-                        export = F)
-    ))
+```{r heatmap_condition, echo=FALSE, fig.width = width, fig.height = len, fig.align='center'}
+if(export==TRUE){
+  knitr::include_graphics(paste0(dirname(wd), "/Plots/HeatMap_centered.pdf"),dpi = 300)
+} else {
+  try(suppressMessages(
+        rna.plot_heatmap(dds, type = "centered", 
+                          kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
+                          k = ifelse(exists("k"), k, 6),
+                          show_all = T, 
+                          show_row_names = T, 
+                          row_font_size = heatmap.row_font_size, 
+                          indicate = c("condition"),
+                          plot = T, 
+                          export = F)
+      ))
+}
 ```
 \pagebreak
 ### Volcano plot(s)
 Volcano plots can be used to visualize a particular contrast (comparison between two samples). This allows to examine the gene enrichment between two samples (x-axis) and their corresponding (adjusted) p-values (y-axis).
 ```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.8, warning=F, message=F, fig.align='center'}
+if(export==TRUE){
+  volcano_list <- c()
+  for(i in 1:length(grep(paste("VolcanoPlot_", contrasts, ".pdf", sep="", collapse = "|"), list.files(path = paste0(dirname(wd), "/Plots"))))){
+    volcano_list <- c(volcano_list, list.files(path = paste0(dirname(wd), "/Plots"), 
+                                  pattern = paste0("VolcanoPlot_", contrasts[i],".pdf"),
+                                  full.names = TRUE))
+  }
+  knitr::include_graphics(volcano_list ,dpi = 300)
+} else {
 for (i in 1:length(contrasts)){
-  prot.plot_volcano(dds, contrast = contrasts[i], add_names = volcano.add_names,
-                          add_names = T, label_size = 2.5, adjusted =  volcano.adjusted,
-                          plot = T, export = F, lfc = dds@metadata$lfc, alpha = dds@metadata$alpha)
+    volcano.temp <- rna.plot_volcano(dds, contrast = contrasts[i],
+                            add_names = volcano.add_names, label_size = 2.5, adjusted =  volcano.adjusted,
+                            plot = T, export = F, lfc = param$lfc, alpha = param$alpha)
+  }
 }
-
 ```
 \pagebreak
 ## `r if(pathway_enrichment == TRUE){"Pathway overrepresentation analysis"}`
@@ -365,4 +385,3 @@ if("pora_custom_up" %in% names(results)) {
   }
 }
 ```
-

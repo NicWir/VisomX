@@ -15,6 +15,141 @@
   }
 }
 
+####____enriched_pathways____####
+# internal function
+enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_kegg=TRUE, kegg_organism, custom_pathways = NULL)
+  {
+  if (class(object) == "DESeqDataSet") {
+    type <- "dds"
+  }
+  else if (class(object) == "SummarizedExperiment"){ ddFDH_Glc_For_vs_Glc
+    type <- "dep"
+  }
+  else {
+    stop("'object' needs to be of class \"DESeqDataSet\" (for transcriptomics data) or \"SummarizedExperiment\" (for proteomics data) after performing differential expression analysis (with 'DEseq' or 'prot.add_rejections'.")
+  }
+  lfc.pfx <- ifelse(length(grep("lfc_shrink", colnames(SummarizedExperiment::rowData(object))))>0,
+                    "lfc_shrink.", "lfc.")
+  ls.significant_df <- list()
+  ls.significant_up <- list()
+  ls.significant_dn <- list()
+
+  for (i in 1:length(contrasts)) {
+    ndx.signif <-
+      grep(ifelse(
+        type == "dds",
+        paste0("significant.", contrasts[i]),
+        paste0(contrasts[i], "_significant")
+      ),
+      colnames(SummarizedExperiment::rowData(object)))
+
+    # Remove rows with NA in p.adj
+    ls.significant_df[[i]] <- SummarizedExperiment::rowData(object) %>% data.frame()
+    ls.significant_df[[i]] <- ls.significant_df[[i]][!is.na(ls.significant_df[[i]][[ndx.signif]]), ]
+    # Filter for genes that are significant for the given contrast
+    ls.significant_df[[i]] <- ls.significant_df[[i]][ls.significant_df[[i]][[ndx.signif]], ] %>% data.frame()
+    ls.significant_up[[i]] <-
+      ls.significant_df[[i]][ls.significant_df[[i]][ifelse(type=="dds", paste0(lfc.pfx, contrasts[i]), paste0(contrasts[i], "_diff"))] > 0,]
+    ls.significant_dn[[i]] <-
+      ls.significant_df[[i]][ls.significant_df[[i]][ifelse(type=="dds", paste0(lfc.pfx, contrasts[i]), paste0(contrasts[i], "_diff"))] < 0,]
+  }
+  if(!pathway_kegg && is.null(custom_pathways)) {
+    stop(
+      "Cannot perform custom pathway over-representation analysis without a table of pathways and corresponding genes.\nPlease provide a dataframe containing 'Pathway' and 'Accession' columns in the 'custom_pathways =' argument. Alternatively, choose 'pathway_kegg = TRUE' and a valid KEGG organism identifier in the 'kegg_organism = ' argument."
+    )
+  }
+  if (pathway_kegg) {
+    if (is.null(kegg_organism)) {
+      stop(
+        "Cannot perform KEGG pathway over-representation analysis without specifying a valid KEGG organism id in the 'kegg_organism' argument."
+      )
+    } else {
+
+      ls.pora_kegg_up <- rep(list(0), length(contrasts))
+      kegg_pathway_up <- function(x) {
+        pathway_enrich(
+          gene = ls.significant_up[[x]]$ID,
+          organism = kegg_organism,
+          keyType = 'kegg',
+          pvalueCutoff = alpha_pathways,
+          pAdjustMethod = "BH",
+          minGSSize = 2)
+      }
+      ls.pora_kegg_up <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_up))
+
+      ls.pora_kegg_dn <- rep(list(0), length(contrasts))
+      kegg_pathway_dn <- function(x) {
+        pathway_enrich(
+          gene = ls.significant_dn[[x]]$ID,
+          organism = kegg_organism,
+          keyType = 'kegg',
+          pvalueCutoff = alpha_pathways,
+          pAdjustMethod = "BH",
+          minGSSize = 2)
+      }
+      ls.pora_kegg_dn <- suppressMessages(lapply(1:length(contrasts), kegg_pathway_dn))
+
+      for (i in 1:length(contrasts)) {
+
+        if(is.null(nrow(ls.pora_kegg_up[[i]]))){
+          cat(paste0("No significantly upregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
+        }
+        if(is.null(nrow(ls.pora_kegg_dn[[i]]))){
+          cat(paste0("No significantly downregulated KEGG pathways found for contrast:\n", contrasts[i], "\n"))
+        }
+
+      }
+      names(ls.pora_kegg_up) <- contrasts
+      names(ls.pora_kegg_dn) <- contrasts
+    }
+  } else {
+    ls.pora_kegg_up <- NA
+    ls.pora_kegg_dn <- NA
+  }
+  if (!is.null(custom_pathways)) {
+
+    ls.pora_custom_up <- rep(list(0), length(contrasts))
+    custom_pathway_up <- function(x) {
+      pathway_enrich(
+        gene = ls.significant_up[[x]]$ID,
+        pvalueCutoff = alpha_pathways,
+        pAdjustMethod = "BH",
+        custom_gene_sets = T,
+        custom_pathways = custom_pathways,
+        minGSSize = 2)
+    }
+    ls.pora_custom_up <- suppressMessages(lapply(1:length(contrasts), custom_pathway_up))
+
+    ls.pora_custom_dn <- rep(list(0), length(contrasts))
+    custom_pathway_dn <- function(x) {
+      pathway_enrich(
+        gene = ls.significant_dn[[x]]$ID,
+        pvalueCutoff = alpha_pathways,
+        pAdjustMethod = "BH",
+        custom_gene_sets = T,
+        custom_pathways = custom_pathways,
+        minGSSize = 2)
+    }
+    ls.pora_custom_dn <- suppressMessages(lapply(1:length(contrasts), custom_pathway_dn))
+
+    for (i in 1:length(contrasts)) {
+      if(is.null(nrow(ls.pora_custom_up[[i]]))){
+        cat(paste0("No significantly upregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+      }
+      if(is.null(nrow(ls.pora_custom_dn[[i]]))){
+        cat(paste0("No significantly downregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+      }
+    }
+    names(ls.pora_custom_up) <- contrasts
+    names(ls.pora_custom_dn) <- contrasts
+  } else {
+    ls.pora_custom_up <- NA
+    ls.pora_custom_dn <- NA
+  }
+  res.pathway <- list(ls.pora_kegg_up = ls.pora_kegg_up, ls.pora_kegg_dn = ls.pora_kegg_dn,
+                      ls.pora_custom_up = ls.pora_custom_up, ls.pora_custom_dn = ls.pora_custom_dn)
+}
+
 #' Format font color for Markdown reports
 #'
 #' \code{colFmt} formats the input depending on PDF or HTML output to give colored text in reports.
@@ -422,3 +557,111 @@ AddErrMsg <- function (msg)
   err.vec <<- c(err.vec, msg)
   print(msg)
 }
+
+read_file <- function(filename, csvsep = ";"){
+  if (file.exists(filename)) {
+    if (str_replace_all(filename, ".{1,}\\.", "") == "csv") {
+      dat <-
+        utils::read.csv(
+          filename,
+          sep = csvsep,
+          header = T,
+          stringsAsFactors = F,
+          fill = T,
+          na.strings = "",
+          quote = "",
+          comment.char = "",
+          check.names = F
+        )
+    } else if (str_replace_all(filename, ".{1,}\\.", "") == "xls" |
+               str_replace(filename, ".{1,}\\.", "") == "xlsx") {
+      dat <- readxl::read_excel(filename)
+    } else if (str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
+      dat <-
+        utils::read.csv(
+          filename,
+          sep = "\t",
+          header = T,
+          stringsAsFactors = F,
+          fill = T,
+          na.strings = "",
+          quote = "",
+          comment.char = "",
+          check.names = F
+        )
+    } else if (str_replace_all(filename, ".{1,}\\.", "") == "txt") {
+      dat <-
+        utils::read.table(
+          filename,
+          sep = "\t",
+          header = T,
+          stringsAsFactors = F,
+          fill = T,
+          na.strings = "",
+          quote = "",
+          comment.char = "",
+          check.names = F
+        )
+    } else {
+      stop(
+        "No compatible file format provided.
+             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
+      )
+    }
+  } # if (file.exists(filename))
+  else {
+    stop(paste0("File \"", filename, "\" does not exist."), call. = F)
+  }
+  return(dat)
+}
+
+get_annotation_contrast <- function (dds, indicate, contrast = contrast_samples)
+{
+  assertthat::assert_that(inherits(dds, "SummarizedExperiment"),
+                          is.character(indicate))
+  col_data <- SummarizedExperiment::colData(dds) %>% data.frame(check.names = FALSE)
+  columns <- colnames(col_data)
+  if (all(!indicate %in% columns)) {
+    stop("'", paste0(indicate, collapse = "' and/or '"),
+         "' column(s) is/are not present in ", deparse(substitute(dds)),
+         ".\nValid columns are: '", paste(columns, collapse = "', '"),
+         "'.", call. = FALSE)
+  }
+  if (any(!indicate %in% columns)) {
+    indicate <- indicate[indicate %in% columns]
+    warning("Only used the following indicate column(s): '",
+            paste0(indicate, collapse = "', '"), "'")
+  }
+  anno <- select(col_data, indicate)
+  anno <- filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
+  names <- colnames(anno)
+  anno_col <- vector(mode = "list", length = length(names))
+  names(anno_col) <- names
+  for (i in names) {
+    var = anno[[i]] %>% unique() %>% sort()
+    if (length(var) == 1)
+      cols <- c("black")
+    if (length(var) == 2)
+      cols <- c("orangered", "cornflowerblue")
+    if (length(var) < 7 && length(var) > 2)
+      cols <- RColorBrewer::brewer.pal(length(var), "Pastel1")
+    if (length(var) > 7 && length(var) <= 12){
+      cols <- RColorBrewer::brewer.pal(length(var), "Set3")
+    } else {
+      pal <- c(
+        "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+        "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+        "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+        "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+        "green1", "yellow4", "yellow3", "darkorange4", "brown"
+      )
+      cols <-pal[1:length(var)]
+    }
+
+
+    names(cols) <- var
+    anno_col[[i]] <- cols
+  }
+  ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
+}
+

@@ -509,7 +509,7 @@ prot.plot_pca <- function (dep,
     stop(
       paste0(
         "'x' and/or 'y' arguments are not valid\n",
-        "Run plot_pca() with 'x' and 'y' <= ",
+        "Run prot.plot_pca() with 'x' and 'y' <= ",
         ncol(dep),
         "."
       ),
@@ -520,7 +520,7 @@ prot.plot_pca <- function (dep,
     stop(
       paste0(
         "'n' argument is not valid.\n",
-        "Run plot_pca() with 'n' <= ",
+        "Run prot.plot_pca() with 'n' <= ",
         nrow(dep),
         "."
       ),
@@ -763,7 +763,6 @@ prot.plot_volcano <-
       df$shape <- "circle"
     }
     # change the -Log10(q value) of proteins exceeding the y plot bound at 5.0 to 4.9 so that they are displayed at the axis border
-    #df$y[df$y>4.9] <- 4.9
     if (adjusted) {
       if (max(df$y) > 5.0) {
         df$y[df$y > 4.9] <- 4.9
@@ -907,7 +906,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
                           length(pal_rev) == 1, is.numeric(font_size), length(font_size) ==
                             1, is.logical(plot), length(plot) == 1)
   if (!(lower >= -1 & upper >= -1 & lower <= 1 & upper <= 1)) {
-    stop("'lower' and/or 'upper' arguments are not valid\n         Run plot_pca() with 'lower' and 'upper' between -1 and 1",
+    stop("'lower' and/or 'upper' arguments are not valid\n         Run prot.plot_corrheatmap() with 'lower' and 'upper' between -1 and 1",
          call. = FALSE)
   }
   pals <- RColorBrewer::brewer.pal.info %>% tibble::rownames_to_column() %>%
@@ -918,10 +917,6 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
          "Run plot_pca() with one of the following 'pal' options: ",
          paste(pals$rowname, collapse = "', '"), "'",
          call. = FALSE)
-  }
-  if (any(is.na(SummarizedExperiment::assay(dep)))) {
-    stop("Missing values in '", deparse(substitute(dep)),
-         "'. Use plot_dist() instead")
   }
   if (!is.null(indicate)) {
     assertthat::assert_that(is.character(indicate))
@@ -962,8 +957,8 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
            deparse(substitute(dep)), "'\nRun add_rejections() to obtain the required column",
            call. = FALSE)
     }
-    dep <- dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant,
-    ]
+    dep <- dep[!is.na(SummarizedExperiment::rowData(dep, use.names = FALSE)$significant), ]
+    dep <- dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant, ]
   }
   cor_mat <- cor(SummarizedExperiment::assay(dep))
   ht1 = ComplexHeatmap::Heatmap(cor_mat, col = circlize::colorRamp2(seq(lower,
@@ -988,7 +983,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
 }
 ####____prot.plot_heatmap____####
 # Modified plot_heatmap function with adjusted aesthetics and legend breaks
-prot.plot_heatmap <- function (dep, type = c("contrast", "centered"),
+prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
                                contrast = NULL, # Analyze only significant proteins contained in the specified contrast(s)
                                show_all = TRUE, # Show protein abundances of all conditions or only of those in the specified constrast(s)
                                pal = "RdBu",
@@ -1619,6 +1614,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
                                          legend.box = "horizontal", legend.key = element_blank(),
                                          legend.key.size = unit(0.5, "cm"), legend.text = element_text(size = legendLabSize),
                                          title = element_text(size = legendLabSize), legend.title = element_blank())
+
   p <- ggplot(plotobj, aes(x = PC, y = Loading, size = Loading,
                            fill = Loading)) + th + geom_point(shape = shape) + labs(title = title,
                                                                                     subtitle = subtitle, caption = caption) + labs(x = xlab,
@@ -1695,7 +1691,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
     p
   }
 }
-####____prot.plot_enrichment____#### REQUIRE(forcats)
+####____prot.plot_enrichment____REQUIRE(forcats)####
 prot.plot_enrichment <- function(enrichset,
                                  title = "Differentially enriched pathways",
                                  subtitle = "",
@@ -1985,7 +1981,7 @@ prot.plot_bar <- function (dep,
         labs(
           x = "Baits",
           y = expression(log[2] ~ "Centered intensity" ~
-                           "(?95% CI)"),
+                           "(\u00B195% CI)"),
           col = "Rep"
         ) + facet_wrap( ~ rowname) +
         theme(basesize = 12) + theme_DEP2()
@@ -2042,7 +2038,7 @@ prot.plot_bar <- function (dep,
           labs(
             x = "Contrasts",
             y = expression(log[2] ~ "Fold change" ~
-                             "(?95% CI)")) + facet_wrap( ~ name) +
+                             "(\u00B195% CI)")) + facet_wrap( ~ name) +
           theme(basesize = 12) + theme_DEP2()
 
 
@@ -2096,7 +2092,7 @@ prot.plot_bar <- function (dep,
           labs(
             x = "Contrasts",
             y = expression(log[2] ~ "Fold change" ~
-                             "(?95% CI)")) + facet_wrap( ~ ID) +
+                             "(\u00B195% CI)")) + facet_wrap( ~ ID) +
           theme(basesize = 12) + theme_DEP2()
 
 
@@ -2188,8 +2184,6 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
   arglist <- lapply(arglist, eval.parent, n = 2)
   names(arglist) <- var.names
   lapply(arglist, function(x) {
-    assertthat::assert_that(inherits(x, "SummarizedExperiment"),
-                            msg = "input objects need to be of class 'SummarizedExperiment'")
     if (any(!c("label", "ID", "condition",
                "replicate") %in% colnames(SummarizedExperiment::colData(x)))) {
       stop("'label', 'ID', 'condition' and/or 'replicate' ",

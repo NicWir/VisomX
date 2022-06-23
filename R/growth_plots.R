@@ -5,7 +5,7 @@ plot.gcFitLinear <- function(x, y, log="", which=c("fit", "diagnostics"), ...)
             switch(which,
                    fit = {
 
-                     plot(x$"raw.data" ~ x$"raw.time", xlab="Time", ylab=ifelse(log == "y", "Ln(density)", "Density"),
+                     plot(x$"raw.data" ~ x$"raw.time", xlab="Time", ylab=ifelse(log == "y", "Density", "Density"),
                           log=log, las=1, main = "Linear fit", ...)
                      try(points(x$raw.data[x$ndx] ~ x$raw.time[x$ndx], pch=21, col="black", bg="red"))
 

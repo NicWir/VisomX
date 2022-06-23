@@ -353,7 +353,7 @@ growth.report <- function(grofit, report.dir = NULL, ...)
 growth.gcFit <- function(time, data, control=grofit.control(), t0 = 0, lin.h = NULL, lin.R2 = 0.95, lin.RSD = 0.05)
 {
   # /// check if start density values are above min.density in all samples
-  max.density <- apply(data[,4:length(data)], 2, max)
+  max.density <- unlist(lapply(1:nrow(data), function (x) max(as.numeric(as.matrix(data[x,-1:-3])))))
   if(is.numeric(control$min.density) && control$min.density != 0){
     if(!is.na(control$min.density) && all(as.numeric(max.density) < control$min.density)){
       stop(paste0("The chosen global start density value (min.density) is larger than every value in your dataset.\nThe maximum start value in your dataset is: ",
@@ -1162,6 +1162,8 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
     if(!is.na(control$min.density) && control$min.density != 0){
       min.density <- log(control$min.density / data[1])
     }
+  } else {
+    min.density <- 0
   }
   bad.values <- ((is.na(data.log))|(is.infinite(data.log))|(is.na(time))|(is.na(data.log)))
   # /// remove bad values or stop program
@@ -1239,7 +1241,7 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
           if(any(ret.check[,5] >= R2 & ret.check[,6] <= RSD)){
             while (!success){
               index.max <- which.max(ret.check[, 3])
-              if(ret.check[index.max,5] >= R2 && ret.check[index.max,6] <= RSD && !is.na(ret.check[index.max,6])){ # prerequisites for suitable µmax candidate: R2 and RSD
+              if(ret.check[index.max,5] >= R2 && ret.check[index.max,6] <= RSD && !is.na(ret.check[index.max,6]) && ret.check[, 8] >= min.density){ # prerequisites for suitable µmax candidate: R2 and RSD
                 slope.max <- ret.check[index.max,3]
                 success <- TRUE
               } else {
@@ -1263,14 +1265,16 @@ growth.gcFitLinear <- function(time, data, gcID = "undefined", t0 = 0, h = NULL,
             }
             #consider only candidate windows next to index.max.ret
             candidate_intervals <- split(candidates, cumsum(c(1, diff(candidates) != 1)))
-            candidates <-
-              candidate_intervals[as.numeric(which(
-                sapply(
-                  candidate_intervals,
-                  FUN = function(X)
-                    index.max.ret %in% X
-                )
-              ))][[1]]
+            if(index.max.ret %in% unlist(candidate_intervals)){
+              candidates <-
+                candidate_intervals[as.numeric(which(
+                  sapply(
+                    candidate_intervals,
+                    FUN = function(X)
+                      index.max.ret %in% X
+                  )
+                ))][[1]]
+            }
 
 
             if(length(candidates) > 0) {
