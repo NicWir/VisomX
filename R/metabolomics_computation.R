@@ -1378,7 +1378,10 @@ met.PreparePrenormData <- function (mSetObj = NA)
 #'  \item \code{"svdImpute"} applies singular value decomposition to impute missing values.
 #'  }
 #' @param export (Logical, \code{TRUE} or \code{FALSE}) Shall the missing value detection plots be exported as PDF or PNG file?
+#' @param dpi (Numeric) The resolution of exported PNG and PDF images.
 #' @param img.format (Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).
+#' @param dec (Character) decimal separator used in CSV, TSV and TXT files.
+#'
 #' @return An mSet object with (built in ascending order):
 #' \itemize{
 #'  \item original data at \code{mSetObj$dataSet$data_orig}.
@@ -1395,6 +1398,8 @@ met.PreparePrenormData <- function (mSetObj = NA)
 met.read_data <- function (data,
           data.type = "conc", anal.type = "stat", paired = FALSE, # Parameters used to initialize dataSet object
           csvsep = ";", # optional: delimiter if reading CSV file
+          dec = ".",
+          sheet = 1,
           data.format = "rowu", lbl.type = "disc",
           filt.feat = c(""),
           filt.smpl = c(""),
@@ -1413,63 +1418,17 @@ met.read_data <- function (data,
   mSetObj <- suppressWarnings(met.initialize(data.type = data.type, anal.type = anal.type, paired = paired))
   mSetObj$dataSet$cls.type <- lbl.type
   mSetObj$dataSet$format <- data.format
-  if (!is.character(data)) {
-    dat <- data
-  } else {
-    # Read table file
-    if (file.exists(data)) {
-      if (str_replace_all(data, ".{1,}\\.", "") == "csv") {
-        dat <-
-          utils::read.csv(
-            data,
-            sep = csvsep,
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "xls" |
-                 str_replace(data, ".{1,}\\.", "") == "xlsx") {
-        dat <- read_excel(data)
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
-        dat <-
-          utils::read.csv(
-            data,
-            sep = "\t",
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "txt") {
-        dat <-
-          utils::read.table(
-            data,
-            sep = "\t",
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else {
-        stop(
-          "No compatible file format provided.
-             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
-        )
-      }
-    } else {
-      stop(paste0("File \"", data, "\" does not exist."), call. = F)
+  # Read data
+  if(!is.null(data)){
+    if (is.character(data)) {
+      # Read table file
+      dat <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
+    } #if (is.character(data))
+    else if(exists(paste(quote(data)))){
+      dat <- data
     }
   }
+
   if (class(dat) == "try-error" || ncol(dat) == 1) {
     AddErrMsg("Data format error. Failed to read in the data!")
     AddErrMsg("Make sure the data table is saved as comma separated values (.csv), XLS/XLSX, or tab separated values (.txt) format!")
@@ -1713,7 +1672,13 @@ met.report <- function(mSetObj, report.dir = NULL, ...)
                                             "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
-  file <- paste0("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX", "/Reports/Report_Met.Rmd")
+  for(i in 1:length(.libPaths())){
+    VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
+    if(length(VisomX.ndx)>0){
+      Report.wd <- paste0(.libPaths()[i], "/VisomX")
+    }
+  }
+  file <- paste0(Report.wd, "/Report_Met.Rmd")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)
   message("Save RData object...")

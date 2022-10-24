@@ -33,7 +33,7 @@ met.workflow(
   export.format = "pdf",
   dpi = 300,
   report = FALSE,
-  report.nm = NULL,
+  report.dir = NULL,
   export.dir = "met.ProcessedData"
 )
 }
@@ -92,7 +92,7 @@ met.workflow(
 
 \item{report}{(Logical) Generate a report with results of this workflow (\code{TRUE}) or not (\code{FALSE}).}
 
-\item{report.nm}{(Character) Enter the name or location of the folder in which the report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
+\item{report.dir}{(Character) Enter the name or location of the folder in which the report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
 
 \item{export.dir}{(Character) Enter the name of location of a folder in which all generated files are saved.}
 }

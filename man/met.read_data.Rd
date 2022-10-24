@@ -10,7 +10,7 @@ met.read_data(
   anal.type = "stat",
   paired = FALSE,
   csvsep = ";",
-  format = "rowu",
+  data.format = "rowu",
   lbl.type = "disc",
   filt.feat = c(""),
   filt.smpl = c(""),
@@ -21,7 +21,9 @@ met.read_data(
   qc.rsd = 25,
   all.rsd = NULL,
   imp.method = "lod",
-  export = TRUE
+  export = FALSE,
+  img.format = "pdf",
+  dpi = dpi
 )
 }
 \arguments{
@@ -35,7 +37,7 @@ met.read_data(
 
 \item{csvsep}{(Character) Enter the separator used in the CSV file (only applicable if reading a ".csv" file).}
 
-\item{format}{(Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).}
+\item{data.format}{(Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).}
 
 \item{lbl.type}{(Character) Specify the group label type, either categorical (\code{"disc"}) or continuous (\code{"cont"}).}
 
@@ -86,6 +88,8 @@ met.read_data(
 }}
 
 \item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the missing value detection plots be exported as PDF or PNG file?}
+
+\item{img.format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
 }
 \value{
 An mSet object with (built in ascending order):

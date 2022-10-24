@@ -4,10 +4,10 @@
 \alias{met.report_test_normalization}
 \title{Generate a markdown report for the screening of metabolomics data pre-processing methods.}
 \usage{
-met.report_test_normalization(mSet_list, report.nm = NULL, ...)
+met.report_test_normalization(mSet_list, report.dir = NULL, ...)
 }
 \arguments{
-\item{report.nm}{(Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
+\item{report.dir}{(Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
 
 \item{...}{Further arguments passed from other methods.}
 

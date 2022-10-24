@@ -20,7 +20,7 @@ met.test_normalization(
   permut.num = 500,
   vip.thresh = 1,
   report = FALSE,
-  report.nm = NULL,
+  report.dir = NULL,
   export = FALSE,
   export.format = "pdf",
   export.dir = "met.Test_Normalization"
@@ -68,7 +68,7 @@ reference feature(s) for \code{rowNorm = "GroupPQN"}, \code{"SamplePQN"}, or
 
 \item{report}{(Logical) Generate a report with results of this workflow (\code{TRUE}) or not (\code{FALSE}).}
 
-\item{report.nm}{(Character) Enter the name or location of the folder in which the
+\item{report.dir}{(Character) Enter the name or location of the folder in which the
 report files are generated if \code{report = TRUE}. If \code{NULL} (the default), a
 new folder "Report_\emph{date-time}" is created in your working directory.}
 

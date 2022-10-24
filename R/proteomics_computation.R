@@ -1,9 +1,20 @@
 ####____prot.filter_missing___####
+#' Title
+#'
+#' @param se
+#' @param type
+#' @param thr
+#' @param min
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
                                  thr = NULL, min = NULL)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
-  type <- match.arg(type)
+  if(is.character(type)) type <- match.arg(type)
   if (any(!c("name", "ID") %in% colnames(SummarizedExperiment::rowData(se,
                                                  use.names = FALSE)))) {
     stop("'name' and/or 'ID' columns are not present in '",
@@ -45,7 +56,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
       bin_data[idx] <- 0
       keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
         gather(ID, value, -rowname) %>% group_by(rowname) %>%
-        summarize(n = n(), valid = sum(value), frac = valid/n) %>%
+        dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
         filter(frac >= min)
       filtered <- se[keep$rowname, ]
     }
@@ -63,15 +74,37 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
   return(filtered)
 }
 ####____prot.read_data____####
+#' Title
+#'
+#' @param data
+#' @param expdesign
+#' @param csvsep
+#' @param dec
+#' @param sheet
+#' @param filter
+#' @param rsd_thresh
+#' @param name
+#' @param id
+#' @param pfx
+#' @param filt_type
+#' @param filt_thr
+#' @param filt_min
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containing proteomics data
                             expdesign = NULL, # Experimental design as file path or data frame, if made previously
                             csvsep = ";", # optional: delimiter if reading CSV file
+                            dec = ".",
+                            sheet = 1,
                             filter = c("Reverse", "Potential contaminant"),
                             rsd_thresh = NULL, # in %!
                             name = 'Gene Symbol', # Header of column containing primary protein IDs
                             id = 'Ensembl Gene ID', # Header of column containing alternative protein IDs
                             pfx = "abundances.", # Prefix in headers of columns containing protein abundances
-                            filt_type = "condition",
+                            filt_type = c("condition", "complete", "fraction", NULL),
                             filt_thr = 3, # keep proteins that have a maximum of 'filt_thr' missing values in at least one condition.
                             filt_min = NULL # Sets the threshold for the minimum fraction of valid values allowed for any protein if type = "fraction".
 ) {
@@ -79,63 +112,19 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                           length(name) == 1,
                           is.character(id),
                           length(id) == 1)
+  if(is.character(filt_type)) filt_type <- match.arg(filt_type)
   data.object <- data
-  if (is.character(data)) {
-    # Read table file
-    if (file.exists(data)) {
-      if (str_replace_all(data, ".{1,}\\.", "") == "csv") {
-        prot <-
-          utils::read.csv(
-            data,
-            sep = csvsep,
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "xls" |
-                 str_replace(data, ".{1,}\\.", "") == "xlsx") {
-        prot <- readxl::read_excel(data)
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "tsv") {
-        prot <-
-          utils::read.csv(
-            data,
-            sep = "\t",
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else if (str_replace_all(data, ".{1,}\\.", "") == "txt") {
-        prot <-
-          utils::read.table(
-            data,
-            sep = "\t",
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = "",
-            check.names = F
-          )
-      } else {
-        stop(
-          "No compatible file format provided.
-             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
-        )
-      }
-    } else {
-      stop(paste0("File \"", data, "\" does not exist."), call. = F)
+  # Read data file
+  if(!is.null(data)){
+    if (is.character(data)) {
+      # Read table file
+      prot <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
+    } #if (is.character(data))
+    else if(exists(paste(quote(data)))){
+      prot <- data
     }
   } else {
-    prot <- data
+    stop("Please provide proteomics data as either an R dataframe object or a CSV/TXT/XLS/XLSX/TSV table file.")
   }
 
   # Test for occurence of prefix for abundance columns.
@@ -200,18 +189,18 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
   if (is.null(expdesign)) {
     # Create experimental design based on column names if neither file nor data frame is provided
     label <- prot_unique %>%
-      select(., contains(pfx)) %>%
+      select(., contains(pfx, ignore.case = F)) %>%
       colnames() %>%
       gsub(pfx, "", .)
 
     condition <- prot_unique %>%
-      select(., contains(pfx)) %>%
+      select(., contains(pfx, ignore.case = F)) %>%
       colnames() %>%
       gsub(pfx, "", .) %>%
       gsub(".[[:digit:]]+$", "", .)  # Remove prefix and replicate number from sample name
 
     replicate <- prot_unique %>%
-      select(., contains(pfx)) %>%
+      select(., contains(pfx, ignore.case = F)) %>%
       colnames() %>%
       str_extract(., "[:digit:]{1,}$")  # Remove string before replicate number
 
@@ -258,6 +247,10 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
 
   # Generate a SummarizedExperiment object using an experimental design
   abundance_columns <- grep(pfx, colnames(prot_unique))  # get abundance column numbers
+  prot_unique[,abundance_columns] <- na_if(prot_unique[,abundance_columns], "NA") # replace "NA" with NA
+  prot_unique[, abundance_columns] <- # convert to numeric
+    sapply(1:length(abundance_columns), function (x)
+      as.numeric(prot_unique[, abundance_columns[x]]))
   message("Generating SummarizedExperiment.")
   prot_se <- make_se(prot_unique, abundance_columns, experimental_design)
 
@@ -296,7 +289,7 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
                nrow(SummarizedExperiment::assay(se)), " proteins were removed from the dataset due to too high RSD.\n\n"))
     filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
   }
-  filtered@metadata$rsd.thresh <- rsd_thresh
+  filtered_rsd@metadata$rsd.thresh <- rsd_thresh
   ## Drop proteins with missing values based on defined type filter "filt_thr"
   prot_se <- prot.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
 
@@ -306,6 +299,40 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
 }
 
 ####____prot.workflow____####
+#' Title
+#'
+#' @param se
+#' @param imp_fun
+#' @param q
+#' @param knn.rowmax
+#' @param type
+#' @param control
+#' @param contrast
+#' @param alpha
+#' @param alpha_pathways
+#' @param lfc
+#' @param heatmap.show_all
+#' @param heatmap.kmeans
+#' @param k
+#' @param heatmap.col_limit
+#' @param heatmap.show_row_names
+#' @param heatmap.row_font_size
+#' @param volcano.add_names
+#' @param volcano.label_size
+#' @param volcano.adjusted
+#' @param plot
+#' @param export
+#' @param report
+#' @param report.dir
+#' @param pathway_enrichment
+#' @param pathway_kegg
+#' @param kegg_organism
+#' @param custom_pathways
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
                                       "MinProb", "min", "zero", "mixed", "nbavg"),
@@ -390,7 +417,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                  lfc, "."))
   # Perform pathway enrichment analysis
   if (pathway_enrichment) {
-    res.pathway <- enrich_pathways(dep, contrasts, alpha_pathways = alpha_pathways,
+    res.pathway <- enrich_pathways(prot_dep, contrasts, alpha_pathways = alpha_pathways,
                                    pathway_kegg = pathway_kegg, kegg_organism = kegg_organism,
                                    custom_pathways = custom_pathways)
   }
@@ -508,24 +535,32 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
     message(paste0("Writing results of KEGG pathway enrichment analysis to: ", getwd(), "'pora_kegg_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_kegg_up)){
-      utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
+      if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
+        utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
+      }
     }
     for(i in 1:length(res.pathway$ls.pora_kegg_dn)){
-      utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
+      if(!is.null(res.pathway$ls.pora_kegg_dn[[i]])){
+        utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
+      }
     }
   }
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
     results <- c(results, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
     message(paste0("Writing results of custom pathway enrichment analysis to: ", getwd(), "'pora_custom_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_custom_up)){
-      utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
+      if(!is.null(res.pathway$ls.pora_custom_up[[i]])){
+        utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
+      }
     }
     for(i in 1:length(res.pathway$ls.pora_custom_dn)){
-      utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
+      if(!is.null(res.pathway$ls.pora_custom_dn[[i]])){
+        utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
+      }
     }
   }
 
@@ -544,6 +579,16 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
 
 ####____prot.impute____####
+#' Title
+#'
+#' @param se
+#' @param fun
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
                                      "MLE", "MinDet", "MinProb", "man",
                                      "min", "zero", "mixed", "nbavg", "SampMin"), ...)
@@ -583,6 +628,16 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
 
 ####____prot.normalize_vsn____####
 # Modified normalize_vsn function from package DEP; automatically prints and exports meanSDPlot
+#' Title
+#'
+#' @param se
+#' @param plot
+#' @param export
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   # Normalize the data (including log2 transformation)
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
@@ -621,12 +676,36 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   return(se_vsn)
 }
 ####____prot.pca____####
+#' Title
+#'
+#' @param deferred
+#' @param fold
+#'
+#' @return
+#' @export
+#'
+#' @examples
 ExactParam <- function (deferred = FALSE, fold = Inf)
 {
   new("ExactParam", deferred = as.logical(deferred),
       fold = as.numeric(fold))
 }
 
+#' Title
+#'
+#' @param mat
+#' @param metadata
+#' @param center
+#' @param scale
+#' @param rank
+#' @param removeVar
+#' @param transposed
+#' @param BSPARAM
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
                       rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam())
 {
@@ -680,6 +759,18 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
   return(pcaobj)
 }
 ####____prot.test_diff____####
+#' Title
+#'
+#' @param se
+#' @param type
+#' @param control
+#' @param test
+#' @param design_formula
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.test_diff <- function (se, type = c("control", "all", "manual"),
                             control = NULL, test = NULL, design_formula = stats::formula(~0 +
                                                                                     condition))
@@ -805,6 +896,16 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
   return(se)
 }
 ####____prot.add_rejections____####
+#' Title
+#'
+#' @param diff
+#' @param alpha
+#' @param lfc
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
 {
   if (is.integer(alpha))
@@ -854,6 +955,14 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
   return(diff)
 }
 ####____prot.get_results____####
+#' Title
+#'
+#' @param dep
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.get_results <- function (dep)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"))
@@ -874,7 +983,7 @@ prot.get_results <- function (dep)
   centered <- data.frame(centered) %>% tibble::rownames_to_column() %>%
     gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep)),
                                             by = "ID")
-  centered <- group_by(centered, rowname, condition) %>% summarize(val = mean(val,
+  centered <- group_by(centered, rowname, condition) %>% dplyr::summarize(val = mean(val,
                                                                               na.rm = TRUE)) %>% mutate(val = signif(val, digits = 3)) %>%
     tidyr::spread(condition, val)
   colnames(centered)[2:ncol(centered)] <- paste(colnames(centered)[2:ncol(centered)],
@@ -897,6 +1006,15 @@ prot.get_results <- function (dep)
   return(table)
 }
 ####____get_annotation____####
+#' Title
+#'
+#' @param dep
+#' @param indicate
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_annotation <- function (dep, indicate)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
@@ -944,6 +1062,16 @@ get_annotation <- function (dep, indicate)
   ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
 }
 ####____prot.report_____####
+#' Title
+#'
+#' @param results
+#' @param report.dir
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.report <- function(results, report.dir = NULL, ...){
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se", "norm",
@@ -974,7 +1102,6 @@ prot.report <- function(results, report.dir = NULL, ...){
   if("pora_custom_dn" %in% names(results)){
     pora_custom_dn <- results$pora_custom_dn
   }
-  message("Render reports...")
   if(!is.null(report.dir)){
     wd <- paste0(getwd(), "/", report.dir)
   } else {
@@ -982,19 +1109,45 @@ prot.report <- function(results, report.dir = NULL, ...){
                                             "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
-  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/Reports", "/Report_Prot.Rmd",
-                sep = "")
-  rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    quiet = TRUE)
+  for(i in 1:length(.libPaths())){
+    VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
+    if(length(VisomX.ndx)>0){
+      Report.wd <- paste0(.libPaths()[i], "/VisomX")
+    }
+  }
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
+  file <- paste0(Report.wd, "/Report_Prot.Rmd")
+  message("Render reports...")
+  rmarkdown::render(file, output_format = "all", output_dir = wd,
+                    quiet = TRUE)
+
   message(paste0("Files saved in: '", wd, "'"))
 }
 
 
 
 ####____pathway_enrich____####
-pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
+#' Title
+#'
+#' @param gene
+#' @param organism
+#' @param keyType
+#' @param pvalueCutoff
+#' @param pAdjustMethod
+#' @param universe
+#' @param minGSSize
+#' @param maxGSSize
+#' @param qvalueCutoff
+#' @param use_internal_kegg
+#' @param custom_gene_sets
+#' @param custom_pathways
+#'
+#' @return
+#' @export
+#'
+#' @examples
+pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                                  pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                                  minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
 {
@@ -1037,6 +1190,21 @@ pathway_enrich <- function (gene, organism = "hsa", keyType = "kegg",
 
 
 ####____prot.enricher_custom____(internal) ####
+#' Title
+#'
+#' @param gene
+#' @param pvalueCutoff
+#' @param pAdjustMethod
+#' @param universe
+#' @param minGSSize
+#' @param maxGSSize
+#' @param qvalueCutoff
+#' @param USER_DATA
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
                                   minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, USER_DATA)
 {
@@ -1150,6 +1318,16 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
 }
 
 
+#' Title
+#'
+#' @param proteins_unique
+#' @param columns
+#' @param expdesign
+#'
+#' @return
+#' @export
+#'
+#' @examples
 make_se <- function (proteins_unique, columns, expdesign)
 {
   assertthat::assert_that(is.data.frame(proteins_unique), is.integer(columns),
@@ -1182,7 +1360,7 @@ make_se <- function (proteins_unique, columns, expdesign)
                    make.names(delete_prefix(colnames(raw))))
   if (any(is.na(matched))) {
     stop("None of the labels in the experimental design match ",
-         "with column names in 'proteins_unique'", "\nRun make_se() with the correct labels in the experimental design",
+         "with column names in 'proteins_unique'", "\nRun make_se() with the correct labels in the experimental design ",
          "and/or correct columns specification")
   }
   colnames(raw)[matched] <- expdesign$ID
@@ -1194,12 +1372,28 @@ make_se <- function (proteins_unique, columns, expdesign)
   return(se)
 }
 
+#' Title
+#'
+#' @param words
+#'
+#' @return
+#' @export
+#'
+#' @examples
 delete_prefix <- function (words)
 {
   prefix <- get_prefix(words)
   gsub(paste0("^", prefix), "", words)
 }
 
+#' Title
+#'
+#' @param words
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_prefix <- function (words)
 {
   assertthat::assert_that(is.character(words))
@@ -1221,6 +1415,15 @@ get_prefix <- function (words)
   paste(mat[prefix, 1], collapse = "")
 }
 
+#' Title
+#'
+#' @param se
+#' @param thr
+#'
+#' @return
+#' @export
+#'
+#' @examples
 filter_missval <- function (se, thr = 0)
 {
   if (is.integer(thr))
@@ -1248,7 +1451,7 @@ filter_missval <- function (se, thr = 0)
   bin_data[idx] <- 0
   keep <- bin_data %>% data.frame() %>% tibble::rownames_to_column() %>%
     gather(ID, value, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(se)),
-                                              by = "ID") %>% group_by(rowname, condition) %>% summarize(miss_val = n() -
+                                              by = "ID") %>% group_by(rowname, condition) %>% dplyr::summarize(miss_val = n() -
                                                                                                           sum(value)) %>% filter(miss_val <= thr) %>% tidyr::spread(condition,
                                                                                                                                                              miss_val)
   se_fltrd <- se[keep$rowname, ]
@@ -1256,11 +1459,25 @@ filter_missval <- function (se, thr = 0)
 }
 
 ####____prot.make_unique(fromDEP)____####
+#' Title
+#'
+#' @param proteins
+#' @param names
+#' @param ids
+#' @param delim
+#'
+#' @return
+#' @export
+#'
+#' @examples
 prot.make_unique <- function (proteins, names, ids, delim = ";")
 {
   assertthat::assert_that(is.data.frame(proteins), is.character(names),
                           length(names) == 1, is.character(ids), length(ids) ==
                             1, is.character(delim), length(delim) == 1)
+  #remove columns with empty header
+  proteins <- proteins[, !(colnames(proteins)=="")]
+
   col_names <- colnames(proteins)
   if (!names %in% col_names) {
     stop("'", names, "' is not a column in '", deparse(substitute(proteins)),
@@ -1272,9 +1489,17 @@ prot.make_unique <- function (proteins, names, ids, delim = ";")
   }
   if (tibble::is_tibble(proteins))
     proteins <- as.data.frame(proteins)
+  proteins[, names][proteins[, names]=="NA"] <- NA
+  proteins[, ids][proteins[, ids]=="NA"] <- NA
   double_NAs <- apply(proteins[, c(names, ids)], 1, function(x) all(is.na(x)))
   if (any(double_NAs)) {
-    stop("NAs in both the 'names' and 'ids' columns")
+    answer_satisfied <- "n"
+    answer_satisfied <- readline("NAs in both the 'names' and 'ids' columns.\n Do you want to remove the respective protein entries (y/n)?\n\n")
+    if ("n" %in% answer_satisfied) {
+    stop()
+    } else {
+      proteins <- proteins[!double_NAs, ]
+    }
   }
   proteins_unique <- proteins %>% mutate(name = gsub(paste0(delim,
                                                             ".*"), "", get(names)), ID = gsub(paste0(delim, ".*"),
@@ -1284,6 +1509,18 @@ prot.make_unique <- function (proteins, names, ids, delim = ";")
 }
 
 ####____make_se_parse____(fromDEP)####
+#' Title
+#'
+#' @param proteins_unique
+#' @param columns
+#' @param mode
+#' @param chars
+#' @param sep
+#'
+#' @return
+#' @export
+#'
+#' @examples
 make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
           chars = 1, sep = "_")
 {
@@ -1330,7 +1567,17 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
   return(se)
 }
 
-####____manual_impute____(fromDEP)
+####____manual_impute____(fromDEP) ####
+#' Title
+#'
+#' @param se
+#' @param scale
+#' @param shift
+#'
+#' @return
+#' @export
+#'
+#' @examples
 manual_impute <- function (se, scale = 0.3, shift = 1.8)
 {
   if (is.integer(scale))

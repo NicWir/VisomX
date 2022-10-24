@@ -41,7 +41,7 @@ Samples were grouped into _`r length(unique(data[['condition']]))`_ conditions:
 `r colFmt(unique(data[['condition']]), 'blue')` 
 
 
-#### `r nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ])` genes differ significantly between samples.
+#### `r length(which(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), "significant"]))` genes differ significantly between samples.
 ```{r signif_conditions, echo=FALSE,  results="asis"}
 if (length(contrasts) > 1){
   for (i in 1:length(contrasts)) {

@@ -9,7 +9,7 @@ Description: This package represents a comprehensive suite of functions
     for robust and reproducible analysis of various omics data. It
     includes popular packages for Omics for data processing,
     normalization, statistical analysis, pattern enrichment analysis and
-    visualization (metabomics: MetaboAnalystR, proteomics: DEP, fluxomics
+    visualization (metabomics: MetaboAnalystR, proteomics: DEP, transcriptomics: DESeq2, fluxomics
     data visualization: fluctuator). VisomX includes all the original
     features, but adds user-friendly wrapper functions that allow complete
     data analysis workflows to be executed in a single step. The results
@@ -25,6 +25,7 @@ Depends:
     R (>= 4.0),
     stringr,
     tidyr
+biocViews:
 Imports: 
     assertthat,
     Biobase,
@@ -69,6 +70,20 @@ Imports:
     progress,
     purrr,
     qs,
+    apeglm,
+    BiocParallel,
+    clusterProfiler,
+    DEP,
+    DESeq2,
+    DOSE,
+    edgeR,
+    genefilter,
+    GlobalAncova,
+    globaltest,
+    IHW,
+    KEGGgraph,
+    sva,
+    PCAtools,
     qvalue,
     RColorBrewer,
     readxl,
@@ -81,13 +96,11 @@ Imports:
     stats,
     SummarizedExperiment,
     tibble,
-    tidyr,
     tinytex,
     UpSetR,
     vsn
 Suggests: 
     DelayedArray,
-    DEP,
     edgeR,
     ggpubr,
     jsonlite,
@@ -96,25 +109,10 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
-    bioc::release/apeglm,
-    bioc::release/BiocParallel,
-    bioc::release/clusterProfiler,
-    bioc::release/DEP,
-    bioc::release/DESeq2,
-    bioc::release/DOSE,
-    bioc::release/edgeR,
-    bioc::release/genefilter,
-    bioc::release/GlobalAncova,
-    bioc::release/globaltest,
-    bioc::release/IHW,
-    bioc::release/KEGGgraph,
-    bioc::release/sva,
-    bioc::release/PCAtools,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA,
     github::stephenslab/mixsqp
-biocViews: 
 Encoding: UTF-8
 GithubRepo: VisomX
 GithubUsername: NicWir

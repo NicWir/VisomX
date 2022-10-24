@@ -79,7 +79,7 @@ prot.plot_numbers(data, plot = T, export = F)
 ```
 
 Gene coverage in all samples:
-```{r coverage, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = 3, fig.align='center'}
+```{r coverage, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = 6, fig.align='center'}
 plot_coverage(data)
 ```
 \pagebreak
@@ -89,7 +89,7 @@ The data was background corrected and normalized by variance stabilizing transfo
 VSN transforms the data in such a way that the variance remains nearly constant over the whole intensity spectrum. Without this (or another) normalization a dependency between intensity and variance can be observed in may cases which deteriorates the analysis results.
 
 #### Verify the variance stabilisation.\
-  The purpose of the following graph is to determine if there is a systematic trend in the standard deviation of the data as a function of overall expression. These graphs are based on the assumption that most genes are not differentially expressed, so the running median is a reasonable estimate of the standard deviation of the data at the feature level, as a function of the mean. After vsn normalization, the running median should be approximately a horizontal line. While a completely flat curve of the square root of variance over the mean may seem like the goal of such transformations, this may be unreasonable in the case of datasets with many true differences due to the experimental conditions. There may be random fluctuations, but there should not be a general trend. If this is not the case, it usually indicates a data quality problem or is the result of inadequate data preprocessing.
+  The purpose of the following graph is to determine if there is a systematic trend in the standard deviation of the data as a function of overall expression. These graphs are based on the assumption that most proteins are not differentially expressed, so the running median is a reasonable estimate of the standard deviation of the data at the feature level, as a function of the mean. After vsn normalization, the running median should be approximately a horizontal line. While a completely flat curve of the square root of variance over the mean may seem like the goal of such transformations, this may be unreasonable in the case of datasets with many true differences due to the experimental conditions. There may be random fluctuations, but there should not be a general trend. If this is not the case, it usually indicates a data quality problem or is the result of inadequate data preprocessing.
 
 SD-Rank(mean) plot before normalization:
 ```{r meanSDplot1,echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
@@ -111,12 +111,12 @@ prot.boxplot_intensity(data, norm, plot = T, export = F)
 \pagebreak
 ## Missing values
 Missing values in the data set must be imputed. The downstream analysis can be strongly influenced by the imputation. Therefore, the selection of an appropriate method is crucial. 
-The data can be missing at random (MAR), for example if genes are quantified in some replicates but not in others, without any bias towards low intensities. This class of missing values can arise when the peptide sequence is mapped incorrectly or software erroneously assigns shared peptides to precursors leading to misidentification in some samples and missing values in others.\
-MNAR may result from experimental effects such as (1) enzyme miscleavages, (2) true presence/absence in the biological samples and (3) instrumentation effects (when peptide measurements are low in abundance compared to background noise or constitute low ionization efficiency). Because values are missing because of low abundant nature of the respective genes, this category of missing values is considered left-censored, i.e., the distribution of values (if present in the data) would fall on the left tail of the total observations in the dataset.
+The data can be missing at random (MAR), for example if proteins are quantified in some replicates but not in others, without any bias towards low intensities. This class of missing values can arise when the peptide sequence is mapped incorrectly or software erroneously assigns shared peptides to precursors leading to misidentification in some samples and missing values in others.\
+MNAR may result from experimental effects such as (1) enzyme miscleavages, (2) true presence/absence in the biological samples and (3) instrumentation effects (when peptide measurements are low in abundance compared to background noise or constitute low ionization efficiency). Because values are missing because of low abundant nature of the respective proteins, this category of missing values is considered left-censored, i.e., the distribution of values (if present in the data) would fall on the left tail of the total observations in the dataset.
 
-To asses the type of missing data (random or not), the following heat map of missing values and density distributions of genes with/without missing values provide a visual aid.\
+To asses the type of missing data (random or not), the following heat map of missing values and density distributions of proteins with/without missing values provide a visual aid.\
 If data is randomly missing, use the k-nearest neighbor (“_knn_”) or maximum likelihood (“_MLE_”) options for imputation.
-If the missing data is biased to certain samples (e.g. controls) which are expected to be depleted of certain genes and/or if there is a clear bias of missing values towards low abundances, use the "_QRILC_", "_MinProb_", "_SampMin_", or "_man_" options for imputation. For a more detailed description of different imputation methods, see the 
+If the missing data is biased to certain samples (e.g. controls) which are expected to be depleted of certain proteins and/or if there is a clear bias of missing values towards low abundances, use the "_QRILC_", "_MinProb_", "_SampMin_", or "_man_" options for imputation. For a more detailed description of different imputation methods, see the 
 _[MSnbase](https://bioconductor.org/packages/3.15/bioc/html/MSnbase.html)_ vignette and in particular the _impute_ function description. The "__SampMin__" method was proposed by  [Liu and Dongre (2020)](https://doi.org/10.1093/bib/bbaa112)) and shown to outperform other common methods for MNAR, left-censored datasets.
 ```{r missval, echo=FALSE, fig.width = 7, fig.height = 6, fig.align='center'}
 if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
@@ -124,7 +124,7 @@ if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
 }
 ```
 \pagebreak
-To check whether missing values are biased toward low-intensity genes (i.e., 'left-censored'), densities and cumulative proportions are plotted for genes with and without missing values.
+To check whether missing values are biased toward low-intensity proteins (i.e., 'left-censored'), densities and cumulative proportions are plotted for proteins with and without missing values.
 
 ```{r missval2, echo=FALSE, fig.width = 7, fig.height = 7, fig.align='center'}
 if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
@@ -141,7 +141,7 @@ prot.plot_imputation(data, norm, imp, basesize = 13, plot = T, export = F)
 ## Quality control
 
 ### Principal component analysis
-To get a high-level overview of the data, the unsupervised method _principal component analysis (PCA)_ reduces the data dimensionality (i.e., number of genes included in the analysis) while retaining most of the data information.  
+To get a high-level overview of the data, the unsupervised method _principal component analysis (PCA)_ reduces the data dimensionality (i.e., number of proteins included in the analysis) while retaining most of the data information.  
 
 ```{r screeplot, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
 ncomp <- 10
@@ -167,38 +167,38 @@ suppressMessages(
 ```
 \pagebreak
 ### Loadings plot
-PCA loadings are the coefficients of the linear combination of the original variables (genes) from which the principal components (PCs) are generated. They describe how much each gene contributes to a particular principal component. Large loadings (positive or negative) indicate that a particular variable has a strong relationship to a particular principal component. The sign of a loading indicates whether a variable and a principal component are positively or negatively correlated.
+PCA loadings are the coefficients of the linear combination of the original variables (proteins) from which the principal components (PCs) are generated. They describe how much each gene contributes to a particular principal component. Large loadings (positive or negative) indicate that a particular variable has a strong relationship to a particular principal component. The sign of a loading indicates whether a variable and a principal component are positively or negatively correlated.
 ```{r loadingsPlot, echo=FALSE, fig.width = 7, fig.height= 8, warning=F, message=F, fig.align='center'}
  withCallingHandlers(suppressMessages(
       suppressWarnings(prot.plot_loadings(pca,labSize = 3, plot = T, export = F)) ), 
                      warning = suppress_ggrepel )
 ```
 \pagebreak
-### Correlation matrix for samples with all genes
+### Correlation matrix for samples with all proteins
 ```{r correlation_heatmap_all, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-    prot.plot_corrheatmap(dds, font_size = 12, significant = FALSE )
+    prot.plot_corrheatmap(dep, font_size = 12, significant = FALSE )
 ```
 \pagebreak
 ## Differential expression analysis
 
-### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed genes", "")` 
+### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed proteins", "")` 
 ```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-  prot.plot_corrheatmap(dds, font_size = 12, significant = T )
+  prot.plot_corrheatmap(dep, font_size = 12, significant = T )
 ```
 \pagebreak
 ### Heatmaps
-The heat map gives an overview of all genes with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of genes (rows) can indicate genes that behave in a similar way.
+The heat map gives an overview of all proteins with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of proteins (rows) can indicate proteins that behave in a similar way.
 ```{r,echo=FALSE, warning=F, message=F}
 width = ncol(data) / 2
 if (width < 7) { width = 7 }
 if (width > 12) { width = 12 }
-len = nrow(dds[SummarizedExperiment::rowData(dds)$significant, ]) / 13
+len = nrow(dep[SummarizedExperiment::rowData(dep)$significant, ]) / 13
 if (len < 5) { len = 5 }
 ```
 ```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
 try(suppressMessages(
   prot.plot_heatmap(
-    dds,
+    dep,
     type = "contrast",
     kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
     k = if_else(exists("k"), k, 6),
@@ -213,7 +213,7 @@ try(suppressMessages(
 \pagebreak
 ```{r heatmap_2, echo=FALSE, fig.width = width, fig.height = len, fig.align='center'}
 try(suppressMessages(
-      prot.plot_heatmap(dds, type = "centered", 
+      prot.plot_heatmap(dep, type = "centered", 
                         kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
                         k = ifelse(exists("k"), k, 6),
                         show_all = T, 
@@ -229,15 +229,14 @@ try(suppressMessages(
 Volcano plots can be used to visualize a particular contrast (comparison between two samples). This allows to examine the gene enrichment between two samples (x-axis) and their corresponding (adjusted) p-values (y-axis).
 ```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.8, warning=F, message=F, fig.align='center'}
 for (i in 1:length(contrasts)){
-  prot.plot_volcano(dds, contrast = contrasts[i], add_names = volcano.add_names,
-                          add_names = T, label_size = 2.5, adjusted =  volcano.adjusted,
-                          plot = T, export = F, lfc = dds@metadata$lfc, alpha = dds@metadata$alpha)
+  prot.plot_volcano(dep, contrast = contrasts[i], add_names = volcano.add_names, label_size = 2.5, adjusted =  volcano.adjusted,
+                          plot = T, export = F, lfc = dep@metadata$lfc, alpha = dep@metadata$alpha)
 }
 
 ```
 \pagebreak
 ## `r if(pathway_enrichment == TRUE){"Pathway overrepresentation analysis"}`
-`r if(pathway_enrichment == TRUE){"Genes that were identified as differentially expressed based on the chosen log2(fold change) and adj. p-value thresholds are used to identify enriched pathways with FDR control (Benjamini-Hochberg method).\n"}`
+`r if(pathway_enrichment == TRUE){"proteins that were identified as differentially expressed based on the chosen log2(fold change) and adj. p-value thresholds are used to identify enriched pathways with FDR control (Benjamini-Hochberg method).\n"}`
 ### `r if("pora_kegg_up" %in% names(results)){"KEGG pathways"}`
 `r if("pora_kegg_up" %in% names(results)){if(all(sapply(results$pora_kegg_up, is.null))){"No significantly upregulated KEGG pathways found."}}`
 `r if("pora_kegg_dn" %in% names(results)){if(all(sapply(results$pora_kegg_dn, is.null))){"No significantly downregulated KEGG pathways found."}}`

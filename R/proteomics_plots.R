@@ -1282,8 +1282,8 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
       )
     }
     try(suppressWarnings(
-      return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]))
-    data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number())
+      return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]), silent = T)
+    try(data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number()), silent = T)
   }
 }
 
@@ -1799,7 +1799,8 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 # Plot bar plots of single proteins based on their Ensembl gene ID
 prot.plot_bar <- function (dep,
                            proteins,
-                           type = c("contrast", "centered"),
+                           ref.prot = NULL,
+                           type = c("contrast", "centered", "reference"),
                            contrast = NULL,
                            col.id = "ID",
                            match.id = "Accession",
@@ -1915,7 +1916,95 @@ prot.plot_bar <- function (dep,
   }
 
   for(i in 1:length(subset_list)) {
+    if (type == "reference") {
+      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'reference'.")
+      if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
+        reference <- row_data[grep(ref.prot, row_data[,"name"]), "ID"]
+        col.ref <- "ID"
+      } else {
+        reference <- row_data[grep(ref.prot, row_data[,"name"]), "name"]
+        col.ref <- "name"
+      }
+      reference.nm <-  row_data[grep(reference, row_data[,col.ref]), "name"]
+      if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
+        stop(paste0("'", ref.prot, "' is not a valid protein name or ID in your dataset. Please provide an existing identifier for a reference protein for normalization when choosing type = 'reference'."))
+      }
+
+      ref.mean <- mean(SummarizedExperiment::assay(dep)[grep(reference, row_data[[col.ref]]), ], na.rm = TRUE)
+      df_reps <-
+        data.frame(SummarizedExperiment::assay(subset_list[[i]]) - ref.mean, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
+                                                by = "ID")
+      if (convert_name == TRUE) {
+        df_reps$rowname <- transform(df_reps,
+                                     rowname = name_table[match(paste(df_reps$rowname),
+                                                                paste(unlist(str_split(
+                                                                  Reduce(c, name_table[match.id]), ", "
+                                                                )))),
+                                                          match.name]) %>%
+          select(rowname) %>% unlist(., use.names = F)
+      }
+      df_reps$replicate <- as.factor(df_reps$replicate)
+
+      df <-
+        df_reps %>% group_by(condition, rowname) %>% summarize(
+          mean = mean(val,
+                      na.rm = TRUE),
+          sd = sd(val, na.rm = TRUE),
+          n = n()
+        ) %>%
+        mutate(
+          error = stats::qnorm(0.975) * sd / sqrt(n),
+          CI.L = mean -
+            error,
+          CI.R = mean + error
+        ) %>% data.frame(check.names = FALSE)
+
+      p <-
+        ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
+        geom_col(aes(y = mean, fill = condition), colour = "black")
+      if (length(unique(dep$condition)) <= 8) {
+        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+      } else if (length(unique(dep$condition)) <= 12) {
+        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+      } else {
+        p <- p + scale_fill_manual(values = c(
+          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+          "green1", "yellow4", "yellow3", "darkorange4", "brown"
+        ))
+      }
+      p <- p +
+        ggnewscale::new_scale_fill() +
+        geom_point(
+          data = df_reps,
+          aes(condition, val, fill = replicate),
+          shape = 23,
+          size = shape.size,
+          color = "black",
+          position = position_dodge(width = 0.3)
+        ) +
+        scale_fill_manual(values = case_when(
+          as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
+          as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+        ) +
+        geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+        labs(
+          x = "Baits",
+          y = expr(log[2](intensity)-log[2](intensity[!!reference.nm])  ~
+                           "(\u00B195% CI)"),
+          col = "Rep"
+        ) + facet_wrap( ~ rowname) +
+        theme(basesize = 12) + theme_DEP2()
+      w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
+      h <- 10
+
+
+    }
     if (type == "centered") {
+      ref.mean <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
       means <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
       df_reps <-
         data.frame(SummarizedExperiment::assay(subset_list[[i]]) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
@@ -2124,7 +2213,7 @@ prot.plot_bar <- function (dep,
           getwd(),
           export_name,
           ".pdf",
-          "and \"...",
+          " and \"...",
           export_name,
           ".png\""
         )
@@ -2150,7 +2239,7 @@ prot.plot_bar <- function (dep,
       plot = FALSE
     }
     if (plot) {
-      return(p)
+      plot(p)
     } else {
       if (type == "centered") {
         df <- df %>% select(rowname, condition, mean, CI.L,
@@ -2168,14 +2257,15 @@ prot.plot_bar <- function (dep,
         return(df)
       }
     }
-  }
+  } #for(i in 1:length(subset_list))
 }
 
 
 ####____prot.boxplot_intensity____####
 # Modified plot_normalization function from package DEP with adjusted colors and
 # function to export plot as PDF and PNG
-prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
+prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE)
+{
   call <- match.call()
   call$export <- NULL
   call$plot <- NULL
@@ -2235,11 +2325,11 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE) {
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting normalization plots to:\n\"", getwd(), "/Plots/BoxPlotIntensity.pdf\" and \".../BoxPlotIntensity.png\""))
     grDevices::png("Plots/BoxPlotIntensity.png",
-        width = 8, height = 10, units = 'in', res = 300)
+                   width = 8, height = 10, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
     grDevices::pdf("Plots/BoxPlotIntensity.pdf",
-        width = 8, height = 10)
+                   width = 8, height = 10)
     print(p)
     grDevices::dev.off()
   }

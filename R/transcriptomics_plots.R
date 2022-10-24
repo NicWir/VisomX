@@ -200,14 +200,14 @@ rna.plot_heatmap <- function (dds, type = c("centered", "contrast"),
       order <- data.frame(df, check.names = FALSE) %>% cbind(., cluster = df_kmeans$cluster) %>%
         mutate(row = apply(.[, seq_len(ncol(.) - 1)],
                            1, function(x) max(x))) %>% group_by(cluster) %>%
-        summarize(index = sum(row)/n()) %>% arrange(desc(index)) %>%
+        dplyr::summarize(index = sum(row)/n()) %>% arrange(desc(index)) %>%
         pull(cluster) %>% match(seq_len(k), .)
       df_kmeans$cluster <- order[df_kmeans$cluster]
     }
     if (type == "contrast") {
       order <- data.frame(df, check.names = FALSE) %>% cbind(., cluster = df_kmeans$cluster) %>%
         gather(condition, diff, -cluster) %>% group_by(cluster) %>%
-        summarize(row = mean(diff)) %>% arrange(desc(row)) %>%
+        dplyr::summarize(row = mean(diff)) %>% arrange(desc(row)) %>%
         pull(cluster) %>% match(seq_len(k), .)
       df_kmeans$cluster <- order[df_kmeans$cluster]
     }
@@ -233,7 +233,7 @@ rna.plot_heatmap <- function (dds, type = c("centered", "contrast"),
     col_limit
   } else {
     df_cent <- log2(SummarizedExperiment::assay(filtered)+1) - log2(rowMeans(SummarizedExperiment::assay(filtered)+1))
-    col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95)) - ceiling(stats::quantile(df_cent, probs= 0.05))
+    col_lim <- ceiling(stats::quantile(df_cent, probs= 0.95, na.rm = TRUE)) - ceiling(stats::quantile(df_cent, probs= 0.05, na.rm = TRUE))
   }
   breaks =  if (col_limit == 1){
     seq(-1, 1, 0.5)
@@ -704,11 +704,11 @@ rna.plot_volcano <-
     ) %>%
       filter(!is.na(significant)) %>% arrange(significant)
 
-    quant99.5 <-  quantile(df$y[df$y!=0], probs = 0.995)
+    quant99.5 <-  quantile(df$y[df$y!=0], probs = 0.995, na.rm = TRUE)
 
     # create new columns for shapes "circle" and "triangle" if genes lie within or outside (for genes with very small adj.p value < 3.162278e-05) of the y bounds, respectively.
     if (adjusted) {
-      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985)) {
+      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE)) {
         df$shape <- ifelse(df$y > 0.98 * quant99.5, "triangle", "circle")
       }
       else{
@@ -720,7 +720,7 @@ rna.plot_volcano <-
     }
     # change the -Log10(q value) of genes exceeding the y plot bound so that they are displayed at the axis border
     if (adjusted) {
-      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985)) {
+      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE)) {
         df$y[df$y > 0.98 * quant99.5] <- 0.98 * quant99.5
       }
     }
@@ -761,14 +761,14 @@ rna.plot_volcano <-
             legend.title = element_text(size = 22)) +
       ggh4x::force_panelsizes(rows = unit(6.5, "in"),
                               cols = unit(6.5, "in")) +
-      scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1))
+      scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1)) + guides(color = guide_legend(reverse = TRUE))
 
     if (adjusted) {
       plot_volcano <- plot_volcano + coord_cartesian(
         xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
                  max(abs(df$x)) + 0.3),
         # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
-        ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985), quant99.5, max(df$y)*1.02)),
+        ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
         expand = FALSE
       )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
     }
@@ -858,7 +858,7 @@ rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
   df <- SummarizedExperiment::assay(se) %>% data.frame() %>% tibble::rownames_to_column() %>%
     gather(ID, bin, -rowname) %>% mutate(bin = ifelse(is.na(bin),
                                                       0, 1))
-  stat <- df %>% group_by(ID) %>% summarize(n = n(), sum = sum(bin)) %>%
+  stat <- df %>% group_by(ID) %>% dplyr::summarize(n = n(), sum = sum(bin)) %>%
     left_join(., data.frame(SummarizedExperiment::colData(se)), by = "ID")
   p <- ggplot(stat, aes(x = ID, y = sum, fill = condition)) +
     geom_col() + geom_hline(yintercept = unique(stat$n)) +
@@ -917,6 +917,7 @@ rna.plot_bar <- function (dds,
                            convert_name = FALSE,
                            shape.size = 2.5,
                            name_table = NULL,
+                           collage = TRUE,
                            plot = TRUE,
                            export = TRUE,
                            export.nm = NULL)
@@ -983,50 +984,54 @@ rna.plot_bar <- function (dds,
             paste0(genes, collapse = "', '"), "'", call. = F)
   }
   subset_list <- list()
-  if(length(genes)<=8){
-    subset_list[[1]] <- dds[genes]
-  } else if(length(genes)<=16){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:length(genes)]]
-  } else if(length(genes)<=24){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:length(genes)]]
-  }else if(length(genes)<=32){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:24]]
-    subset_list[[4]] <- dds[genes[25:length(genes)]]
-  } else if(length(genes)<=40){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:24]]
-    subset_list[[4]] <- dds[genes[25:32]]
-    subset_list[[5]] <- dds[genes[33:length(genes)]]
-  } else if(length(genes)<=48){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:24]]
-    subset_list[[4]] <- dds[genes[25:32]]
-    subset_list[[5]] <- dds[genes[33:40]]
-    subset_list[[6]] <- dds[genes[41:length(genes)]]
-  } else if(length(genes)<=56){
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:24]]
-    subset_list[[4]] <- dds[genes[25:32]]
-    subset_list[[5]] <- dds[genes[33:40]]
-    subset_list[[6]] <- dds[genes[41:48]]
-    subset_list[[7]] <- dds[genes[49:length(genes)]]
+  if(collage){
+    if(length(genes)<=8){
+      subset_list[[1]] <- dds[genes]
+    } else if(length(genes)<=16){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:length(genes)]]
+    } else if(length(genes)<=24){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:length(genes)]]
+    }else if(length(genes)<=32){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:24]]
+      subset_list[[4]] <- dds[genes[25:length(genes)]]
+    } else if(length(genes)<=40){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:24]]
+      subset_list[[4]] <- dds[genes[25:32]]
+      subset_list[[5]] <- dds[genes[33:length(genes)]]
+    } else if(length(genes)<=48){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:24]]
+      subset_list[[4]] <- dds[genes[25:32]]
+      subset_list[[5]] <- dds[genes[33:40]]
+      subset_list[[6]] <- dds[genes[41:length(genes)]]
+    } else if(length(genes)<=56){
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:24]]
+      subset_list[[4]] <- dds[genes[25:32]]
+      subset_list[[5]] <- dds[genes[33:40]]
+      subset_list[[6]] <- dds[genes[41:48]]
+      subset_list[[7]] <- dds[genes[49:length(genes)]]
+    } else {
+      subset_list[[1]] <- dds[genes[1:8]]
+      subset_list[[2]] <- dds[genes[9:16]]
+      subset_list[[3]] <- dds[genes[17:24]]
+      subset_list[[4]] <- dds[genes[25:32]]
+      subset_list[[5]] <- dds[genes[33:40]]
+      subset_list[[6]] <- dds[genes[41:48]]
+      subset_list[[7]] <- dds[genes[49:56]]
+      subset_list[[8]] <- dds[genes[57:length(genes)]]
+    }
   } else {
-    subset_list[[1]] <- dds[genes[1:8]]
-    subset_list[[2]] <- dds[genes[9:16]]
-    subset_list[[3]] <- dds[genes[17:24]]
-    subset_list[[4]] <- dds[genes[25:32]]
-    subset_list[[5]] <- dds[genes[33:40]]
-    subset_list[[6]] <- dds[genes[41:48]]
-    subset_list[[7]] <- dds[genes[49:56]]
-    subset_list[[8]] <- dds[genes[57:length(genes)]]
+    subset_list <- lapply(1:length(genes), function(x) dds[genes[x]])
   }
 
   for(i in 1:length(subset_list)) {
@@ -1047,7 +1052,7 @@ rna.plot_bar <- function (dds,
       }
       df_reps$replicate <- as.factor(df_reps$replicate)
       df <-
-        df_reps %>% group_by(condition, rowname) %>% summarize(
+        df_reps %>% group_by(condition, rowname) %>% dplyr::summarize(
           mean = mean(val,
                       na.rm = TRUE),
           sd = sd(val, na.rm = TRUE),
@@ -1194,20 +1199,25 @@ rna.plot_bar <- function (dds,
     }
 
     if (export == TRUE) {
-      if (!is.null(export.nm)) {
-        if (length(genes) <= 8) {
-          export_name <- paste0("Plots/", export.nm)
-        } else{
-          export_name <- paste0("Plots/", export.nm, "_", i)
+      if(collage){
+        if (!is.null(export.nm)) {
+          if (length(genes) <= 8) {
+            export_name <- paste0("Plots/", export.nm)
+          } else{
+            export_name <- paste0("Plots/", export.nm, "_", i)
+          }
+        } else {
+          if (length(genes) <= 8) {
+            export_name <- paste0("Plots/BarPlot_",
+                                  paste(genes, collapse = "_"))
+          } else{
+            export_name <- paste0("Plots/BarPlot_",
+                                  paste(genes, collapse = "_"), "_", i)
+          }
         }
       } else {
-        if (length(genes) <= 8) {
-          export_name <- paste0("Plots/BarPlot_",
-                                paste(genes, collapse = "_"))
-        } else{
-          export_name <- paste0("Plots/BarPlot_",
-                                paste(genes, collapse = "_"), "_", i)
-        }
+        export_name <- paste0("Plots/BarPlot_",
+                              paste(genes[i]))
       }
       dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
       message(
@@ -1216,7 +1226,7 @@ rna.plot_bar <- function (dds,
           getwd(),
           export_name,
           ".pdf",
-          "and \"...",
+          " and \"...",
           export_name,
           ".png\""
         )
@@ -1242,7 +1252,7 @@ rna.plot_bar <- function (dds,
       plot = FALSE
     }
     if (plot) {
-      return(p)
+      print(p)
     } else {
       if (type == "centered") {
         df <- df %>% select(rowname, condition, mean, CI.L,

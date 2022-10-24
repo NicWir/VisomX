@@ -3,6 +3,8 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
                            files.ind = NULL,
                            expdesign = NULL, # Experimental design as file path or data frame, if made previously
                            csvsep = ";", # optional: delimiter if reading CSV file(s)
+                           dec = ".",
+                           sheet = 1,
                            name = "SymbolID", # Header of column containing primary protein IDs
                            id = 'gene_id', # Header of column containing alternative protein IDs
                            values = "expected_count",
@@ -19,15 +21,17 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
                           length(name) == 1,
                           is.character(id),
                           length(id) == 1)
+  # Read data
   if(!is.null(data)){
     if (is.character(data)) {
     # Read table file
-    dat <- read_data(data, csvsep=csvsep)
+    dat <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
     } #if (is.character(data))
     else if(exists(paste(quote(data)))){
       dat <- data
     }
   } else {
+    # Combine separate data files into a single dataframe
     if(!is.null(files.ind)){
       if(!is.character(files.ind)){
         stop(
@@ -66,7 +70,7 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
   }
   if (is.character(id2name.table)) {
     # Read table file
-    id2name <- read_data(id2name.table, csvsep=csvsep)
+    id2name <- read_file(id2name.table, csvsep=csvsep)
   }
 
   # Test for occurence of prefix for abundance columns.
@@ -175,6 +179,8 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
 
   # Generate a SummarizedExperiment object using an experimental design
   abundance_columns <- grep(pfx.counts, colnames(rna_unique))  # get abundance column numbers
+  rna_unique[,abundance_columns] <- suppressWarnings(matrix(as.numeric(as.matrix(rna_unique[,abundance_columns])),
+                                           ncol = ncol(as.matrix(rna_unique[,abundance_columns])) ) )
   message("Generating SummarizedExperiment.")
   rna_se <- rna.make_se(rna_unique, abundance_columns, experimental_design)
 
@@ -269,7 +275,7 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
       bin_data[idx] <- 0
       keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
         gather(ID, value, -rowname) %>% group_by(rowname) %>%
-        summarize(n = n(), valid = sum(value), frac = valid/n) %>%
+        dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
         filter(frac >= min)
       filtered <- se[keep$rowname, ]
     }
@@ -393,6 +399,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                                       "_vs_", conditions[2]), "'.", call. = FALSE)
     }
     ddsSE$condition <- relevel(ddsSE$condition, unlist(strsplit(contrast, "_vs_"))[2])
+    cntrst <- contrast
   }
   if (type == "all") {
     cntrst <- apply(utils::combn(conditions, 2), 2, paste,
@@ -529,8 +536,12 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     SummarizedExperiment::rowData(dds)[,paste0("significant.", names(results)[i])] <- results[[i]]$significant
   }
   # Add 'significant' column if gene was significant in any contrast
-  SummarizedExperiment::rowData(dds)[,"significant"] <- apply(SummarizedExperiment::rowData(dds)[,grep("significant.", colnames(SummarizedExperiment::rowData(dds)))], 1, any)
-
+  if(length(grep("significant.", colnames(SummarizedExperiment::rowData(dds)))) > 1){
+    SummarizedExperiment::rowData(dds)[,"significant"] <- apply(SummarizedExperiment::rowData(dds)[,grep("significant.", colnames(SummarizedExperiment::rowData(dds)))], 1, any)
+  }
+  else{
+    SummarizedExperiment::rowData(dds)[,"significant"] <- SummarizedExperiment::rowData(dds)[,grep("significant.", colnames(SummarizedExperiment::rowData(dds)))]
+  }
   if(!quiet) message("Significantly different genes identified:")
   if(!quiet){
     for (i in 1:length(cntrst)) {
@@ -603,117 +614,119 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   }
 
   # Create Plots
-  if (export == TRUE){
-    dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
-    if(!quiet) message(paste0("Rendering and exporting figures as PDF and PNG files to: ", getwd(), "/Plots"))
-  }
-  suppress_ggrepel <- function(w) {
-    if (any(grepl("ggrepel", w)))
-      invokeRestart("muffleWarning")
-  }
-  #### Box plot of Cook's distance for each sample (outlier detection)
-  if(plot==TRUE){
-    par(mar=c(8,5,2,2))
-    boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
-  }
-  if (export == TRUE){
-    grDevices::pdf(paste0("Plots/BoxPlot_CooksDistance", ".pdf"),
-                   width = 6*length(dds$condition)/20, height = 6)
-    par(mar=c(8,5,2,2))
-    boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
-    grDevices::dev.off()
+  if(export == TRUE || plot == TRUE){
+    if (export == TRUE){
+      dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
+      if(!quiet) message(paste0("Rendering and exporting figures as PDF and PNG files to: ", getwd(), "/Plots"))
+    }
+    suppress_ggrepel <- function(w) {
+      if (any(grepl("ggrepel", w)))
+        invokeRestart("muffleWarning")
+    }
+    #### Box plot of Cook's distance for each sample (outlier detection)
+    if(plot==TRUE){
+      par(mar=c(8,5,2,2))
+      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+    }
+    if (export == TRUE){
+      grDevices::pdf(paste0("Plots/BoxPlot_CooksDistance", ".pdf"),
+                     width = 6*length(dds$condition)/20, height = 6)
+      par(mar=c(8,5,2,2))
+      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+      grDevices::dev.off()
 
-    grDevices::png(paste0("Plots/BoxPlot_CooksDistance", ".png"),
-                   width = 6*length(dds$condition)/20, height = 6, units = 'in', res = 300)
-    par(mar=c(8,5,2,2))
-    boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
-    grDevices::dev.off()
-  }
-  try(suppressMessages(
-    prot.plot_missval(se, plot = plot, export = export)
-  ))
+      grDevices::png(paste0("Plots/BoxPlot_CooksDistance", ".png"),
+                     width = 6*length(dds$condition)/20, height = 6, units = 'in', res = 300)
+      par(mar=c(8,5,2,2))
+      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+      grDevices::dev.off()
+    }
+    try(suppressMessages(
+      prot.plot_missval(se, plot = plot, export = export)
+    ))
 
-  se_log2 <- se
-  assay(se_log2) <- log2(assay(se_log2))
-  try(suppressMessages(
-    prot.plot_detect(se_log2, basesize = 10, plot = plot, export = export)
-  ))
-  suppressMessages(
-    rna.plot_imputation(log2(SummarizedExperiment::assay(se)+1),
-                        "Imputed" = log2(SummarizedExperiment::assay(se_imp)+1),
-                        "Normalized" = log2(norm.counts+1), colData = SummarizedExperiment::colData(se),
-                        plot = plot, export = export, basesize = 12)
-  )
-  suppressMessages(
-    suppressWarnings(
-      prot.plot_screeplot(rna.pca, axisLabSize = 18, titleLabSize = 22, plot = plot, export = export)
-    ) )
-  withCallingHandlers(suppressMessages(
-    prot.plot_loadings(rna.pca,labSize = 3, plot = plot, export = export)
-  ) , warning = suppress_ggrepel)
-  suppressMessages(
-    rna.plot_pca(dds,x = 1, y = 2, point_size = 4, basesize = 14, title = "PC Scores - PC2 vs. PC1",
-                  plot = plot,export = export)
-  )
-  suppressMessages(
-    rna.plot_pca(dds,x = 1, y = 3, point_size = 4, basesize = 14, title = "PC Scores - PC3 vs. PC1",
-                  plot = plot,export = export)
-  )
-  suppressMessages(
-    rna.plot_heatmap(dds, type = "centered", kmeans = heatmap.kmeans, show_all = heatmap.show_all, contrast = cntrst,
-                      k = k, col_limit = heatmap.col_limit,show_row_names = heatmap.show_row_names,
-                      row_font_size = heatmap.row_font_size, indicate = c("condition"),
-                      plot = plot, export = export)
-  )
-  suppressMessages(
-    rna.plot_heatmap(dds, type = "contrast", contrast = cntrst,  kmeans = heatmap.kmeans, k = k, col_limit = heatmap.col_limit,
-                      show_row_names = heatmap.show_row_names, row_font_size = heatmap.row_font_size,
-                      plot = plot, export = export)
-  )
-  for (i in 1:length(cntrst)){
+    se_log2 <- se
+    assay(se_log2) <- log2(assay(se_log2))
+    try(suppressMessages(
+      prot.plot_detect(se_log2, basesize = 10, plot = plot, export = export)
+    ))
+    suppressMessages(
+      rna.plot_imputation(log2(SummarizedExperiment::assay(se)+1),
+                          "Imputed" = log2(SummarizedExperiment::assay(se_imp)+1),
+                          "Normalized" = log2(norm.counts+1), colData = SummarizedExperiment::colData(se),
+                          plot = plot, export = export, basesize = 12)
+    )
     suppressMessages(
       suppressWarnings(
-        volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
-                          add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
-                          plot = plot, export = export, lfc = lfc, alpha = alpha)
+        prot.plot_screeplot(rna.pca, axisLabSize = 18, titleLabSize = 22, plot = plot, export = export)
       ) )
-  }
-  if (pathway_kegg) {
-    for (i in 1:length(cntrst)) {
-      if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_up[[i]])) == 0)){
-        suppressMessages(
-          suppressWarnings(
-            prot.plot_enrichment(res.pathway$ls.pora_kegg_up[[i]], title = paste0("Upregulated pathways", " - KEGG"),
-                                 subtitle =  str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
-          ) )
-      }
-      if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_dn[[i]])) == 0)){
-        suppressMessages(
-          suppressWarnings(
-            prot.plot_enrichment(res.pathway$ls.pora_kegg_dn[[i]], title = paste0("Downregulated pathways", " - KEGG"),
-                                 subtitle = str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
-          ) )
+    withCallingHandlers(suppressMessages(
+      prot.plot_loadings(rna.pca,labSize = 3, plot = plot, export = export)
+    ) , warning = suppress_ggrepel)
+    suppressMessages(
+      rna.plot_pca(dds,x = 1, y = 2, point_size = 4, basesize = 14, title = "PC Scores - PC2 vs. PC1",
+                    plot = plot,export = export)
+    )
+    suppressMessages(
+      rna.plot_pca(dds,x = 1, y = 3, point_size = 4, basesize = 14, title = "PC Scores - PC3 vs. PC1",
+                    plot = plot,export = export)
+    )
+    suppressMessages(
+      rna.plot_heatmap(dds, type = "centered", kmeans = heatmap.kmeans, show_all = heatmap.show_all, contrast = cntrst,
+                        k = k, col_limit = heatmap.col_limit,show_row_names = heatmap.show_row_names,
+                        row_font_size = heatmap.row_font_size, indicate = c("condition"),
+                        plot = plot, export = export)
+    )
+    suppressMessages(
+      rna.plot_heatmap(dds, type = "contrast", contrast = cntrst,  kmeans = heatmap.kmeans, k = k, col_limit = heatmap.col_limit,
+                        show_row_names = heatmap.show_row_names, row_font_size = heatmap.row_font_size,
+                        plot = plot, export = export)
+    )
+    for (i in 1:length(cntrst)){
+      suppressMessages(
+        suppressWarnings(
+          volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
+                            add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+                            plot = plot, export = export, lfc = lfc, alpha = alpha)
+        ) )
+    }
+    if (pathway_kegg) {
+      for (i in 1:length(cntrst)) {
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_up[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(res.pathway$ls.pora_kegg_up[[i]], title = paste0("Upregulated pathways", " - KEGG"),
+                                   subtitle =  str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
+            ) )
+        }
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_dn[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(res.pathway$ls.pora_kegg_dn[[i]], title = paste0("Downregulated pathways", " - KEGG"),
+                                   subtitle = str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = TRUE)
+            ) )
+        }
       }
     }
-  }
-  if(!is.null(custom_pathways)){
-    for (i in 1:length(cntrst)) {
-      if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_up[[i]])) == 0)){
-        suppressMessages(
-          suppressWarnings(
-            prot.plot_enrichment(res.pathway$ls.pora_custom_up[[i]], title = "Upregulated pathways",
-                                 subtitle =  str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
-          ) )
+    if(!is.null(custom_pathways)){
+      for (i in 1:length(cntrst)) {
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_up[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(res.pathway$ls.pora_custom_up[[i]], title = "Upregulated pathways",
+                                   subtitle =  str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
+            ) )
+        }
+        if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_dn[[i]])) == 0)){
+          suppressMessages(
+            suppressWarnings(
+              prot.plot_enrichment(res.pathway$ls.pora_custom_dn[[i]], title = "Downregulated pathways",
+                                   subtitle = str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
+            ) )
+        }
       }
-      if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_dn[[i]])) == 0)){
-        suppressMessages(
-          suppressWarnings(
-            prot.plot_enrichment(res.pathway$ls.pora_custom_dn[[i]], title = "Downregulated pathways",
-                                 subtitle = str_replace(cntrst[i], "_vs_", " vs. "), plot = plot, export = export, kegg = FALSE)
-          ) )
-      }
-    }
-  }
+    } # if(!is.null(custom_pathways))
+  } #if(export == TRUE || plot == TRUE)
 
   if(report == TRUE){
     rna.report(res,
@@ -762,7 +775,7 @@ rna.report <- function(results, report.dir = NULL, ...){
   if("pora_custom_dn" %in% names(results)){
     pora_custom_dn <- results$pora_custom_dn
   }
-  message("Render reports...")
+
   if(!is.null(report.dir)){
     wd <- paste0(getwd(), "/", report.dir)
   } else {
@@ -770,12 +783,13 @@ rna.report <- function(results, report.dir = NULL, ...){
                                                  "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
-  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/Reports", "/Report_RNA.Rmd",
-                sep = "")
-  rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    quiet = TRUE)
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
+  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/Reports", "/Report_RNA.Rmd",
+                sep = "")
+  message("Render reports...")
+  rmarkdown::render(file, output_format = "all", output_dir = wd,
+                    quiet = TRUE)
   message(paste0("Files saved in: '", wd, "'"))
 }
 
@@ -850,6 +864,7 @@ rna.make_se <- function(genes_unique, columns, expdesign)
     genes_unique <- as.data.frame(genes_unique)
   if (tibble::is_tibble(expdesign))
     expdesign <- as.data.frame(expdesign)
+  genes_unique$name <- make.unique(genes_unique$name)
   rownames(genes_unique) <- genes_unique$name
   raw <- genes_unique[, columns]
   raw[is.na(raw)] <- 0

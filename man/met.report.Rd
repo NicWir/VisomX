@@ -4,12 +4,12 @@
 \alias{met.report}
 \title{Generate a markdown report for metabolomics data analysis}
 \usage{
-met.report(mSetObj, report.nm = NULL, ...)
+met.report(mSetObj, report.dir = NULL, ...)
 }
 \arguments{
 \item{mSetObj}{Enter name of the created mSet object after a full analysis workflow (see \code{\link[VisomX]{met.workflow}}).}
 
-\item{report.nm}{(Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
+\item{report.dir}{(Character) Enter the name or location of the folder in which the report files are generated. If \code{NULL} (the default), a new folder "Report_\emph{date-time}" is created in your working directory.}
 
 \item{...}{Further arguments passed from other methods.}
 }

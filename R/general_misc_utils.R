@@ -10,6 +10,7 @@
   k0 <- "\n"
   k2 <- paste("https://github.com/NicWir/VisomX")
   packageStartupMessage(c(k1,k0,k2))
+  options(dplyr.summarise.inform = FALSE)
   if(!tinytex::is_tinytex()){
     packageStartupMessage("TinyTex was not found on your system. To ensure full functionality of Visomx, please execute tinytex::install_tinytex().")
   }
@@ -22,7 +23,7 @@ enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_ke
   if (class(object) == "DESeqDataSet") {
     type <- "dds"
   }
-  else if (class(object) == "SummarizedExperiment"){ ddFDH_Glc_For_vs_Glc
+  else if (class(object) == "SummarizedExperiment"){
     type <- "dep"
   }
   else {
@@ -558,12 +559,24 @@ AddErrMsg <- function (msg)
   print(msg)
 }
 
-read_file <- function(filename, csvsep = ";"){
+#' Call the appropriate function required to read a table file and return the table as a dataframe object.
+#'
+#' @param filename (Character) Name or path of the table file to read. Can be of type CSV, XLS, XLSX, TSV, or TXT.
+#' @param csvsep (Character) separator used in CSV file (ignored for other file types).
+#' @param dec (Character) decimal separator used in CSV, TSV and TXT files.
+#' @param sheet (Numeric or Character) Number or name of a sheet in XLS or XLSX files (_optional_). Default: \code{";"}
+#'
+#' @return A dataframe object
+#' @export
+#'
+read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1)
+  {
   if (file.exists(filename)) {
-    if (str_replace_all(filename, ".{1,}\\.", "") == "csv") {
+    if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "csv") {
       dat <-
         utils::read.csv(
           filename,
+          dec = dec,
           sep = csvsep,
           header = T,
           stringsAsFactors = F,
@@ -573,13 +586,14 @@ read_file <- function(filename, csvsep = ";"){
           comment.char = "",
           check.names = F
         )
-    } else if (str_replace_all(filename, ".{1,}\\.", "") == "xls" |
-               str_replace(filename, ".{1,}\\.", "") == "xlsx") {
-      dat <- readxl::read_excel(filename)
-    } else if (str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
+    } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "xls" |
+               stringr::str_replace(filename, ".{1,}\\.", "") == "xlsx") {
+      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = T, sheet = sheet, .name_repair = "unique")), check.names = F)
+    } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
       dat <-
         utils::read.csv(
           filename,
+          dec = dec,
           sep = "\t",
           header = T,
           stringsAsFactors = F,
@@ -589,10 +603,11 @@ read_file <- function(filename, csvsep = ";"){
           comment.char = "",
           check.names = F
         )
-    } else if (str_replace_all(filename, ".{1,}\\.", "") == "txt") {
+    } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "txt") {
       dat <-
         utils::read.table(
           filename,
+          dec = dec,
           sep = "\t",
           header = T,
           stringsAsFactors = F,
@@ -608,12 +623,15 @@ read_file <- function(filename, csvsep = ";"){
              Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
       )
     }
-  } # if (file.exists(filename))
-  else {
+  } else {
     stop(paste0("File \"", filename, "\" does not exist."), call. = F)
   }
+  colnames <- gsub("\"", "", colnames(dat))
+  dat <- data.frame(sapply(1:ncol(dat), function(x) gsub("\"", "", dat[,x])))
+  colnames(dat) <- colnames
   return(dat)
 }
+
 
 get_annotation_contrast <- function (dds, indicate, contrast = contrast_samples)
 {
@@ -664,4 +682,19 @@ get_annotation_contrast <- function (dds, indicate, contrast = contrast_samples)
   }
   ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
 }
+
+
+
+suppress_warnings <- function(.expr, .f, ...) {
+  eval.parent(
+    substitute(
+      withCallingHandlers( .expr, warning = function (w) {
+        cm   <- conditionMessage(w)
+        cond <- if (is.character(.f)) grepl(.f, cm) else rlang::as_function(.f)(cm, ...)
+        if (cond) invokeRestart("muffleWarning")
+      })
+    )
+  )
+}
+
 

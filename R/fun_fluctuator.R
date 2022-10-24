@@ -1,68 +1,44 @@
-####____read_flux____####
+#' Title
+#'
+#' @param file.data
+#' @param csvsep
+#' @param dec
+#' @param sheet.data
+#' @param sheet.match
+#' @param rename.reaction
+#' @param file.match
+#' @param col.id
+#' @param col.eq
+#' @param col.flux
+#' @param col.sd
+#' @param FBA
+#'
+#' @return
+#' @export
+#'
+#' @examples
 read_flux <- function(file.data = dat_flux,
-                        data.sep = ";",
-                        rename.reaction = TRUE,
-                        file.match= "eq_bigg.csv",
-                        match.sep = ";",
-                        col.id="Reaction ID",
-                        col.eq = "Equation",
-                        col.flux= "Value (%)",
-                        col.sd= "Standard Deviation",
-                        FBA = FALSE){
+                      csvsep = ";",
+                      dec = ".",
+                      sheet.data = 1,
+                      sheet.match = 1,
+                      rename.reaction = TRUE,
+                      rescale.reaction = NULL,
+                      file.match= "eq_bigg.csv",
+                      col.id="Reaction ID",
+                      col.eq = "Equation",
+                      col.flux= "Value (%)",
+                      col.sd= "Standard Deviation",
+                      FBA = FALSE){
 
   # Read file that matches equations to BiGG reaction names
   if (rename.reaction == TRUE) {
-
     if (!is.character(file.match)) {
       eq_bigg <- file.match
     } else {
       # Read table file
       if (file.exists(file.match)) {
-        if (str_replace_all(file.match, ".{1,}\\.", "") == "csv") {
-          eq_bigg <-
-            utils::read.csv(
-              file.match,
-              sep = match.sep,
-              header = T,
-              stringsAsFactors = F,
-              fill = T,
-              na.strings = "",
-              quote = "",
-              comment.char = ""
-            )
-        } else if (str_replace_all(file.match, ".{1,}\\.", "") == "xls" |
-                   str_replace(file.match, ".{1,}\\.", "") == "xlsx") {
-          eq_bigg <- read_excel(file.match)
-        } else if (str_replace_all(file.match, ".{1,}\\.", "") == "tsv") {
-          eq_bigg <-
-            utils::read.csv(
-              file.match,
-              sep = "\t",
-              header = T,
-              stringsAsFactors = F,
-              fill = T,
-              na.strings = "",
-              quote = "",
-              comment.char = ""
-            )
-        } else if (str_replace_all(file.match, ".{1,}\\.", "") == "txt") {
-          eq_bigg <-
-            utils::read.table(
-              file.match,
-              sep = "\t",
-              header = T,
-              stringsAsFactors = F,
-              fill = T,
-              na.strings = "",
-              quote = "",
-              comment.char = ""
-            )
-        } else {
-          stop(
-            "No compatible file format provided for the equation-BiGG name matching table.
-             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
-          )
-        }
+        eq_bigg <- read_file(file.match, csvsep=csvsep, dec=dec, sheet=sheet.match)
       } else {
         stop(
           paste0(
@@ -75,6 +51,7 @@ read_flux <- function(file.data = dat_flux,
       }
     }
   }
+  if(is.null(rescale.reaction)) stop("Please provide the name of a reaction to normalize all fluxes (will be set as 100%).")
 
   # Read data file
   if (!is.character(file.data)) {
@@ -82,53 +59,7 @@ read_flux <- function(file.data = dat_flux,
   } else {
     # Read table file
     if (file.exists(file.data)) {
-      if (str_replace_all(file.data, ".{1,}\\.", "") == "csv") {
-        df_data <-
-          utils::read.csv(
-            file.data,
-            sep = data.sep,
-            header = T,
-            blank.lines.skip = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = ""
-          )
-      } else if (str_replace_all(file.data, ".{1,}\\.", "") == "xls" |
-                 str_replace(file.data, ".{1,}\\.", "") == "xlsx") {
-        df_data <- read_excel(file.data)
-      } else if (str_replace_all(file.data, ".{1,}\\.", "") == "tsv") {
-        df_data <-
-          utils::read.csv(
-            file.data,
-            sep = "\t",
-            header = T,
-            blank.lines.skip = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = ""
-          )
-      } else if (str_replace_all(file.data, ".{1,}\\.", "") == "txt") {
-        df_data <-
-          utils::read.table(
-            file.data,
-            sep = "\t",
-            header = T,
-            stringsAsFactors = F,
-            fill = T,
-            na.strings = "",
-            quote = "",
-            comment.char = ""
-          )
-      } else {
-        stop(
-          "No compatible file format provided.
-             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
-        )
-      }
+      df_data <- read_file(file.data, csvsep = csvsep, dec = dec, sheet = sheet.data)
     } else {
       stop(paste0("File \"", file.data, "\" does not exist."), call. = F)
     }
@@ -138,45 +69,45 @@ read_flux <- function(file.data = dat_flux,
                 " does not exist in the provided data file.\nPlease define the header of the column containing reaction IDs with 'col.id ='\n",
                 "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
   }
-  if(!(col.eq %in% colnames(df_data))){
-    stop(paste0("A column with name ", col.eq,
-                " does not exist in the provided data file.\nPlease define the header of the column containing carbon transition equations with 'col.eq ='\n",
-                "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
+  if(FBA == FALSE){
+    if(!(col.eq %in% colnames(df_data))){
+      stop(paste0("A column with name ", col.eq,
+                  " does not exist in the provided data file.\nPlease define the header of the column containing carbon transition equations with 'col.eq ='\n",
+                  "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
+    }
   }
   if(!(col.flux %in% colnames(df_data))){
     stop(paste0("A column with name ", col.flux,
                 " does not exist in the provided data file.\nPlease define the header of the column containing flux values with 'col.flux ='\n",
                 "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
   }
-  if(!(col.sd %in% colnames(df_data))){
-    stop(paste0("A column with name ", col.sd,
-                " does not exist in the provided data file.\nPlease define the header of the column containing standard deviations with 'col.sd ='\n",
-                "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
+  if(FBA == FALSE){
+    if(!(col.sd %in% colnames(df_data))){
+      stop(paste0("A column with name ", col.sd,
+                  " does not exist in the provided data file.\nPlease define the header of the column containing standard deviations with 'col.sd ='\n",
+                  "Valid column names are: ", paste(colnames(df_data), collapse=", ")))
+    }
   }
   # Rename reactions according to BiGG standard based on matches of the equations in the reference file.
-  df_data <- cbind(df_data[,col.id], df_data[,col.eq], df_data[,col.flux], df_data[,col.sd])
   if (FBA == FALSE) {
-    #Rename column names
-    df_data <- df_data %>% dplyr::rename(
-      reaction = all_of(col.id),
-      equation = all_of(col.eq),
-      flux = all_of(col.flux),
-      SD = all_of(col.sd)
-    )
-
+    df_data <- as.data.frame(cbind(reaction= df_data[,col.id], equation = df_data[,col.eq], flux = df_data[,col.flux], SD = df_data[,col.sd]))
     for (i in 1:nrow(df_data)) {
       df_data$reaction[i] <-
         eq_bigg$reaction[match(df_data$equation[i], eq_bigg$equation)]
     }
   } else {
+    df_data <- as.data.frame(cbind(reaction= df_data[,col.id], flux = df_data[,col.flux]))
     df_data$SD <- 0
     df_data$equation <- 0
-    # Scale all fluxes except the growth rate to glucose uptake (100%)
-    df_rescaled <- df_data
-    df_rescaled$flux <- df_data$flux / df_data[grep("GLCtex", df_data$reaction), "flux"] *100
-    # Restore original growth rate value
-    df_rescaled[grep("BIOMASS_KT2440_WT3", df_rescaled$reaction), "flux"] <-  df_data[grep("BIOMASS_KT2440_WT3", df_data$reaction), "flux"]
-    df_data <- df_rescaled
+    if(!is.null(rescale.reaction)){
+      # Scale all fluxes except the growth rate
+      df_rescaled <- df_data
+      df_rescaled$flux <- as.numeric(df_data$flux) / as.numeric(df_data[match(rescale.reaction, df_data$reaction), "flux"]) *100
+      # Restore original growth rate value
+      df_rescaled[grep("BIOMASS_KT2440_WT3", df_rescaled$reaction), "flux"] <-  df_data[grep("BIOMASS_KT2440_WT3", df_data$reaction), "flux"]
+      df_data <- df_rescaled
+    }
+
     if (rename.reaction == TRUE) {
       # Filter reactions in results from FBA to only contain reactions listed in the match file
       df_data <- df_data %>% filter(reaction %in% (paste(eq_bigg$reaction)) )
@@ -241,13 +172,23 @@ read_flux <- function(file.data = dat_flux,
 #'
 #' ...
 #'
+#' @param template
+#' @param result.nm
+#' @param pal
+#' @param title
+#' @param export
+#' @param export_dpi
+#' @param export_width
+#' @param export_height
+#' @param FBA
 #' @param df data frame
+#'
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @import reticulate
 #' @export
-flux_to_map <- function (df = "dat_flux.",
+flux_to_map <- function (df = "dat_flux",
                          template = NULL,
-                         result = NULL,
+                         result.nm = NULL,
                          pal = "G",
                          title = "",
                          export = TRUE,
@@ -299,7 +240,12 @@ flux_to_map <- function (df = "dat_flux.",
     colflux_50 <-  '#fec44f' # black for a flux value of 50%
     colflux_100 <- '#d95f0e' # black for a flux value of 100%
     colflux_max <- '#993404' # black for fluxes > 100%
-  }else {
+  } else if (pal == "PuRd"){
+    colflux_0   <- '#f1eef6' # black for a flux value of 0%
+    colflux_50 <-  '#df65b0' # black for a flux value of 50%
+    colflux_100 <- '#ce1256' # black for a flux value of 100%
+    colflux_max <- '#91003f' # black for fluxes > 100%
+  } else {
     stop(
       "No valid color palette provided to draw flux arrows.
       Please define a suitable palette (G, R, B, BYR, gray, YR, or BW) as \"pal =\" argument.",
@@ -374,16 +320,16 @@ flux_to_map <- function (df = "dat_flux.",
   message("Reading map template...")
 
   # read SVG map template
-  if (!is.null(template) & is.character(template)) {
+  if (!is.null(template) && is.character(template)) {
     template.nm <- template %>% str_replace(".svg", "")
     template_svg <- paste0(template.nm, ".svg")
     if (!file.exists(template)) {
       stop(paste0("The template file \"", template_svg, "\" does not exist."), .call = FALSE)
     } else {
-      MAP <- read_svg(template_svg)
+      MAP <- fluctuator::read_svg(template_svg)
     }
   }
-  if (is.null(template)){
+  else{
     stop(
       "No template SVG provided. Templates can be specified with \"template =\".",
       call. = FALSE
@@ -397,6 +343,12 @@ flux_to_map <- function (df = "dat_flux.",
                     node = paste0("Title"),
                     value = title)
   }
+
+  # get names of reactions in map
+  rxn.nm <- MAP@summary$label[!is.na(MAP@summary$label)][!grepl("_text|rect|scalebar", MAP@summary$label[!is.na(MAP@summary$label)])]
+  rxn.nm <- gsub("value_", "", rxn.nm)
+  # reduce df to contain only entries present in map (for quicker computation)
+  df <- df[df[["reaction"]] %in% rxn.nm, ]
 
   message("Applying flux values to text fields...")
 
@@ -501,31 +453,40 @@ flux_to_map <- function (df = "dat_flux.",
   df[grep("BIOMASS", df$reaction), grep("flux", colnames(df))] <- biomass
 
   # Write modified SVG map
-  result.nm <- str_replace(paste0("Plots/", template.nm), "template", "result")
 
-  if (!is.null(result)){
-    result.nm <- result %>% str_replace(".svg", "")
+  if (!is.null(result.nm)){
+    result.nm <- result.nm %>% str_replace(".svg", "")
     result_svg <- paste0("Plots/", result.nm, ".svg")
     message(paste0("Writing results SVG file with defined name: \"",
                    result_svg,"\" ...") )
   } else {
+    result.nm <- str_replace(paste0("Plots/", template.nm), "template", "result")
     message(paste0("Writing results SVG file:\n'Plots/",
                    result.nm, "+F",".svg' ..."))
     result_svg <- paste0(result.nm,"+F",".svg")
   }
 
-  write_svg(MAP, file = result_svg)
+  fluctuator::write_svg(MAP, file = result_svg)
 
-  if ( export == TRUE ){
+  if(export == TRUE){
     svg_to_png(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
     svg_to_pdf(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
-
   }
 
   return(df)
 }
-
-####____svg_to_png___####
+#' Title
+#'
+#' @param svg
+#' @param out
+#' @param dpi
+#' @param width
+#' @param height
+#'
+#' @return
+#' @export
+#'
+#' @examples
 svg_to_png <-
   function (svg = svg,
             out = NULL,
@@ -565,8 +526,19 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
     message(paste0("Exporting PNG file to: ", png))
   }
 
-####____svg_to_pdf____####
 
+#' Title
+#'
+#' @param svg
+#' @param out
+#' @param dpi
+#' @param width
+#' @param height
+#'
+#' @return
+#' @export
+#'
+#' @examples
 svg_to_pdf <-
   function (svg = svg,
             out = NULL,
@@ -608,8 +580,36 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
     message(paste0("Exporting PDF file to: ", pdf ))
   }
 
-####____prot_to_map____####
 
+#' Title
+#'
+#' @param se
+#' @param protein_set
+#' @param col.id
+#' @param select.id
+#' @param pfx
+#' @param imp_fun
+#' @param q
+#' @param type
+#' @param condition
+#' @param contrast
+#' @param template
+#' @param RSD_thresh
+#' @param p_thresh
+#' @param result
+#' @param pal
+#' @param legend_min
+#' @param legend_max
+#' @param title
+#' @param export
+#' @param export_dpi
+#' @param export_width
+#' @param export_height
+#'
+#' @return
+#' @export
+#'
+#' @examples
  prot_to_map <- function (se,
                           protein_set = NULL,
                           col.id = 'ID',
@@ -681,7 +681,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
            call. = FALSE )
    }
 
-   MAP <- read_svg(template_svg)
+   MAP <- fluctuator::read_svg(template_svg)
 
    # Create list of proteins in the map based on matches with the defined prefix (pfx)
    if (is.null(protein_set)){
@@ -900,7 +900,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
                                                                   RSD_subject = as.numeric(RSD_subject),
                                                                   p.val = as.numeric(p.val))
    }
-   df_plot <- df_plot[(df_plot_$stroke_color != ""),]
+   df_plot <- df_plot[(df_plot$stroke_color != ""),]
    return(df_plot)
  }
 
@@ -911,7 +911,6 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
 #' @param png PNG image file
 #' @return The input mSet object with imputed data at mSetObj$dataSet$data_proc.
 #' @export
-####____png_to_gif____####
  png_to_gif <-
    function(png, ..., fps = 0.5, out = "Plots/animated_gif.gif") {
      call <- match.call()
