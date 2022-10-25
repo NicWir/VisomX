@@ -73,7 +73,6 @@ Imports:
     apeglm,
     BiocParallel,
     clusterProfiler,
-    DEP,
     DESeq2,
     DOSE,
     edgeR,
@@ -101,6 +100,7 @@ Imports:
     vsn
 Suggests: 
     DelayedArray,
+    DEP,
     edgeR,
     ggpubr,
     jsonlite,
@@ -118,4 +118,4 @@ GithubRepo: VisomX
 GithubUsername: NicWir
 NeedsCompilation: yes
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1

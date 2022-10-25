@@ -1,15 +1,15 @@
-####____prot.filter_missing___####
-#' Title
+#' Filter proteins based on missing values
 #'
-#' @param se
-#' @param type
-#' @param thr
-#' @param min
+#' \code{prot.filter_missing} filters a proteomics dataset based on missing values. Different types of filtering can be applied, which range from only keeping proteins without missing values to keeping proteins with a certain percent valid values in all samples or keeping proteins that are complete in at least one condition.
 #'
-#' @return
+#' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
+#' @param type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep proteins with valid values in all samples. "condition" will keep proteins that have a maximum of \code{thr} missing values in at least one condition. "fraction" will keep proteins that have a \code{min} fraction of valid values in all samples.
+#' @param thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{type = "condition"}. In other words: "keep proteins that have a maximum of 'thr' missing values in at least one condition."
+#' @param min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{type = "fraction"}.
+#'
+#' @return A filtered SummarizedExperiment object.
 #' @export
-#'
-#' @examples
+#' @references Xiaofei Zhang, Arne H. Smits, Gabrielle B.A. van Tilburg, Huib Ovaa, Wolfgang Huber and Michiel Vermeulen. Proteome-wide identification of ubiquitin interactions using UbIA-MS. Nature Protocols (2018).
 prot.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
                                  thr = NULL, min = NULL)
 {
@@ -73,40 +73,47 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
   filtered@metadata$n.pre_filt <- nrow(SummarizedExperiment::assay(se))
   return(filtered)
 }
-####____prot.read_data____####
-#' Title
+
+#' Read proteomics data in table format and create SummarizedExperiment
 #'
-#' @param data
-#' @param expdesign
-#' @param csvsep
-#' @param dec
-#' @param sheet
-#' @param filter
-#' @param rsd_thresh
-#' @param name
-#' @param id
-#' @param pfx
-#' @param filt_type
-#' @param filt_thr
-#' @param filt_min
+#' \code{prot.read_data} takes a table file containing proteomics data and filters proteins based on missing values (see \code{\link{prot.filter_missing}}) or a given relative standard deviation threshold, and creates a \code{SummarizedExperiment} object.
 #'
-#' @return
+#' @param data An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing proteomics data.
+#' The table must contain:
+#' \enumerate{
+#'    \item A column with protein IDs (e.g., accession numbers). The header of this column is provided as argument \code{id}.
+#'    \item A column with protein names. The header of this column is provided as argument \code{name}.
+#'    \item X columns containing abundance values for X samples. The column headers must have a prefix (e.g., "abundances.") that is provided as argument \code{pfx}. Replicates are identified by identical column headers followed by an underscore and the replicate number (e.g., "abundances.ConditionA_1", "abundances.ConditionA_2", "abundances.ConditionA_3", ...).
+#' }
+#' @param expdesign (_optional, if made previously_) An R dataframe object or a table file containing the columns 'label', 'condition', and 'replicate' with label = "condition_replicate". If \code{NULL}, an experimental design table will be created automatically.
+#' @param csvsep (Character string) separator used in CSV files (ignored for other file types). Default: \code{";"}
+#' @param dec (Character string) decimal separator used in CSV, TSV or TXT files (ignored for other file types). Default: \code{"."}
+#' @param sheet (Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (_optional_).
+#' @param filter (Character string) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.
+#' @param rsd_thresh (Numeric, optional) Provide a relative standard deviation (RSD) threshold **in %** for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded.
+#' @param name (Character string) Provide the header of the column containing protein names.
+#' @param id (Character string) Provide the header of the column containing protein IDs
+#' @param pfx (Character string) Provide the common prefix for headers containing abundance values (e.g., "abundances.").
+#' @param filt_type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep proteins with valid values in all samples. "condition" will keep proteins that have a maximum of \code{filt_thr} missing values in at least one condition. "fraction" will keep proteins that have a \code{filt_min} fraction of valid values in all samples.
+#' @param filt_thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{filt_type = "condition"}. In other words: "keep proteins that have a maximum of 'filt_thr' missing values in at least one condition."
+#' @param filt_min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{filt_type = "fraction"}.
+#'
+#' @return A filtered SummarizedExperiment object.
 #' @export
 #'
-#' @examples
-prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containing proteomics data
-                            expdesign = NULL, # Experimental design as file path or data frame, if made previously
-                            csvsep = ";", # optional: delimiter if reading CSV file
+prot.read_data <- function (data = "dat_prot.csv",
+                            expdesign = NULL,
+                            csvsep = ";",
                             dec = ".",
                             sheet = 1,
                             filter = c("Reverse", "Potential contaminant"),
-                            rsd_thresh = NULL, # in %!
-                            name = 'Gene Symbol', # Header of column containing primary protein IDs
-                            id = 'Ensembl Gene ID', # Header of column containing alternative protein IDs
-                            pfx = "abundances.", # Prefix in headers of columns containing protein abundances
+                            rsd_thresh = NULL,
+                            name = 'Gene Symbol',
+                            id = 'Ensembl Gene ID',
+                            pfx = "abundances.",
                             filt_type = c("condition", "complete", "fraction", NULL),
-                            filt_thr = 3, # keep proteins that have a maximum of 'filt_thr' missing values in at least one condition.
-                            filt_min = NULL # Sets the threshold for the minimum fraction of valid values allowed for any protein if type = "fraction".
+                            filt_thr = 3,
+                            filt_min = NULL
 ) {
   assertthat::assert_that(is.character(name),
                           length(name) == 1,
@@ -298,41 +305,41 @@ prot.read_data <- function (data = "dat_prot.csv", # File or dataframe containin
   return(prot_se)
 }
 
-####____prot.workflow____####
-#' Title
+#' Run a complete proteomics analysis workflow.
 #'
-#' @param se
-#' @param imp_fun
-#' @param q
-#' @param knn.rowmax
-#' @param type
-#' @param control
-#' @param contrast
-#' @param alpha
-#' @param alpha_pathways
-#' @param lfc
-#' @param heatmap.show_all
-#' @param heatmap.kmeans
-#' @param k
-#' @param heatmap.col_limit
-#' @param heatmap.show_row_names
-#' @param heatmap.row_font_size
-#' @param volcano.add_names
-#' @param volcano.label_size
-#' @param volcano.adjusted
-#' @param plot
-#' @param export
-#' @param report
-#' @param report.dir
-#' @param pathway_enrichment
-#' @param pathway_kegg
-#' @param kegg_organism
-#' @param custom_pathways
+#' \code{prot.workflow} performs variance stabilization normalization (\code{\link{prot.normalize_vsn}}), missing value imputation (\code{\link{prot.impute}}), principal component analysis (\code{\link{prot.pca}}), differential enrichment test (\code{\link{prot.test_diff}}), and pathway enrichment analysis. If desired, standardized plots and a report are generated and exported as separate files.
 #'
-#' @return
+#' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
+#' @param imp_fun (Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{prot.impute}}) for details.
+#' @param q (Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.
+#' @param knn.rowmax (Numeric) The maximum percent missing data allowed in any row for \code{imp_fun = 'knn'}. Default: 0.5.
+#' @param type (Character string) Type of differential analysis to perform. "all" (contrast each condition with every other condition), "control" (contrast each condition to a defined control condition), "manual" (manually define selected conditions).
+#' @param control (Character string) The name of the control condition if \code{type = control}.
+#' @param contrast (Character string or vector of strings) Define the contrasts to be tested if \code{type = manual} in the form: \code{"ConditionA_vs_ConditionB"}, or \code{c("ConditionA_vs_ConditionC", "ConditionB_vs_ConditionC")}.
+#' @param alpha (Numeric) Significance threshold for adjusted p values.
+#' @param alpha_pathways (Numeric) Significance threshold for adjusted p values in pathway enrichment analysis.
+#' @param lfc (Numeric) Relevance threshold for log2(fold change) values. Only proteins with a |log2(fold change)| value above \code{lfc} for a given contrast are considered "significant" (if they additionally fullfil the \code{alpha} criterion).
+#' @param heatmap.show_all (Logical) Shall all samples be displayed in the heat map (\code{TRUE}) or only the samples contained in the defined \code{contrast} (\code{FALSE})?
+#' @param heatmap.kmeans (Logical) Shall the proteins be clustered in the heat map with the k-nearest neighbour method (\code{TRUE}) or not \code{FALSE})?
+#' @param k (Integer) Number of protein clusters in heat map if \code{heatmap.kmeans = TRUE}.
+#' @param heatmap.col_limit (Integer) Define the outer breaks in the heat map legend. Example: if \code{heatmap.col_limit = 3}, the color scale will span from -3 to 3. Alls values below -3 will have the same color as -3, and all values above 3 will have the same color as 3.
+#' @param heatmap.show_row_names (Logical) Show protein names in heat map (\code{TRUE}) or not \code{FALSE}).
+#' @param heatmap.row_font_size (Numeric) Font size of protein names in heat maps if \code{heatmap.show_row_names = TRUE}.
+#' @param volcano.add_names (Logical) Show protein names in volcano plots (\code{TRUE}) or not \code{FALSE}).
+#' @param volcano.label_size (Numeric) Font size of protein names in volcano plots if \code{volcano.add_names = TRUE}.
+#' @param volcano.adjusted (Logical) Shall adjusted p values be shown on the y axis of volcano plots (\code{TRUE}) or raw p values (\code{FALSE})?.
+#' @param plot (Logical) Show the generated plots in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).
+#' @param export (Logical) Exported the generated plots as PNG and PDF files (\code{TRUE}) or not \code{FALSE}).
+#' @param report (Logical) Render and export a report in PDF and HTML format that summarizes the results (\code{TRUE}) or not \code{FALSE}).
+#' @param report.dir (Character string) Provide the name of or path to a folder into which the report will be saved.
+#' @param pathway_enrichment (Logical) Perform pathway over-representation analysis for each tested contrast (\code{TRUE}) or not \code{FALSE}).
+#' @param pathway_kegg (Logical) Perform pathway over-representation analysis with gene sets in the KEGG database (\code{TRUE}) or not \code{FALSE}).
+#' @param kegg_organism (Character string) Identifier of the organism in the KEGG database (if \code{pathway_kegg = TRUE})
+#' @param custom_pathways (a R dataframe object) Data frame providing custom pathway annotations. The table must contain a "Pathway" column listing identified pathway in the studies organism, and an "Accession" column listing the proteins (or genes) each pathway is composed of. The **Accession** entries must match with protein **IDs**.
+#'
+#' @return A list containing `SummarizedExperiment` object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
 #' @export
 #'
-#' @examples
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
                                       "MinProb", "min", "zero", "mixed", "nbavg"),
@@ -1012,7 +1019,6 @@ prot.get_results <- function (dep)
 #' @param indicate
 #'
 #' @return
-#' @export
 #'
 #' @examples
 get_annotation <- function (dep, indicate)
@@ -1202,7 +1208,6 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
 #' @param USER_DATA
 #'
 #' @return
-#' @export
 #'
 #' @examples
 prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
@@ -1325,7 +1330,6 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
 #' @param expdesign
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_se <- function (proteins_unique, columns, expdesign)
@@ -1377,7 +1381,6 @@ make_se <- function (proteins_unique, columns, expdesign)
 #' @param words
 #'
 #' @return
-#' @export
 #'
 #' @examples
 delete_prefix <- function (words)
@@ -1391,7 +1394,6 @@ delete_prefix <- function (words)
 #' @param words
 #'
 #' @return
-#' @export
 #'
 #' @examples
 get_prefix <- function (words)
@@ -1421,7 +1423,6 @@ get_prefix <- function (words)
 #' @param thr
 #'
 #' @return
-#' @export
 #'
 #' @examples
 filter_missval <- function (se, thr = 0)
@@ -1518,7 +1519,6 @@ prot.make_unique <- function (proteins, names, ids, delim = ";")
 #' @param sep
 #'
 #' @return
-#' @export
 #'
 #' @examples
 make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
@@ -1575,7 +1575,6 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
 #' @param shift
 #'
 #' @return
-#' @export
 #'
 #' @examples
 manual_impute <- function (se, scale = 0.3, shift = 1.8)

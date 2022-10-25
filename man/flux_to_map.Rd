@@ -5,9 +5,9 @@
 \title{...}
 \usage{
 flux_to_map(
-  df = "dat_flux.",
+  df = "dat_flux",
   template = NULL,
-  result = NULL,
+  result.nm = NULL,
   pal = "G",
   title = "",
   export = TRUE,

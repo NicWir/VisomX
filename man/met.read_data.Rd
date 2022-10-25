@@ -10,6 +10,8 @@ met.read_data(
   anal.type = "stat",
   paired = FALSE,
   csvsep = ";",
+  dec = ".",
+  sheet = 1,
   data.format = "rowu",
   lbl.type = "disc",
   filt.feat = c(""),
@@ -36,6 +38,8 @@ met.read_data(
 \item{paired}{(Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).}
 
 \item{csvsep}{(Character) Enter the separator used in the CSV file (only applicable if reading a ".csv" file).}
+
+\item{dec}{(Character) decimal separator used in CSV, TSV and TXT files.}
 
 \item{data.format}{(Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).}
 
@@ -90,6 +94,8 @@ met.read_data(
 \item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the missing value detection plots be exported as PDF or PNG file?}
 
 \item{img.format}{(Character, \code{"png"} or \code{"pdf"}) image file format (if \code{export = TRUE}).}
+
+\item{dpi}{(Numeric) The resolution of exported PNG and PDF images.}
 }
 \value{
 An mSet object with (built in ascending order):
