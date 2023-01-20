@@ -1,5 +1,9 @@
-####____theme_DEP1____(internal)####
-# Adjusted aesthetics for theme_DEP1; adjustable base size
+#' @title  theme_DEP1
+#' @description A function to create a theme for ggplot2
+#' @param basesize numeric. Base font size for the theme.
+#' @return A ggplot2 theme object.
+#' @export
+#' @importFrom ggplot2 theme_bw
 theme_DEP1 <- function (basesize = 15)
 {
   theme <- ggplot2::theme_bw(base_size = basesize)
@@ -18,7 +22,25 @@ theme_DEP1 <- function (basesize = 15)
   return(theme)
 }
 
-####____prot.plot_numbers____####
+
+
+#' Plot the number of proteins identified in a SummarizedExperiment object
+#'
+#' @param se A SummarizedExperiment object
+#' @param plot Logical, if TRUE a plot is returned
+#' @param export Logical, if TRUE the plot is exported to the /Plots directory
+#'
+#' @return If plot = TRUE, returns a ggplot object. If plot = FALSE, returns a data frame.
+#'
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment colData assay
+#' @importFrom tibble rownames_to_column
+#' @importFrom dplyr gather group_by summarize left_join
+#' @importFrom ggplot2 geom_col geom_hline labs theme_DEP2 scale_fill_brewer scale_fill_manual
+#' @importFrom grDevices png pdf
+#'
 prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
@@ -71,8 +93,27 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
     return(df)
   }
 }
-####____prot.plot_imputation____####
-prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = TRUE)
+
+
+
+#' @title Plot imputation results
+#' @description Plot the results of imputation as a density plot
+#' @param se SummarizedExperiment object
+#' @param plot logical, whether to plot the results or not (default: TRUE)
+#' @param basesize numeric, base font size (default: 12)
+#' @param export logical, whether to export the results as PNG and PDF or not (default: TRUE)
+#' @return (invisible) a ggplot object
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom purrr map_df
+#' @importFrom ggplot2 geom_density stat_density facet_wrap labs theme_DEP1 scale_color_brewer scale_color_manual
+#' @importFrom grDevices png pdf dev.off
+#' @importFrom utils dir.create
+#' @importFrom SummarizedExperiment assay colData
+#' @importFrom dplyr left_join
+#' @importFrom magrittr %>%
+prot.plot_imputation <- function(se, plot = TRUE, basesize = 12, export = TRUE)
 {
   call <- match.call()
   call$export <- NULL
@@ -134,12 +175,40 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
 
   if (plot == TRUE){
     print(p)
-  } else {
-    return(p)
   }
+  invisible(p)
 }
 
-####____prot.plot_density____####
+
+
+#' Generates density plots for a SummarizedExperiment object
+#'
+#' @param se1 A SummarizedExperiment object with normalized data.
+#' @param se2 (optional) A second SummarizedExperiment object with normalized data.
+#' @param se3 (optional) A third SummarizedExperiment object with normalized data.
+#' @param title1 A title for the first density plot.
+#' @param title2 (optional) A title for the second density plot.
+#' @param title3 (optional) A title for the third density plot.
+#' @param group A logical value indicating whether to group the plots by condition (TRUE) or not (FALSE). If TRUE, \code{\link{prot.plot_imputation}} is called.
+#' @param basesize The base font size for the plots.
+#' @param plot A logical value indicating whether to plot the plots (TRUE) or not (FALSE).
+#' @param export A logical value indicating whether to export the plots (TRUE) or not (FALSE).
+#'
+#' @export
+#'
+#' @return (Invisibly) returns a ggplot object.
+#'
+#' @importFrom SummarizedExperiment assay
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom tibble rownames_to_column
+#' @importFrom dplyr pivot_longer
+#' @importFrom grDevices pdf
+#' @importFrom grDevices png
+#' @importFrom grDevices dev.off
+#' @importFrom utils dir.create
+#' @importFrom utils message
+#' @importFrom gridExtra marrangeGrob
+#'
 prot.plot_density <- function(se1,
                               se2 = NULL,
                               se3 = NULL,
@@ -306,14 +375,35 @@ prot.plot_density <- function(se1,
 
     if (plot == TRUE){
       print(p)
-    } else {
-      return(p)
     }
+    invisible(p)
   }
 }
 
-####____prot.plot_missval____####
-# Modified plot_missval function from package DEP with export as PDF and PNG
+
+
+#' Plot missing values in SummarizedExperiment
+#'
+#' This function takes a SummarizedExperiment object and creates a binary heatmap of missing values in the assay.
+#'
+#' @param se A SummarizedExperiment object
+#' @param plot Logical. Whether to return the plot.
+#' @param export Logical. Whether to export the heatmap in pdf and png format.
+#' @param fontsize Numeric. Font size for the column names in the heatmap.
+#' @return A binary heatmap of missing values in the SummarizedExperiment.
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment assay
+#' @importFrom ComplexHeatmap Heatmap draw
+#' @importFrom grid gpar
+#' @importFrom grDevices pdf png dev.off
+#' @importFrom utils dir.create
+#'
+#' @seealso \code{\link{prot.clean_data}}
+#'
+#' @references
+#'
 prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
@@ -350,8 +440,29 @@ prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
     ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
   }
 }
-####____prot.plot_detect____####
-# Modified plot_detect function from package DEP with export as PDF and PNG. Plots the group-wise density of proteins with missing values
+
+#' Plot detectability for a SummarizedExperiment
+#'
+#' Plots the group-wise density of proteins with missing values
+#'
+#' @param se A SummarizedExperiment object
+#' @param basesize Base font size for the plots
+#' @param plot Logical, whether to plot the figure
+#' @param export Logical, whether to export the figure
+#'
+#' @return Plots of the density distributions and cumulative fraction of proteins with and without missing values
+#'
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment assay
+#' @importFrom dplyr group_by summarize
+#' @importFrom tidyr gather
+#' @importFrom ggplot2 geom_density stat_density theme_minimal
+#' @importFrom grDevices pdf png
+#' @importFrom gridExtra grid.arrange
+#' @importFrom stringr str_replace
+#' @importFrom utils getwd dir.create
 prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
@@ -450,8 +561,32 @@ prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
   }
 }
 
-####____prot.plot_pca____####
-# Edited PCA plot function from package DEP including vertical and horizontal reference lines at x = 0 and y = 0
+#' Plot Eesults of Principal Component Analysis
+#'
+#' Performs PCA and of a given SummarizedExperiment object and plots the results.
+#'
+#' @param dep SummarizedExperiment object
+#' @param x x-axis PC (default: 1)
+#' @param y y-axis PC (default: 2)
+#' @param indicate features to indicate in the plot ("condition" or "replicate")
+#' @param title title of the plot (default: "PCA plot - top \code{n} variable proteins")
+#' @param label whether to label points in the plot (default: FALSE)
+#' @param n number of variables to take into account, sorted according to their variance in descending order. Only the \code{n} most variable proteins are used to perform PCA. default: number of columns in \code{dep})
+#' @param point_size size of points in the plot (default: 4)
+#' @param label_size size of labels in the plot (default: 3)
+#' @param hline position of horizontal line (default: 0)
+#' @param hlineType type of horizontal line (default: 'longdash')
+#' @param hlineCol color of horizontal line (default: 'black')
+#' @param hlineWidth width of horizontal line (default: 0.4)
+#' @param vline position of vertical line (default: 0)
+#' @param vlineType type of vertical line (default: 'longdash')
+#' @param vlineCol color of vertical line (default: 'black')
+#' @param vlineWidth width of vertical line (default: 0.4)
+#' @param basesize base size of the plot (default: 15)
+#' @param plot whether to return the PCA plot (default: TRUE)
+#' @param export whether to export the PCA plot to the Plots directory as PNG and PDF file (default: TRUE)
+#' @return (invisibly) a data frame containing the PCA coordinates
+#' @export
 prot.plot_pca <- function (dep,
                            x = 1,
                            y = 2,
@@ -646,17 +781,40 @@ prot.plot_pca <- function (dep,
   if (plot) {
     print(p)
   }
-  else {
-    df <- pca_df %>% select(rowname, paste0("PC", c(x, y)),
-                            match(indicate, colnames(pca_df)))
-    colnames(df)[1] <- "sample"
-    return(df)
-  }
+
+  df <- pca_df %>% select(rowname, paste0("PC", c(x, y)),
+                          match(indicate, colnames(pca_df)))
+  colnames(df)[1] <- "sample"
+  invisible(df)
 }
 
-####____prot.plot_volcano____####
-#Revised volcano plot function from the DEP package with enhanced aesthetics.
 
+
+#' Plots a volcano plot for a given contrast
+#'
+#' @param dep A SummarizedExperiment object
+#' @param contrast The contrast of interest in the format "conditionA_vs_conditionB"
+#' @param label_size The size of labels for the protein names
+#' @param alpha The alpha value used to determine significance.
+#' @param lfc The log2 fold change threshold.
+#' @param add_names Logical, whether to add protein names to the plot
+#' @param adjusted Logical, whether to plot adjusted p-values. The \code{alpha} threshold is applied to adjusted p values even if \code{adjusted = FALSE}.
+#' @param plot Logical, whether to return the volcano plot
+#' @param export Logical, whether to export the volcano plot as PND and PDF file
+#'
+#' @return (invisibly) A data frame with columns for protein, log2 fold change, and -log10 p-value
+#'
+#' @export
+#'
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom assertthat assert_that
+#' @importFrom ggplot2 geom_point geom_vline geom_hline geom_text_repel labs xlab ylab scale_colour_manual theme_bw theme coord_cartesian
+#' @importFrom ggh4x force_panelsizes
+#' @importFrom scales pretty_breaks
+#' @importFrom dplyr filter mutate arrange
+#' @importFrom stringr str_replace
+#' @importFrom grDevices pdf png dev.off
+#' @importFrom utils dir.create
 prot.plot_volcano <-
   function (dep,
             contrast,
@@ -889,11 +1047,38 @@ prot.plot_volcano <-
       if (adjusted) {
         colnames(df)[3] <- "adjusted_p_value_-log10"
       }
-      return(df)
     }
+    invisible(df)
   }
 
-####____prot.plot_corrheatmap____####
+
+
+#' Plot a correlation heatmap
+#'
+#' This function plots a Pearson correlation heatmap for a given SummarizedExperiment object.
+#'
+#' @param dep A SummarizedExperiment object
+#' @param significant Logical. If TRUE, only significant correlations are plotted. Default is TRUE.
+#' @param lower Numeric. Lower limit of the color scale. Default is 0.
+#' @param upper Numeric. Upper limit of the color scale. Default is 1.
+#' @param pal Character. Brewer color palette to be used. Default is "PRGn". See \code{\link[RColorBrewer]{brewer.pal.info}} for options
+#' @param pal_rev Logical. If TRUE, color palette is reversed. Default is FALSE.
+#' @param indicate Character. Column name from colData to use for annotations. Default is NULL.
+#' @param font_size Numeric. Font size for labels. Default is 12.
+#' @param plot Logical. If FALSE, no plot is generated, only data frame is returned. Default is TRUE.
+#' @param ... Other arguments to be passed to \code{\link[ComplexHeatmap]{Heatmap}}.
+#'
+#' @return (Invisibly) a data frame with Pearson correlation values is returned.
+#'
+#' @export
+#'
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom assertthat assert_that
+#' @importFrom circlize colorRamp2
+#' @importFrom grid gpar
+#' @importFrom tibble rownames_to_column
+#' @importFrom SummarizedExperiment assay colData rowData
+#'
 prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1, pal = "PRGn",
                                    pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE,
                                    ...)
@@ -975,13 +1160,31 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
   }
-  else {
-    df <- as.data.frame(cor_mat)
-    return(df)
-  }
+  df <- as.data.frame(cor_mat)
+  invisible(df)
 }
-####____prot.plot_heatmap____####
-# Modified plot_heatmap function with adjusted aesthetics and legend breaks
+
+
+#' Plots a heatmap of the differentially expressed proteins
+#'
+#' @param dep A SummarizedExperiment object containing the normalized protein abundances and the associated metadata
+#' @param type Type of heatmap to plot. Either "centered" or "contrast".
+#' @param contrast (String or vector of strings) Analyze only significant proteins contained in the specified contrast(s). Default is NULL. Contrasts must be given in the form "ConditionA_vs_ConditionB"
+#' @param show_all Show protein abundances of all conditions or only of those in the specified constrast(s). Default is TRUE
+#' @param pal Color palette to use. Default is "RdBu"
+#' @param kmeans Perform k-means clustering on the rows. Default is FALSE
+#' @param k Number of clusters to use when kmeans is TRUE. Default is 6
+#' @param col_limit Specify a custom range for the color scale of the heatmap. Default is NA, in which case the minimum and maximum of the color scale are calculated as the 5% and 95% percentiles.
+#' @param indicate Annotate the heatmap with the specified column from the metadata.
+#' @param clustering_distance Distance metric used for clustering. Default is "euclidean".
+#' @param show_row_names Show the protein names on the left side of the heatmap. Default is FALSE.
+#' @param row_font_size Font size for the protein names. Default is 6
+#' @param col_font_size Font size for the condition names. Default is 10
+#' @param plot Plot the heatmap. Default is TRUE
+#' @param export Export the heatmap as pdf and png. Default is TRUE
+#' @param ... Other parameters passed to the ComplexHeatmap::Heatmap function
+#' @return (Invisibly) returns a data frame with the proteins and the normalized abundances
+#' @export
 prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
                                contrast = NULL, # Analyze only significant proteins contained in the specified contrast(s)
                                show_all = TRUE, # Show protein abundances of all conditions or only of those in the specified constrast(s)
@@ -1034,10 +1237,10 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
       } else {
         pal <- c(
           "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-          "green1", "yellow4", "yellow3", "darkorange4", "brown"
+                       "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                       "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                       "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                       "green1", "yellow4", "yellow3", "darkorange4", "brown"
         )
         cols <-pal[1:length(var)]
       }
@@ -1270,24 +1473,50 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
   }
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-  } else {
-    colnames(df) <- gsub(" ", "_", colnames(df))
-    suppressWarnings(
-      df <- df[, unlist(ComplexHeatmap::column_order(ht1))]
-    )
-    if (kmeans) {
-      suppressWarnings(
-        df <- cbind(df, k = df_kmeans$cluster)
-      )
-    }
-    try(suppressWarnings(
-      return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]), silent = T)
-    try(data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number()), silent = T)
   }
+
+  colnames(df) <- gsub(" ", "_", colnames(df))
+  suppressWarnings(
+    df <- df[, unlist(ComplexHeatmap::column_order(ht1))]
+  )
+  if (kmeans) {
+    suppressWarnings(
+      df <- cbind(df, k = df_kmeans$cluster)
+    )
+  }
+  try(suppressWarnings(
+    return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]), silent = T)
+  try(df <- data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number()), silent = T)
+
+  invisible(df)
+
 }
 
-####____prot.plot_heatmap_all____####
-# Modified plot_heatmap function with adjusted aesthetics and legend breaks
+
+
+
+#' Plots a heatmap of all protein abundances
+#'
+#' @param se A SummarizedExperiment object
+#' @param show_all Logical. Show protein abundances of all conditions or only of those in the specified constrast(s). Default is TRUE
+#' @param pal Character. Color palette to use. Default is "RdBu"
+#' @param kmeans Logical. Perform kmeans clustering on protein abundances. Default is FALSE
+#' @param k Numeric. Number of clusters to use in kmeans clustering. Default is 6
+#' @param col_limit Numeric. Maximum intensity for the heatmap. Default is NA
+#' @param indicate Character. Column name of the annotation to indicate in the heatmap. Default is "condition"
+#' @param clustering_distance Character. Distance metric to use for clustering. Default is "euclidean"
+#' @param show_row_names Logical. Show protein names on the left of the heatmap. Default is FALSE
+#' @param row_font_size Numeric. Font size for protein names. Default is 6
+#' @param col_font_size Numeric. Font size for condition names. Default is 10
+#' @param plot Logical. Plot the heatmap or not. Default is TRUE
+#' @param export Logical. Export the heatmap to a pdf and png file. Default is TRUE
+#' @param scale Logical. Scale the data before plotting. Default is TRUE
+#' @param show_row_dend Logical. Show row dendrogram. Default is FALSE
+#' @param ... Other parameters to pass to ComplexHeatmap::Heatmap
+#'
+#' @return A data frame with protein abundances
+#'
+#' @export
 prot.plot_heatmap_all <- function (se,
                                    show_all = TRUE, # Show protein abundances of all conditions or only of those in the specified constrast(s)
                                    pal = "RdBu",
@@ -1442,7 +1671,7 @@ prot.plot_heatmap_all <- function (se,
   }
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
-  } else {
+  }
     colnames(df) <- gsub(" ", "_", colnames(df))
     suppressWarnings(
       df <- df[, unlist(ComplexHeatmap::column_order(ht1))]
@@ -1454,8 +1683,8 @@ prot.plot_heatmap_all <- function (se,
     }
     try(suppressWarnings(
       return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]))
-    data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number())
-  }
+    df <- data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number())
+    invisible(df)
 }
 
 
