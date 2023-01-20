@@ -2,7 +2,7 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{pathway_enrich}
 \alias{pathway_enrich}
-\title{Title}
+\title{Pathway Enrichment Analysis}
 \usage{
 pathway_enrich(
   gene,
@@ -20,8 +20,33 @@ pathway_enrich(
 )
 }
 \arguments{
-\item{custom_pathways}{}
+\item{gene}{A numeric vector or a character vector of gene symbols that were found enriched in a differential expression analysis.}
+
+\item{organism}{A character string. The organism to use. Default is "ppu" for Pseudomonas putida KT2440.}
+
+\item{keyType}{A character string. The type of gene ID. Default is "kegg".}
+
+\item{pvalueCutoff}{A numeric value. The cutoff of p-value. Default is 0.05.}
+
+\item{pAdjustMethod}{A character string. The method of p-value adjustment. Default is "BH".}
+
+\item{universe}{A numeric vector or a character vector of gene symbols.}
+
+\item{minGSSize}{A numeric value. The minimum gene set size. Default is 10.}
+
+\item{maxGSSize}{A numeric value. The maximum gene set size. Default is 500.}
+
+\item{qvalueCutoff}{A numeric value. The cutoff of q-value. Default is 0.2.}
+
+\item{use_internal_kegg}{A logical value. Whether to use internal KEGG database. Default is FALSE.}
+
+\item{custom_gene_sets}{A logical value. Whether to use custom gene sets. Default is FALSE.}
+
+\item{custom_pathways}{A data frame. The custom pathways to use. Needs to have column "Pathway" and corresponding "Accession" column with comma-separated entries of gene/protein identifiers for that pathway.}
+}
+\value{
+A data frame containing the results of the pathway enrichment analysis.
 }
 \description{
-Title
+This function performs pathway enrichment analysis. Uses the DOSE package with the internal function \code{enricher_internal}.
 }

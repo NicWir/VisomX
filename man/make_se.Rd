@@ -2,13 +2,20 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{make_se}
 \alias{make_se}
-\title{Title}
+\title{Create a SummarizedExperiment object from a data frame}
 \usage{
 make_se(proteins_unique, columns, expdesign)
 }
 \arguments{
-\item{expdesign}{}
+\item{proteins_unique}{A data frame containing the protein expression data}
+
+\item{columns}{A vector of column numbers containing the numeric expression data}
+
+\item{expdesign}{A data frame containing the experimental design}
+}
+\value{
+A SummarizedExperiment object
 }
 \description{
-Title
+This function creates a SummarizedExperiment object from a data frame containing protein expression data.
 }

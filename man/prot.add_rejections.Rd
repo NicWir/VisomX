@@ -2,13 +2,20 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.add_rejections}
 \alias{prot.add_rejections}
-\title{Title}
+\title{Add rejections to a SummarizedExperiment}
 \usage{
 prot.add_rejections(diff, alpha = 0.05, lfc = 1)
 }
 \arguments{
-\item{lfc}{}
+\item{diff}{A SummarizedExperiment object.}
+
+\item{alpha}{A numeric value for the alpha level (adj. p value) threshold.}
+
+\item{lfc}{A numeric value for the log2 fold change threshold.}
+}
+\value{
+A SummarizedExperiment object. The results of this function can be accessed with \code{ SummarizedExperiment::rowData(se)}
 }
 \description{
-Title
+This function adds a logical vector of rejections (TRUE/FALSE) to a SummarizedExperiment object.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.test_diff}
 \alias{prot.test_diff}
-\title{Title}
+\title{Test Differential Expression}
 \usage{
 prot.test_diff(
   se,
@@ -13,8 +13,19 @@ prot.test_diff(
 )
 }
 \arguments{
-\item{design_formula}{}
+\item{se}{A SummarizedExperiment object}
+
+\item{type}{Character vector indicating which type of contrast to use. Options are: "control", "all" or "manual".}
+
+\item{control}{Character vector indicating the control condition. Required when type is "control".}
+
+\item{test}{Character vector indicating the contrasts to be tested. Required when type is "manual". Needs to be in the form "Subject_vs_Control".}
+
+\item{design_formula}{Formula object indicating the design of the experiment.}
+}
+\value{
+A SummarizedExperiment object with the results of the differential expression test that can be accessed with \code{ SummarizedExperiment::rowData(se)}
 }
 \description{
-Title
+This function tests for differential expression between conditions
 }

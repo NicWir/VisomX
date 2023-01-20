@@ -9,6 +9,7 @@ prot.read_data(
   expdesign = NULL,
   csvsep = ";",
   dec = ".",
+  na.strings = "",
   sheet = 1,
   filter = c("Reverse", "Potential contaminant"),
   rsd_thresh = NULL,
@@ -34,6 +35,8 @@ The table must contain:
 \item{csvsep}{(Character string) separator used in CSV files (ignored for other file types). Default: \code{";"}}
 
 \item{dec}{(Character string) decimal separator used in CSV, TSV or TXT files (ignored for other file types). Default: \code{"."}}
+
+\item{na.strings}{A character vector of strings which are to be interpreted as NA values.}
 
 \item{sheet}{(Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (\emph{optional}).}
 

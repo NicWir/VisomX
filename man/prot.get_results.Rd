@@ -2,13 +2,16 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.get_results}
 \alias{prot.get_results}
-\title{Title}
+\title{Get Results}
 \usage{
 prot.get_results(dep)
 }
 \arguments{
-\item{dep}{}
+\item{dep}{A SummarizedExperiment object}
+}
+\value{
+A data frame containing the results
 }
 \description{
-Title
+Function to generate a table with results of a differential expression analysis
 }

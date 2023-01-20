@@ -2,13 +2,20 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{delete_prefix}
 \alias{delete_prefix}
-\title{Title}
+\title{Delete Prefix}
 \usage{
 delete_prefix(words)
 }
 \arguments{
-\item{words}{}
+\item{words}{A character vector of words}
+}
+\value{
+A character vector of words with a common prefix
 }
 \description{
-Title
+Delete Prefix
+}
+\examples{
+delete_prefix(c("unhappy", "unfair"))
+
 }

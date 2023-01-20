@@ -2,13 +2,18 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.report}
 \alias{prot.report}
-\title{Title}
+\title{Report Proteomics Data}
 \usage{
 prot.report(results, report.dir = NULL, ...)
 }
 \arguments{
-\item{...}{}
+\item{results}{A list containing the results of a differential protein expression analysis, generated with \code{prot.workflow}.}
+
+\item{report.dir}{A character string specifying the directory where the report will be saved}
+
+\item{...}{Additional parameters to be passed to markdown to generate the report.
+currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k}
 }
 \description{
-Title
+Generates a report with proteomics data in PDF and HTML format
 }

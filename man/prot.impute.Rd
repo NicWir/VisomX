@@ -2,7 +2,7 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.impute}
 \alias{prot.impute}
-\title{Title}
+\title{Impute missing values in a SummarizedExperiment object}
 \usage{
 prot.impute(
   se,
@@ -12,8 +12,31 @@ prot.impute(
 )
 }
 \arguments{
-\item{...}{}
+\item{se}{A SummarizedExperiment object}
+
+\item{fun}{A character string specifying the imputation method to use.
+The available methods are "bpca", "knn", "QRILC", "MLE", "MinDet",
+"MinProb", "man", "min", "zero", "mixed", "nbavg", and "SampMin".}
+
+\item{...}{Additional arguments passed to the imputation function.}
+}
+\value{
+A SummarizedExperiment object with imputed values
 }
 \description{
-Title
+Imputes missing values in a SummarizedExperiment object.
 }
+\details{
+"SampMin" replaces missing values with the minimum value found in each sample. For information about the remaining imputation methods, see \code{help("imputeMethods", "MsCoreUtils")}
+}
+\examples{
+data(mset)
+se <- make_se(mset)
+se <- prot.impute(se, fun = "knn")
+
+}
+\seealso{
+\code{\link{prot.make_unique}}, \code{\link{prot.make_se}}
+}
+\keyword{SummarizedExperiment}
+\keyword{imputation,}

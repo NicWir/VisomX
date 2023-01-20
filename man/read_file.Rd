@@ -4,7 +4,7 @@
 \alias{read_file}
 \title{Call the appropriate function required to read a table file and return the table as a dataframe object.}
 \usage{
-read_file(filename, csvsep = ";", dec = ".", sheet = 1)
+read_file(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1)
 }
 \arguments{
 \item{filename}{(Character) Name or path of the table file to read. Can be of type CSV, XLS, XLSX, TSV, or TXT.}

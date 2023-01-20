@@ -2,13 +2,21 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{filter_missval}
 \alias{filter_missval}
-\title{Title}
+\title{Filter SummarizedExperiment object based on missing values}
 \usage{
 filter_missval(se, thr = 0)
 }
 \arguments{
-\item{thr}{}
+\item{se}{A SummarizedExperiment object}
+
+\item{thr}{A numeric value representing the missing value threshold}
+}
+\value{
+A filtered SummarizedExperiment object
 }
 \description{
-Title
+Will keep proteins that have a maximum of \code{thr} missing values in at least one condition.
+}
+\details{
+Used with option \code{type = 'condition'} in \code{\link{prot.filter_missing()}}.
 }

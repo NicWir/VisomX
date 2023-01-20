@@ -652,7 +652,6 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
   return(se)
 }
 
-####____prot.normalize_vsn____####
 #' Normalize the data via variance stabilization normalization
 #'
 #' @param se A SummarizedExperiment object
@@ -669,7 +668,8 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
 #' @importFrom stats meanSdPlot
 #' @importFrom base message
 #'
-prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
+prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE)
+  {
   # Normalize the data (including log2 transformation)
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
   se_vsn <- se
@@ -706,38 +706,50 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
 
   return(se_vsn)
 }
-####____prot.pca____####
 
-#' Title
+#' Constructor for ExactParam objects
 #'
-#' @param deferred
-#' @param fold
-#'
-#' @return
+#' @param deferred Logical indicating whether to use deferred evaluations
+#' @param fold Numeric indicating the fold value
+#' @return An ExactParam object
 #' @export
 #'
-#' @examples
+#' @importFrom utils head
+#'
+#' @noRd
+#'
+#' @keywords internal
 ExactParam <- function (deferred = FALSE, fold = Inf)
 {
   new("ExactParam", deferred = as.logical(deferred),
       fold = as.numeric(fold))
 }
 
-#' Title
+#' @title PCA Analysis
 #'
-#' @param mat
-#' @param metadata
-#' @param center
-#' @param scale
-#' @param rank
-#' @param removeVar
-#' @param transposed
-#' @param BSPARAM
+#' @description
+#' This function performs principal component analysis (PCA) on a given matrix.
 #'
-#' @return
+#' @param mat A numeric matrix.
+#' @param metadata An optional data frame with rownames matching 'colnames(mat)'.
+#' @param center A logical indicating whether to center the data before PCA.
+#' @param scale A logical indicating whether to scale the data before PCA.
+#' @param rank An integer indicating the number of principal components to calculate.
+#' @param removeVar A numeric value between 0 and 1 indicating the fraction of variables to remove based on variance.
+#' @param transposed A logical indicating whether the matrix is transposed.
+#' @param BSPARAM An object of class \code{ExactParam} or \code{ApproxParam}.
+#'
+#' @return A list with components \code{rotated}, \code{loadings}, \code{variance}, \code{sdev}, \code{metadata}, \code{xvars}, \code{yvars}, and \code{components}.
+#'
 #' @export
 #'
 #' @examples
+#' mat <- matrix(rnorm(1000), nrow = 100, ncol = 10)
+#' prot.pca(mat)
+#'
+#' @references
+#' BiocSingular (https://bioconductor.org/packages/release/bioc/html/BiocSingular.html)
+#'
 prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
                       rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam())
 {
@@ -790,19 +802,31 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
   class(pcaobj) <- "pca"
   return(pcaobj)
 }
-####____prot.test_diff____####
-#' Title
+
+
+#' Test Differential Expression
 #'
-#' @param se
-#' @param type
-#' @param control
-#' @param test
-#' @param design_formula
+#' This function tests for differential expression between conditions
 #'
-#' @return
+#' @param se A SummarizedExperiment object
+#' @param type Character vector indicating which type of contrast to use. Options are: "control", "all" or "manual".
+#' @param control Character vector indicating the control condition. Required when type is "control".
+#' @param test Character vector indicating the contrasts to be tested. Required when type is "manual". Needs to be in the form "Subject_vs_Control".
+#' @param design_formula Formula object indicating the design of the experiment.
+#' @return A SummarizedExperiment object with the results of the differential expression test that can be accessed with \code{ SummarizedExperiment::rowData(se)}
 #' @export
 #'
-#' @examples
+#' @importFrom assertthat is.character
+#' @importFrom stats terms.formula
+#' @importFrom limma lmFit makeContrasts contrasts.fit eBayes topTable
+#' @importFrom fdrtool fdrtool
+#' @importFrom purrr map_df
+#' @importFrom tidyr spread
+#' @importFrom dplyr mutate select
+#' @importFrom tibble rownames_to_column
+#' @importFrom utils combn
+#'
+#' @importFrom SummarizedExperiment assay
 prot.test_diff <- function (se, type = c("control", "all", "manual"),
                             control = NULL, test = NULL, design_formula = stats::formula(~0 +
                                                                                     condition))
@@ -927,17 +951,25 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
                        sort = FALSE)
   return(se)
 }
-####____prot.add_rejections____####
-#' Title
+
+
+
+#' Add rejections to a SummarizedExperiment
 #'
-#' @param diff
-#' @param alpha
-#' @param lfc
+#' This function adds a logical vector of rejections (TRUE/FALSE) to a SummarizedExperiment object.
 #'
-#' @return
+#' @param diff A SummarizedExperiment object.
+#' @param alpha A numeric value for the alpha level (adj. p value) threshold.
+#' @param lfc A numeric value for the log2 fold change threshold.
+#'
+#' @return A SummarizedExperiment object. The results of this function can be accessed with \code{ SummarizedExperiment::rowData(se)}
 #' @export
 #'
-#' @examples
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom SummarizedExperiment colData
+#'
 prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
 {
   if (is.integer(alpha))
@@ -986,15 +1018,22 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
   diff@metadata["lfc"] <- as.numeric(lfc)
   return(diff)
 }
-####____prot.get_results____####
-#' Title
+
+
+
+
+#' @title Get Results
+#' @description Function to generate a table with results of a differential expression analysis
+#' @param dep A SummarizedExperiment object
+#' @return A data frame containing the results
 #'
-#' @param dep
-#'
-#' @return
 #' @export
 #'
-#' @examples
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment rowData assay colData
+#' @importFrom dplyr group_by summarize mutate
+#' @importFrom tidyr spread
+#' @importFrom tibble column_to_rownames rownames_to_column
 prot.get_results <- function (dep)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"))
@@ -1037,15 +1076,17 @@ prot.get_results <- function (dep)
     arrange(desc(significant))
   return(table)
 }
-####____get_annotation____####
-#' Title
+
+
+
+
+#' Constructor Method for HeatmapAnnotation class using ComplexHeatmap::HeatmapAnnotation
 #'
-#' @param dep
-#' @param indicate
-#'
-#' @return
-#'
-#' @examples
+#' @param dep SummarizedExperiment object
+#' @param indicate Character vector indicating the column names of the annotation
+#' @return HeatmapAnnotation object
+#' @keywords internal
+#' @noRd
 get_annotation <- function (dep, indicate)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
@@ -1092,17 +1133,17 @@ get_annotation <- function (dep, indicate)
   }
   ComplexHeatmap::HeatmapAnnotation(df = anno, col = anno_col, show_annotation_name = TRUE)
 }
-####____prot.report_____####
-#' Title
-#'
-#' @param results
-#' @param report.dir
-#' @param ...
-#'
-#' @return
+
+
+
+
+#' @title Report Proteomics Data
+#' @description Generates a report with proteomics data in PDF and HTML format
+#' @param results A list containing the results of a differential protein expression analysis, generated with \code{prot.workflow}.
+#' @param report.dir A character string specifying the directory where the report will be saved
+#' @param ... Additional parameters to be passed to markdown to generate the report.
+#' currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k
 #' @export
-#'
-#' @examples
 prot.report <- function(results, report.dir = NULL, ...){
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se", "norm",
@@ -1158,26 +1199,34 @@ prot.report <- function(results, report.dir = NULL, ...){
 
 
 
-####____pathway_enrich____####
-#' Title
+
+
+#' @title Pathway Enrichment Analysis
 #'
-#' @param gene
-#' @param organism
-#' @param keyType
-#' @param pvalueCutoff
-#' @param pAdjustMethod
-#' @param universe
-#' @param minGSSize
-#' @param maxGSSize
-#' @param qvalueCutoff
-#' @param use_internal_kegg
-#' @param custom_gene_sets
-#' @param custom_pathways
+#' @description
+#' This function performs pathway enrichment analysis. Uses the DOSE package with the internal function \code{enricher_internal}.
 #'
-#' @return
+#' @param gene A numeric vector or a character vector of gene symbols that were found enriched in a differential expression analysis.
+#' @param organism A character string. The organism to use. Default is "ppu" for Pseudomonas putida KT2440.
+#' @param keyType A character string. The type of gene ID. Default is "kegg".
+#' @param pvalueCutoff A numeric value. The cutoff of p-value. Default is 0.05.
+#' @param pAdjustMethod A character string. The method of p-value adjustment. Default is "BH".
+#' @param universe A numeric vector or a character vector of gene symbols.
+#' @param minGSSize A numeric value. The minimum gene set size. Default is 10.
+#' @param maxGSSize A numeric value. The maximum gene set size. Default is 500.
+#' @param qvalueCutoff A numeric value. The cutoff of q-value. Default is 0.2.
+#' @param use_internal_kegg A logical value. Whether to use internal KEGG database. Default is FALSE.
+#' @param custom_gene_sets A logical value. Whether to use custom gene sets. Default is FALSE.
+#' @param custom_pathways A data frame. The custom pathways to use. Needs to have column "Pathway" and corresponding "Accession" column with comma-separated entries of gene/protein identifiers for that pathway.
+#'
+#' @return A data frame containing the results of the pathway enrichment analysis.
+#'
 #' @export
 #'
-#' @examples
+#' @importFrom clusterProfiler organismMapper
+#' @importFrom clusterProfiler prepare_KEGG
+#' @importFrom Biobase reverseSplit
+#' @importFrom DOSE enricher_internal
 pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                                  pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                                  minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
@@ -1194,7 +1243,7 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
     DATA$NAME2EXTID  <- NAME2EXTID
     DATA$EXTID2NAME  <- EXTID2NAME
     DATA$PATHID2EXTID <- NAME2EXTID
-    res <- prot.enricher_custom(gene, pvalueCutoff = pvalueCutoff,
+    res <- enricher_custom(gene, pvalueCutoff = pvalueCutoff,
                                 pAdjustMethod = pAdjustMethod, universe = universe, minGSSize = minGSSize,
                                 maxGSSize = maxGSSize, qvalueCutoff = qvalueCutoff, USER_DATA = DATA)
     if (is.null(res))
@@ -1220,22 +1269,27 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
 }
 
 
-####____prot.enricher_custom____(internal) ####
-#' Title
+
+
+
+#' Enricher Custom
 #'
-#' @param gene
-#' @param pvalueCutoff
-#' @param pAdjustMethod
-#' @param universe
-#' @param minGSSize
-#' @param maxGSSize
-#' @param qvalueCutoff
-#' @param USER_DATA
+#' This internal function performs pathway enrichment analysis using a custom set of pathways and genes/proteins.
 #'
-#' @return
+#' @param gene A character vector of gene or protein IDs found to be enriched.
+#' @param pvalueCutoff The cutoff p-value for enrichment.
+#' @param pAdjustMethod One of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
+#' @param universe background genes/proteins
+#' @param minGSSize minimal size of genes annotated by Ontology term for testing.
+#' @param maxGSSize maximal size of each geneSet for analyzing.
+#' @param qvalueCutoff The cutoff q-value (adjusted p value) for enrichment.
+#' @param USER_DATA ontology information.
 #'
-#' @examples
-prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
+#' @return An enriched results objects of class \code{enrichResult}
+#'
+#' @noRd
+#' @keywords internal
+enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
                                   minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, USER_DATA)
 {
   gene <- as.character(unique(gene))
@@ -1348,15 +1402,21 @@ prot.enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", univ
 }
 
 
-#' Title
+
+
+
+#' Create a SummarizedExperiment object from a data frame
 #'
-#' @param proteins_unique
-#' @param columns
-#' @param expdesign
+#' This function creates a SummarizedExperiment object from a data frame containing protein expression data.
 #'
-#' @return
+#' @param proteins_unique A data frame containing the protein expression data
+#' @param columns A vector of column numbers containing the numeric expression data
+#' @param expdesign A data frame containing the experimental design
 #'
-#' @examples
+#' @return A SummarizedExperiment object
+#'
+#' @export
+#'
 make_se <- function (proteins_unique, columns, expdesign)
 {
   assertthat::assert_that(is.data.frame(proteins_unique), is.integer(columns),
@@ -1401,26 +1461,36 @@ make_se <- function (proteins_unique, columns, expdesign)
   return(se)
 }
 
-#' Title
+#' Delete Prefix
 #'
-#' @param words
+#' @param words A character vector of words
 #'
-#' @return
+#' @return A character vector of words with a common prefix
 #'
 #' @examples
+#' delete_prefix(c("unhappy", "unfair"))
+#'
+#' @export
+#'
 delete_prefix <- function (words)
 {
   prefix <- get_prefix(words)
   gsub(paste0("^", prefix), "", words)
 }
 
-#' Title
+
+
+#' Get the common prefix of words
 #'
-#' @param words
+#' @param words A character vector of words
 #'
-#' @return
+#' @return A character string that is the common prefix of all words
+#'
+#' @export
 #'
 #' @examples
+#' get_prefix(c("animal", "antelope", "anteater"))
+#'
 get_prefix <- function (words)
 {
   assertthat::assert_that(is.character(words))
@@ -1442,14 +1512,28 @@ get_prefix <- function (words)
   paste(mat[prefix, 1], collapse = "")
 }
 
-#' Title
+
+
+
+#' Filter SummarizedExperiment object based on missing values
 #'
-#' @param se
-#' @param thr
+#' Will keep proteins that have a maximum of \code{thr} missing values in at least one condition.
 #'
-#' @return
+#' @param se A SummarizedExperiment object
+#' @param thr A numeric value representing the missing value threshold
 #'
-#' @examples
+#' @return A filtered SummarizedExperiment object
+#'
+#' @export
+#'
+#' @details Used with option \code{type = 'condition'} in \code{\link{prot.filter_missing()}}.
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment rowData colData assay
+#' @importFrom dplyr summarize
+#' @importFrom tidyr spread
+#'
+#' @export filter_missval
 filter_missval <- function (se, thr = 0)
 {
   if (is.integer(thr))
@@ -1484,18 +1568,28 @@ filter_missval <- function (se, thr = 0)
   return(se_fltrd)
 }
 
-####____prot.make_unique(fromDEP)____####
-#' Title
+
+
+
+#' Make Unique Proteins
 #'
-#' @param proteins
-#' @param names
-#' @param ids
-#' @param delim
+#' This function takes a data frame of proteins, a column name for names, a column name for IDs, and a delimiter and returns a data frame with unique proteins.
 #'
-#' @return
-#' @export
+#' @param proteins A data frame of protein abundances.
+#' @param names A character string for the name of the column with protein names.
+#' @param ids A character string for the name of the column with protein IDs (e.g., Accession numbers).
+#' @param delim A character string for the delimiter.
+#'
+#' @return A data frame with unique proteins.
 #'
 #' @examples
+#' prot.make_unique(proteins, names, ids, delim = ";")
+#'
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom tibble is_tibble
+#' @importFrom dplyr mutate
 prot.make_unique <- function (proteins, names, ids, delim = ";")
 {
   assertthat::assert_that(is.data.frame(proteins), is.character(names),
@@ -1534,18 +1628,21 @@ prot.make_unique <- function (proteins, names, ids, delim = ";")
   return(proteins_unique)
 }
 
-####____make_se_parse____(fromDEP)####
-#' Title
+
+#' Parse a data frame into a SummarizedExperiment object
 #'
-#' @param proteins_unique
-#' @param columns
-#' @param mode
-#' @param chars
-#' @param sep
+#' This function takes a data frame containing proteins unique to each sample and the corresponding expression values, and parses it into a SummarizedExperiment object.
 #'
-#' @return
+#' @param proteins_unique A data frame containing proteins unique to each sample. Must contain 'name' and 'ID' columns.
+#' @param columns The columns containing the expression values. Must be numeric.
+#' @param mode A character string specifying the format of the sample labels in the columns (default is "char").
+#' @param chars The number of characters to consider when parsing the sample labels (default is 1).
+#' @param sep The delimiter used to separate the sample labels (default is "_").
 #'
-#' @examples
+#' @return A SummarizedExperiment object.
+#' @noRd
+#' @keywords internal
+#' @importFrom SummarizedExperiment SummarizedExperiment
 make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
           chars = 1, sep = "_")
 {
@@ -1587,21 +1684,38 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
   rownames(col_data) <- col_data$ID
   colnames(raw)[match(col_data$label, colnames(raw))] <- col_data$ID
   raw <- raw[, !is.na(colnames(raw))]
-  se <- SummarizedExperiment(assays = as.matrix(raw), colData = col_data,
+  se <- SummarizedExperiment:SummarizedExperiment(assays = as.matrix(raw), colData = col_data,
                              rowData = row_data)
   return(se)
 }
 
 ####____manual_impute____(fromDEP) ####
-#' Title
+
+
+
+#' Imputation by random draws from a manually defined distribution
 #'
-#' @param se
-#' @param scale
-#' @param shift
+#' This function imputes missing values in a proteomics dataset by random draws from a manually defined distribution.
 #'
-#' @return
+#' @param se SummarizedExperiment, Proteomics data (output from make_se() or make_se_parse()). It is adviced to first remove proteins with too many missing values using filter_missval() and normalize the data using normalize_vsn().
+#' @param scale Numeric(1), Sets the width of the distribution relative to the standard deviation of the original distribution.
+#' @param shift Numeric(1), Sets the left-shift of the distribution (in standard deviations) from the median of the original distribution.
 #'
-#' @examples
+#' @return A SummarizedExperiment object with imputed values
+#'
+#' @export
+#'
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom dplyr filter group_by summarise
+#' @importFrom tidyr gather rownames_to_column
+#' @importFrom stats rnorm
+#'
+#' @useDynLib SummarizedExperiment
+#'
+#' @importFrom SummarizedExperiment assay
+#'
+#' @export manual_impute
 manual_impute <- function (se, scale = 0.3, shift = 1.8)
 {
   if (is.integer(scale))

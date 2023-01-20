@@ -2,13 +2,20 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{get_prefix}
 \alias{get_prefix}
-\title{Title}
+\title{Get the common prefix of words}
 \usage{
 get_prefix(words)
 }
 \arguments{
-\item{words}{}
+\item{words}{A character vector of words}
+}
+\value{
+A character string that is the common prefix of all words
 }
 \description{
-Title
+Get the common prefix of words
+}
+\examples{
+get_prefix(c("animal", "antelope", "anteater"))
+
 }

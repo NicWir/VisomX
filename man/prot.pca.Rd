@@ -2,7 +2,7 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.pca}
 \alias{prot.pca}
-\title{Title}
+\title{PCA Analysis}
 \usage{
 prot.pca(
   mat,
@@ -16,8 +16,33 @@ prot.pca(
 )
 }
 \arguments{
-\item{BSPARAM}{}
+\item{mat}{A numeric matrix.}
+
+\item{metadata}{An optional data frame with rownames matching 'colnames(mat)'.}
+
+\item{center}{A logical indicating whether to center the data before PCA.}
+
+\item{scale}{A logical indicating whether to scale the data before PCA.}
+
+\item{rank}{An integer indicating the number of principal components to calculate.}
+
+\item{removeVar}{A numeric value between 0 and 1 indicating the fraction of variables to remove based on variance.}
+
+\item{transposed}{A logical indicating whether the matrix is transposed.}
+
+\item{BSPARAM}{An object of class \code{ExactParam} or \code{ApproxParam}.}
+}
+\value{
+A list with components \code{rotated}, \code{loadings}, \code{variance}, \code{sdev}, \code{metadata}, \code{xvars}, \code{yvars}, and \code{components}.
 }
 \description{
-Title
+This function performs principal component analysis (PCA) on a given matrix.
+}
+\examples{
+mat <- matrix(rnorm(1000), nrow = 100, ncol = 10)
+prot.pca(mat)
+
+}
+\references{
+BiocSingular (https://bioconductor.org/packages/release/bioc/html/BiocSingular.html)
 }

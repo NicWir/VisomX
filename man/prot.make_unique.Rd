@@ -2,13 +2,26 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.make_unique}
 \alias{prot.make_unique}
-\title{Title}
+\title{Make Unique Proteins}
 \usage{
 prot.make_unique(proteins, names, ids, delim = ";")
 }
 \arguments{
-\item{delim}{}
+\item{proteins}{A data frame of protein abundances.}
+
+\item{names}{A character string for the name of the column with protein names.}
+
+\item{ids}{A character string for the name of the column with protein IDs (e.g., Accession numbers).}
+
+\item{delim}{A character string for the delimiter.}
+}
+\value{
+A data frame with unique proteins.
 }
 \description{
-Title
+This function takes a data frame of proteins, a column name for names, a column name for IDs, and a delimiter and returns a data frame with unique proteins.
+}
+\examples{
+prot.make_unique(proteins, names, ids, delim = ";")
+
 }
