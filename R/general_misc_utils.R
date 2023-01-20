@@ -1,3 +1,5 @@
+mcols <- getFromNamespace(x = "mcols", "S4Vectors")
+
 #' Run upon attaching package VisomX
 #'
 #' Changes debug option for package \code{rgl} to avoid Rstudio crashing upon attaching it and prints welcome message
@@ -267,7 +269,7 @@ move.file <- function(from, to) {
 prot.get_kegg_pathways <- function(organism){
   assertthat::assert_that(is.character(organism))
   # Get gene sets from KEGG
-  kegg <- download_KEGG(organism)
+  kegg <- clusterProfiler::download_KEGG(organism)
   # replace KEGG pathway numbers with names
   kegg$KEGGPATHID2EXTID$from <- kegg$KEGGPATHID2NAME[match(kegg$KEGGPATHID2EXTID$from,
                                                            kegg$KEGGPATHID2NAME$from), 2]
@@ -569,7 +571,7 @@ AddErrMsg <- function (msg)
 #' @return A dataframe object
 #' @export
 #'
-read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1)
+read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1)
   {
   if (file.exists(filename)) {
     if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "csv") {
@@ -581,14 +583,14 @@ read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1)
           header = T,
           stringsAsFactors = F,
           fill = T,
-          na.strings = "",
+          na.strings = na.strings,
           quote = "",
           comment.char = "",
           check.names = F
         )
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "xls" |
                stringr::str_replace(filename, ".{1,}\\.", "") == "xlsx") {
-      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = T, sheet = sheet, .name_repair = "unique")), check.names = F)
+      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = T, sheet = sheet, .name_repair = "unique", na = na.strings)), check.names = F)
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
       dat <-
         utils::read.csv(
@@ -598,7 +600,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1)
           header = T,
           stringsAsFactors = F,
           fill = T,
-          na.strings = "",
+          na.strings = na.strings,
           quote = "",
           comment.char = "",
           check.names = F
@@ -612,7 +614,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1)
           header = T,
           stringsAsFactors = F,
           fill = T,
-          na.strings = "",
+          na.strings = na.strings,
           quote = "",
           comment.char = "",
           check.names = F

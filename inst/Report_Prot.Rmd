@@ -75,12 +75,12 @@ suppress_ggrepel <- function(w) {
   }
 ```
 ```{r numbers, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = pg_width, fig.align='center'}
-prot.plot_numbers(data, plot = T, export = F)
+try(prot.plot_numbers(data, plot = T, export = F))
 ```
 
 Gene coverage in all samples:
 ```{r coverage, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = 6, fig.align='center'}
-plot_coverage(data)
+try(plot_coverage(data))
 ```
 \pagebreak
 ## Normalization
@@ -183,7 +183,7 @@ PCA loadings are the coefficients of the linear combination of the original vari
 
 ### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed proteins", "")` 
 ```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-  prot.plot_corrheatmap(dep, font_size = 12, significant = T )
+  try(prot.plot_corrheatmap(dep, font_size = 12, significant = T ))
 ```
 \pagebreak
 ### Heatmaps

@@ -610,6 +610,7 @@ rna.plot_volcano <-
             label_size = 3,
             alpha = 0.05,
             lfc = 2,
+            x.lim = NULL,
             add_names = TRUE,
             adjusted = FALSE,
             plot = TRUE,
@@ -692,14 +693,19 @@ rna.plot_volcano <-
     signif <- match(paste("significant.", contrast, sep = ""),
                     colnames(row_data))
 
+    # replace NA p values with the lowest p value
+    na.ndx <- which(is.na(row_data[, p_values]))
+    row_data[is.na(row_data[, p_values]), p_values] <- max(row_data[, p_values][!is.na(row_data[, p_values])])
+
     # replace 0 p values with the machine-specific lowest value
-    row_data[!is.na(row_data[, p_values])&row_data[, p_values]==0, p_values] <- .Machine$double.xmin
+    row_data[,signif][is.na(row_data[,signif])] <- FALSE
 
     df <- data.frame(
       x = row_data[, diff],
       y = -log10(row_data[, p_values]),
       significant = row_data[, signif],
       name = row_data$name,
+      na = seq(1:length(row_data[, signif])) %in% na.ndx,
       check.names = FALSE
     ) %>%
       filter(!is.na(significant)) %>% arrange(significant)
@@ -724,16 +730,18 @@ rna.plot_volcano <-
         df$y[df$y > 0.98 * quant99.5] <- 0.98 * quant99.5
       }
     }
-
     df_volcano <- df %>%
       # Categorize genes based on the log2(fold change) and q value thresholds
       mutate(Genes = factor(
         case_when(
           x >= lfc & significant == "TRUE" ~ "Upregulated",
           x <= -lfc & significant == "TRUE" ~ "Downregulated",
+          na == "TRUE" ~ "p-value NA",
           TRUE ~ "Not significant"
         )
       ))
+    df_volcano$Genes <-relevel(df_volcano$Genes, "Upregulated")
+    # levels(df_volcano$Genes) <- rev(levels(df_volcano$Genes))
     # Plot with points colored according to the thresholds
     plot_volcano <- df_volcano %>%
       ggplot(aes(x, y, group = name, colour = Genes)) +
@@ -748,38 +756,62 @@ rna.plot_volcano <-
         alpha = 0.5 ) +      # Add dotted lines to indicate the log2(fc) threshold, semi-transparent
       scale_colour_manual(
         # Adjust the circle colors
-        labels = c("Upregulated", "Not significant", "Downregulated"),
+        labels = c("Upregulated", "Downregulated", "Not significant", "p-value NA"),
         values = c(
           "Upregulated" = "#e31f26",
-          "Not significant" = "#525352",
-          "Downregulated" = "#387fb9")) +
+          "Not significant" = "#6f716f",
+          "Downregulated" = "#387fb9",
+          "p-value NA" = "#353535")) +
       labs(title =  str_replace(contrast, "_vs_", " vs. ")) +
       xlab(expression(log[2]("Fold change"))) + ylab(expression(-Log[10]("q-value"))) +       # Label the axes
       theme_bw(base_size = 20) + #Set the theme, define label font size
       theme(legend.position = "bottom", title = element_text(size = exp(-nchar(str_replace(contrast, "_vs_", " vs. "))/40)*28),
             axis.title = element_text(size = 22),
-            legend.title = element_text(size = 22)) +
+            legend.title = element_text(size = 18)) +
       ggh4x::force_panelsizes(rows = unit(6.5, "in"),
                               cols = unit(6.5, "in")) +
-      scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1)) + guides(color = guide_legend(reverse = TRUE))
+      guides(color = guide_legend(reverse = FALSE))
+
+    if(!is.null(x.lim))
+      plot_volcano <- plot_volcano + scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1), limits = x.lim)
+    else
+      plot_volcano <- plot_volcano + scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1))
+
 
     if (adjusted) {
-      plot_volcano <- plot_volcano + coord_cartesian(
-        xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
-                 max(abs(df$x)) + 0.3),
-        # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
-        ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
-        expand = FALSE
-      )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      if(is.null(x.lim)){
+        plot_volcano <- plot_volcano + coord_cartesian(
+          xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
+                   max(abs(df$x)) + 0.3),
+          # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
+          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
+          expand = FALSE
+        )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      } else {
+        plot_volcano <- plot_volcano + coord_cartesian(
+          # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
+          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
+          expand = FALSE
+        )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      }
+
     }
     else{
-      plot_volcano <- plot_volcano + coord_cartesian(
-        xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
-                 max(abs(df$x)) + 0.3),
-        # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
-        ylim = c((min(df$y) - 0.1), max(df$y)),
-        expand = TRUE
-      )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      if(is.null(x.lim)){
+        plot_volcano <- plot_volcano + coord_cartesian(
+          xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
+                   max(abs(df$x)) + 0.3),
+          # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
+          ylim = c((min(df$y) - 0.1), max(df$y[!is.infinite(df$y)])),
+          expand = TRUE
+        )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      } else {
+        plot_volcano <- plot_volcano + coord_cartesian(
+          ylim = c((min(df$y) - 0.1), max(df$y[!is.infinite(df$y)])),
+          expand = TRUE
+        )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
+      }
+
     }
     if (adjusted) {
       plot_volcano <- plot_volcano +
@@ -789,7 +821,7 @@ rna.plot_volcano <-
     }
     if (add_names) {
       plot_volcano <- plot_volcano + ggrepel::geom_text_repel(
-        data = filter(df_volcano, significant),
+        data = filter(df_volcano, significant|na),
         aes(label = name),
         size = label_size,
         box.padding = unit(0.25,
@@ -1036,7 +1068,7 @@ rna.plot_bar <- function (dds,
 
   for(i in 1:length(subset_list)) {
     if (type == "centered") {
-      means <- log2(rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE))
+      means <- rowMeans(log2(SummarizedExperiment::assay(subset_list[[i]])), na.rm = TRUE)
       df_reps <-
         data.frame(log2(SummarizedExperiment::assay(subset_list[[i]])) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
         gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
@@ -1251,7 +1283,7 @@ rna.plot_bar <- function (dds,
     if(length(genes)>8){
       plot = FALSE
     }
-    if (plot) {
+    if(plot){
       print(p)
     } else {
       if (type == "centered") {

@@ -51,7 +51,7 @@ read_flux <- function(file.data = dat_flux,
       }
     }
   }
-  if(is.null(rescale.reaction)) stop("Please provide the name of a reaction to normalize all fluxes (will be set as 100%).")
+  # if(is.null(rescale.reaction)) stop("Please provide the name of a reaction to normalize all fluxes (will be set as 100%).")
 
   # Read data file
   if (!is.character(file.data)) {
@@ -473,7 +473,7 @@ flux_to_map <- function (df = "dat_flux",
     svg_to_pdf(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
   }
 
-  return(df)
+  invisible(df)
 }
 #' Title
 #'
@@ -623,7 +623,8 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
                           contrast = NULL, # Tested contrast if type = "contrast" in the format "A_vs_B"
                           template = NULL,
                           RSD_thresh = 0.5,
-                          p_thresh = 0.05,
+                          p_thresh = 1,
+                          indicate_nonsig = c("gray", "dashed"),
                           result = NULL,
                           pal = "RdYlBu",
                           legend_min = NULL,
@@ -632,9 +633,11 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
                           export = TRUE,
                           export_dpi = 300,
                           export_width = 2281,
-                          export_height = 2166) {
+                          export_height = 2166)
+ {
    type <- match.arg(type)
    imp_fun <- match.arg(imp_fun)
+   indicate_nonsig <- match.arg(indicate_nonsig)
    dir.create(paste0(getwd(),"/Plots"), showWarnings = F)
    # Define palettes for protein squares and legend
    if (pal %in% rownames(RColorBrewer::brewer.pal.info)) {
@@ -684,7 +687,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
    MAP <- fluctuator::read_svg(template_svg)
 
    # Create list of proteins in the map based on matches with the defined prefix (pfx)
-   if (is.null(protein_set)){
+   if (is.null(protein_set) && !is.null(pfx)){
      assign("protein_set", stats::setNames(data.frame(MAP@summary$label[grep( paste(pfx, collapse="|"), MAP@summary$label)]), paste(select.id)))
    }
 
@@ -745,7 +748,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
      #add log2(fold change) values from prot_diff
      df$diff <- row_data[,grep("_diff", colnames(row_data))]
      #add p-values values from prot_diff
-     df$p.val <- row_data[,grep("_p.val", colnames(row_data))]
+     df$p.val <- row_data[,grep("_p.adj", colnames(row_data))]
      # Calculate the relative standard deviation for subject and reference conditions
      subject <- str_replace(contrast, "_vs.+", "")
      ref <- str_replace(contrast, ".+vs_", "")
@@ -760,21 +763,32 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
      df <- filter(df, str_detect(ID, paste(selected_ids, collapse="|")))
 
      # Filter for proteins with a relative standard deviation below "RSD_thresh = " or a p-value < 0.05
-     df_sig <- df %>% filter( (RSD_subject <= RSD_thresh & RSD_ref <= RSD_thresh) | (p.val <= p_thresh) )
-
+     if(indicate_nonsig == "gray"){
+       df_sig <- df %>% filter( (RSD_subject <= RSD_thresh & RSD_ref <= RSD_thresh) & (p.val <= p_thresh) )
+     }
+     else{
+       df_sig <- df %>% filter( (RSD_subject <= RSD_thresh & RSD_ref <= RSD_thresh) )
+       df_sig_pval <- df %>% filter( (p.val <= p_thresh) )
+       filtered_pval <- setdiff(df$ID, df_sig_pval$ID)
+       df_filtered_pval <- filter(df, str_detect(ID, paste(filtered_pval, collapse="|"))) %>% select(ID, values = diff,
+                                                                                           RSD_ref, RSD_subject, p.val)
+     }
      filtered <- setdiff(df$ID, df_sig$ID)
+
+
      if(length(filtered)>0){
-       cat(paste0("The following proteins exceeded the RSD threshold of 'RSD_thresh =",
+       cat(paste0("The following proteins exceeded the RSD threshold of 'RSD_thresh = ",
                   RSD_thresh,
                   "' and/or the p-value threshold of 'p_thresh = ",
                   p_thresh,
                   ":\n",
                   paste(filtered, collapse = ", "), "\n"))
+
+       df_filtered <- filter(df, str_detect(ID, paste(filtered, collapse="|"))) %>% select(ID, values = diff,
+                                                                                           RSD_ref, RSD_subject, p.val)
+     } else {
+       df_filtered <- data.frame()
      }
-
-     df_filtered <- filter(df, str_detect(ID, paste(filtered, collapse="|"))) %>% select(ID, values = diff,
-                                                                                         RSD_ref, RSD_subject, p.val)
-
 
      # Create data frame with protein IDs and plotted values
      df_plot <- cbind(ID = df_sig$ID, values = as.numeric(df_sig$diff), RSD_ref = as.numeric(df_sig$RSD_ref),
@@ -827,9 +841,6 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
    # remove rows for the legend to color protein boxes
    df_plot <- df_plot[-(grep("colref", df_plot$ID)),]
 
-
-
-
    if (title != ""){
    message("Changing map title...")
    MAP <- fluctuator::set_values(MAP,
@@ -843,6 +854,15 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
                           node = df_plot$ID, attr = "style",
                           pattern = "fill:#858585",
                           replacement = paste0("fill:", df_plot$fill_color_rgb))
+
+   if(indicate_nonsig == "dashed"){
+     message("Make borders of protein boxes dashed for nonsignificant changes...")
+     MAP <- fluctuator::set_attributes(MAP,
+                                       node = filtered_pval, attr = "style",
+                                       pattern = "stroke-dasharray:none",
+                                       replacement = "stroke-dasharray:0.568075,1.704225")
+   }
+
 
    message("Apply min and max values to the proteomics legend...")
    MAP <- fluctuator::set_values(MAP,
@@ -888,8 +908,10 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
      svg_to_png(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
      svg_to_pdf(svg = result_svg, width=export_width, height=export_height, dpi=export_dpi)
    }
-   df_filtered$stroke_color <- ""
-   df_filtered$fill_color_rgb <- ""
+   if(length(filtered)>0){
+     df_filtered$stroke_color <- ""
+     df_filtered$fill_color_rgb <- ""
+   }
 
    if(type == "centered"){
      df_plot <- rbind.data.frame(df_plot, df_filtered) %>% mutate(values = as.numeric(values),
@@ -901,7 +923,7 @@ inkscape = "C:/Program Files/Inkscape/bin/inkscape.exe"')
                                                                   p.val = as.numeric(p.val))
    }
    df_plot <- df_plot[(df_plot$stroke_color != ""),]
-   return(df_plot)
+   invisible(df_plot)
  }
 
 #'

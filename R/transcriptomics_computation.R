@@ -7,7 +7,7 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
                            sheet = 1,
                            name = "SymbolID", # Header of column containing primary protein IDs
                            id = 'gene_id', # Header of column containing alternative protein IDs
-                           values = "expected_count",
+                           values = "FPKM",
                            id2name.table = NULL,
                            id2name.id = NULL,
                            id2name.name = NULL,
@@ -349,8 +349,8 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           is.numeric(alpha),
                           length(alpha) == 1,
                           is.numeric(lfc),
-                          length(lfc) == 1,
-                          exists("custom_df"))
+                          length(lfc) == 1
+                          )
 
   # Show error if inputs are not valid
   if (!type %in% c("all", "control", "manual")) {
@@ -425,7 +425,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
 
   # Perform PCA Analysis
   if(!quiet) message("performing PCA analysis")
-  norm.counts <- counts(dds, normalized = TRUE)
+  norm.counts <- BiocGenerics::counts(dds, normalized = TRUE)
   rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'mean'), error = function(e) { rlog(dds, fitType = 'mean') })
   rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts))
 
@@ -785,7 +785,7 @@ rna.report <- function(results, report.dir = NULL, ...){
   dir.create(wd, showWarnings = F)
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
-  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/Reports", "/Report_RNA.Rmd",
+  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/inst", "/Report_RNA.Rmd",
                 sep = "")
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,

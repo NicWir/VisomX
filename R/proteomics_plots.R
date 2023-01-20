@@ -53,11 +53,11 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
     fig_width = ncol(se)/1.5
     message(paste0("Exporting plot with identified proteins per sample to:\n\"", getwd(), "/Plots/ProteinsIdentified.pdf\" and \".../ProteinsIdentified.png\""))
     grDevices::png("Plots/ProteinsIdentified.png",
-        width = fig_width, height = 8, units = 'in', res = 300)
+                   width = fig_width, height = 8, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
     grDevices::pdf("Plots/ProteinsIdentified.pdf",
-        width = fig_width, height = 8)
+                   width = fig_width, height = 8)
     print(p)
     grDevices::dev.off()
   }
@@ -95,7 +95,7 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
   })
   gather_join <- function(se) {
     SummarizedExperiment::assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(.,
-                                                                                    data.frame(SummarizedExperiment::colData(se)), by = "ID", check.names = FALSE)
+                                                                                                          data.frame(SummarizedExperiment::colData(se)), by = "ID", check.names = FALSE)
   }
   df <- purrr::map_df(arglist, gather_join, .id = "var") %>%
     mutate(var = factor(var, levels = names(arglist)))
@@ -124,7 +124,7 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
     message(paste0("Exporting imputation plot to:\n\"", getwd(), "/Plots/ImputationPlot.pdf\" and \".../ImputationPlot.png\""))
     grDevices::png("Plots/ImputationPlot.png",
-        width = 7, height = 8, units = 'in', res = 300)
+                   width = 7, height = 8, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
     grDevices::pdf("Plots/ImputationPlot.pdf")
@@ -143,17 +143,15 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
 prot.plot_density <- function(se1,
                               se2 = NULL,
                               se3 = NULL,
-                              title1 = deparse(substitute(se1)),
-                              title2 = deparse(substitute(se2)),
-                              title3 = deparse(substitute(se3)),
+                              title1 = "",
+                              title2 = "",
+                              title3 = "",
                               group = FALSE,
                               basesize = 15,
-                              plot = plot,
-                              export = export) {
+                              plot = TRUE,
+                              export = FALSE) {
   ls <- list()
   if (group == F) {
-
-
     # Create data frame from SummarizedExperiment with normalized data
     se.df1 <- data.frame(SummarizedExperiment::assay(se1), check.names = FALSE) %>% tibble::rownames_to_column()
     if (!is.null(se2)){
@@ -267,29 +265,29 @@ prot.plot_density <- function(se1,
       dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
       message(paste0("Exporting density plots to:\n\"", getwd(), "/Plots/DensityPlot.pdf\" and \".../DensityPlot.png\""))
       grDevices::pdf("Plots/DensityPlot.pdf", height = height, width = width)
-      suppressWarnings(print(marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
+      suppressWarnings(print(gridExtra::marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
       grDevices::dev.off()
       grDevices::png("Plots/DensityPlot.png",
-          width = width, height = height, units = 'in', res = 300)
-      suppressWarnings(print(marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
+                     width = width, height = height, units = 'in', res = 300)
+      suppressWarnings(print(gridExtra::marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
       grDevices::dev.off()
     }
 
     if (plot == TRUE){
-      suppressWarnings(print(marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
+      suppressWarnings(print(gridExtra::marrangeGrob(ls[ls.dens], layout_matrix = lay, top = NULL)))
     }
 
   } else {
     if (is.null(se2) && is.null(se3)){
-      p <- plot_imputation(se1, export = F, plot = F)
+      p <- prot.plot_imputation(se1, export = F, plot = F)
       width = 12
       height = 6
     } else if (!is.null(se2) && is.null(se3)){
-      p <- plot_imputation(se1, se2, export = F, plot = F)
+      p <- prot.plot_imputation(se1, se2, export = F, plot = F)
       width = 12
       height = 12
     } else if (!is.null(se2) && !is.null(se3)){
-      p <- plot_imputation(se1, se2, se3, export = F, plot = F)
+      p <- prot.plot_imputation(se1, se2, se3, export = F, plot = F)
       width = 12
       height = 18
     }
@@ -301,7 +299,7 @@ prot.plot_density <- function(se1,
       print(p)
       grDevices::dev.off()
       grDevices::png("Plots/DensityPlot_grp.png",
-          width=width, height=height, units = 'in', res = 300)
+                     width=width, height=height, units = 'in', res = 300)
       print(p)
       grDevices::dev.off()
     }
@@ -343,7 +341,7 @@ prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
     grDevices::dev.off()
 
     grDevices::png("Plots/MissValPlot.png",
-        width = 6, height = 6, units = 'in', res = 300)
+                   width = 6, height = 6, units = 'in', res = 300)
     ComplexHeatmap::draw(ht2, heatmap_legend_side = "top")
     grDevices::dev.off()
   }
@@ -442,7 +440,7 @@ prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
     grDevices::dev.off()
 
     grDevices::png("Plots/DensMissPlot.png",
-        width = 6, height = 6, units = 'in', res = 300)
+                   width = 6, height = 6, units = 'in', res = 300)
     gridExtra::grid.arrange(p1, p2, ncol = 1)
     grDevices::dev.off()
   }
@@ -641,7 +639,7 @@ prot.plot_pca <- function (dep,
     grDevices::dev.off()
 
     grDevices::png(paste0("Plots/PCAPlot_", "PC", x, "-PC", y, ".png"),
-        width = 8, height = 8, units = 'in', res = 300)
+                   width = 8, height = 8, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
   }
@@ -792,7 +790,7 @@ prot.plot_volcano <-
         alpha = 0.5 ) +      # Add dotted lines to indicate the log2(fc) threshold, semi-transparent
       scale_colour_manual(
         # Adjust the circle colors
-        labels = c("Upregulated", "Not significant", "Downregulated"),
+        labels = c("Downregulated", "Not significant", "Upregulated"),
         values = c(
           "Upregulated" = "#e31f26",
           "Not significant" = "#525352",
@@ -804,8 +802,9 @@ prot.plot_volcano <-
             axis.title = element_text(size = 22),
             legend.title = element_text(size = 22)) +
       ggh4x::force_panelsizes(rows = unit(6.5, "in"),
-                       cols = unit(6.5, "in")) +
-      scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1))
+                              cols = unit(6.5, "in")) +
+      scale_x_continuous(breaks = scales::pretty_breaks(n = max(abs(df$x)) + 1)) +
+      guides(color = guide_legend(reverse = F))
 
     if (adjusted) {
       plot_volcano <- plot_volcano + coord_cartesian(
@@ -864,8 +863,8 @@ prot.plot_volcano <-
       )
 
       grDevices::pdf(paste0("Plots/VolcanoPlot_", contrast, ".pdf"),
-          width = 8.1,
-          height = 8.6)
+                     width = 8.1,
+                     height = 8.6)
       print(plot_volcano)
       grDevices::dev.off()
 
@@ -1131,7 +1130,7 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
   }
   if (type == "contrast") {
     df <- SummarizedExperiment::rowData(filtered, use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
-       tibble::column_to_rownames(var = "name") %>% select(ends_with("_diff"))
+      tibble::column_to_rownames(var = "name") %>% select(ends_with("_diff"))
     if(length(grep("_diff", colnames(SummarizedExperiment::rowData(filtered)))) == 1){
       df[[1]] <- df[[1]] %>% sort()
     }
@@ -1256,16 +1255,16 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
                    ".png\""))
 
     grDevices::pdf(paste0("Plots/HeatMap_",
-               type,
-               ".pdf"),
-        width = w, height = len)
+                          type,
+                          ".pdf"),
+                   width = w, height = len)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
     grDevices::dev.off()
 
     grDevices::png(paste0("Plots/HeatMap_",
-               type,
-               ".png"),
-        width = w, height = len, units = 'in', res = 300)
+                          type,
+                          ".png"),
+                   width = w, height = len, units = 'in', res = 300)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
     grDevices::dev.off()
   }
@@ -1430,14 +1429,14 @@ prot.plot_heatmap_all <- function (se,
                    ".png\""))
 
     grDevices::pdf(paste0("Plots/HeatMap_all",
-               ".pdf"),
-        width = w, height = len)
+                          ".pdf"),
+                   width = w, height = len)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
     grDevices::dev.off()
 
     grDevices::png(paste0("Plots/HeatMap_all",
-               ".png"),
-        width = w, height = len, units = 'in', res = 300)
+                          ".png"),
+                   width = w, height = len, units = 'in', res = 300)
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
     grDevices::dev.off()
   }
@@ -1546,7 +1545,7 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
     grDevices::dev.off()
 
     grDevices::png("Plots/ScreePlot.png",
-        width = 6, height = 6, units = 'in', res = 300)
+                   width = 6, height = 6, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
   }
@@ -1658,13 +1657,13 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
   }
   if (drawConnectors == TRUE) {
     p <- p + ggrepel::geom_text_repel(data = plotobj, aes(label = as.character(var)),
-                             size = labSize, nudge_x = ifelse(positionConnectors ==
-                                                                "left", -0.75, ifelse(positionConnectors ==
-                                                                                        "right", 0.75, 0)), direction = "y",
-                             segment.color = colConnectors, segment.size = widthConnectors,
-                             arrow = arrow(length = lengthConnectors, type = typeConnectors,
-                                           ends = endsConnectors), show.legend = FALSE,
-                             hjust = labhjust, vjust = labvjust)
+                                      size = labSize, nudge_x = ifelse(positionConnectors ==
+                                                                         "left", -0.75, ifelse(positionConnectors ==
+                                                                                                 "right", 0.75, 0)), direction = "y",
+                                      segment.color = colConnectors, segment.size = widthConnectors,
+                                      arrow = arrow(length = lengthConnectors, type = typeConnectors,
+                                                    ends = endsConnectors), show.legend = FALSE,
+                                      hjust = labhjust, vjust = labvjust)
   }
   else if (drawConnectors == FALSE) {
     p <- p + geom_text(data = plotobj, aes(label = as.character(var)),
@@ -1680,7 +1679,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
     grDevices::dev.off()
 
     grDevices::png("Plots/LoadingsPlot.png",
-        width = 6, height = 6, units = 'in', res = 300)
+                   width = 6, height = 6, units = 'in', res = 300)
     print(p)
     grDevices::dev.off()
   }
@@ -1743,18 +1742,18 @@ prot.plot_enrichment <- function(enrichset,
     w <- 6+max(str_count(enrichset$Description))/6
     h <- 5+length(enrichset$Description)/6
     grDevices::pdf(paste0("Plots/EnrichmentPlot_",
-               if_else(
-                 grepl("Diff", title, ignore.case = T),
-                 "Diff_", if_else(
-                   grepl("Up", title, ignore.case = T),
-                   "Up_", if_else(
-                     grepl("Down", title, ignore.case = T),
-                     "Down_", ""))),
-               subtitle,
-               if_else(kegg==TRUE, "-KEGG", "-custom"),
-               ".pdf"),
-        width = w,
-        height = h)
+                          if_else(
+                            grepl("Diff", title, ignore.case = T),
+                            "Diff_", if_else(
+                              grepl("Up", title, ignore.case = T),
+                              "Up_", if_else(
+                                grepl("Down", title, ignore.case = T),
+                                "Down_", ""))),
+                          subtitle,
+                          if_else(kegg==TRUE, "-KEGG", "-custom"),
+                          ".pdf"),
+                   width = w,
+                   height = h)
     print(p)
     grDevices::dev.off()
 
@@ -1799,18 +1798,22 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 # Plot bar plots of single proteins based on their Ensembl gene ID
 prot.plot_bar <- function (dep,
                            proteins,
+                           combine = FALSE,
                            ref.prot = NULL,
-                           type = c("contrast", "centered", "reference"),
+                           type = c("contrast", "centered", "reference", "abundance"),
                            contrast = NULL,
                            col.id = "ID",
                            match.id = "Accession",
                            match.name = "Name",
                            convert_name = FALSE,
                            shape.size = 2.5,
+                           y.lim = NULL,
                            name_table = NULL,
                            plot = TRUE,
                            export = TRUE,
-                           export.nm = NULL)
+                           export.nm = NULL,
+                           width = NULL,
+                           height = NULL)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"),
                           is.character(proteins), is.character(type), is.logical(plot),
@@ -1868,65 +1871,168 @@ prot.plot_bar <- function (dep,
     warning("Only used the following protein(s): '",
             paste0(proteins, collapse = "', '"), "'")
   }
+
   subset_list <- list()
-  if(length(proteins)<=8){
+
+  if(combine == TRUE){
     subset_list[[1]] <- dep[proteins]
-  } else if(length(proteins)<=16){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:length(proteins)]]
-  } else if(length(proteins)<=24){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:length(proteins)]]
-  }else if(length(proteins)<=32){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:24]]
-    subset_list[[4]] <- dep[proteins[25:length(proteins)]]
-  } else if(length(proteins)<=40){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:24]]
-    subset_list[[4]] <- dep[proteins[25:32]]
-    subset_list[[5]] <- dep[proteins[33:length(proteins)]]
-  } else if(length(proteins)<=48){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:24]]
-    subset_list[[4]] <- dep[proteins[25:32]]
-    subset_list[[5]] <- dep[proteins[33:40]]
-    subset_list[[6]] <- dep[proteins[41:length(proteins)]]
-  } else if(length(proteins)<=56){
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:24]]
-    subset_list[[4]] <- dep[proteins[25:32]]
-    subset_list[[5]] <- dep[proteins[33:40]]
-    subset_list[[6]] <- dep[proteins[41:48]]
-    subset_list[[7]] <- dep[proteins[49:length(proteins)]]
-  } else {
-    subset_list[[1]] <- dep[proteins[1:8]]
-    subset_list[[2]] <- dep[proteins[9:16]]
-    subset_list[[3]] <- dep[proteins[17:24]]
-    subset_list[[4]] <- dep[proteins[25:32]]
-    subset_list[[5]] <- dep[proteins[33:40]]
-    subset_list[[6]] <- dep[proteins[41:48]]
-    subset_list[[7]] <- dep[proteins[49:56]]
-    subset_list[[8]] <- dep[proteins[57:length(proteins)]]
   }
+  else {
+    if(length(proteins)<=8){
+      subset_list[[1]] <- dep[proteins]
+    } else if(length(proteins)<=16){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:length(proteins)]]
+    } else if(length(proteins)<=24){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:length(proteins)]]
+    }else if(length(proteins)<=32){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:24]]
+      subset_list[[4]] <- dep[proteins[25:length(proteins)]]
+    } else if(length(proteins)<=40){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:24]]
+      subset_list[[4]] <- dep[proteins[25:32]]
+      subset_list[[5]] <- dep[proteins[33:length(proteins)]]
+    } else if(length(proteins)<=48){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:24]]
+      subset_list[[4]] <- dep[proteins[25:32]]
+      subset_list[[5]] <- dep[proteins[33:40]]
+      subset_list[[6]] <- dep[proteins[41:length(proteins)]]
+    } else if(length(proteins)<=56){
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:24]]
+      subset_list[[4]] <- dep[proteins[25:32]]
+      subset_list[[5]] <- dep[proteins[33:40]]
+      subset_list[[6]] <- dep[proteins[41:48]]
+      subset_list[[7]] <- dep[proteins[49:length(proteins)]]
+    } else {
+      subset_list[[1]] <- dep[proteins[1:8]]
+      subset_list[[2]] <- dep[proteins[9:16]]
+      subset_list[[3]] <- dep[proteins[17:24]]
+      subset_list[[4]] <- dep[proteins[25:32]]
+      subset_list[[5]] <- dep[proteins[33:40]]
+      subset_list[[6]] <- dep[proteins[41:48]]
+      subset_list[[7]] <- dep[proteins[49:56]]
+      subset_list[[8]] <- dep[proteins[57:length(proteins)]]
+    }
+  }
+
+  if(combine == FALSE && is.null(y.lim)){
+    if (type == "reference"){
+      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'reference'.")
+      if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
+        reference <- row_data[grep(ref.prot, row_data[,"ID"]), "ID"]
+        col.ref <- "ID"
+      } else{
+        reference <- row_data[grep(ref.prot, row_data[,"name"]), "name"]
+        col.ref <- "name"
+      }
+      reference.nm <-  row_data[grep(reference, row_data[,col.ref]), "name"]
+      if(length(row_data[grep(ref.prot, row_data[,col.ref]), "name"]) == 0){
+        stop(paste0("'", ref.prot, "' is not a valid protein name or ID in your dataset. Please provide an existing identifier for a reference protein for normalization when choosing type = 'reference'."))
+      }
+
+      ref.mean <- mean(SummarizedExperiment::assay(dep)[grep(reference, row_data[[col.ref]]), ], na.rm = TRUE)
+      df_reps <-
+        data.frame(SummarizedExperiment::assay(dep[proteins]) - ref.mean, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
+                                                by = "ID")
+      if (convert_name == TRUE) {
+        df_reps$rowname <- transform(df_reps,
+                                     rowname = name_table[match(paste(df_reps$rowname),
+                                                                paste(unlist(str_split(
+                                                                  Reduce(c, name_table[match.id]), ", "
+                                                                )))),
+                                                          match.name]) %>%
+          select(rowname) %>% unlist(., use.names = F)
+      }
+      df_reps$replicate <- as.factor(df_reps$replicate)
+
+      df <-
+        df_reps %>% group_by(condition, rowname) %>% summarize(
+          mean = mean(val,
+                      na.rm = TRUE),
+          sd = sd(val, na.rm = TRUE),
+          n = n()
+        ) %>%
+        mutate(
+          error = stats::qnorm(0.975) * sd / sqrt(n),
+          CI.L = mean -
+            error,
+          CI.R = mean + error
+        ) %>% data.frame(check.names = FALSE)
+      y.lim <- c(min(c(df$CI.L, df_reps$val)), max(c(df$CI.R, df_reps$val)))
+    }
+    if (type == "centered"){
+      means <- rowMeans(SummarizedExperiment::assay(dep[proteins]), na.rm = TRUE)
+      df_reps <-
+        data.frame(SummarizedExperiment::assay(dep[proteins]) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
+                                                by = "ID")
+      y.lim <- c(min(df_reps$val), max(df_reps$val))
+    }
+    if(type == "abundance"){
+      df_reps <-
+        data.frame(SummarizedExperiment::assay(dep[proteins]), check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
+                                                by = "ID")
+      y.lim <- c(min(df_reps$val), max(df_reps$val))
+
+    }
+    if (type == "contrast") {
+      if (!is.null(contrast)) {
+        df <-
+          SummarizedExperiment::rowData(dep[proteins], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+          select(
+            name,
+            paste0(contrast, "_diff"),
+            paste0(contrast, "_CI.L"),
+            paste0(contrast, "_CI.R")
+          ) %>% gather(var, val, -name) %>%
+          mutate(
+            contrast = gsub("_diff|_CI.L|_CI.R", "", var),
+            var = gsub(".*_", "", var)
+          ) %>%
+          spread(var, val)
+      } else {
+        df <-
+          SummarizedExperiment::rowData(dep[proteins], use.names = FALSE) %>% data.frame(check.names = FALSE) %>%
+          select(name,
+                 ends_with("_diff"),
+                 ends_with("_CI.L"),
+                 ends_with("_CI.R")) %>% gather(var, val, -name) %>%
+          mutate(
+            contrast = gsub("_diff|_CI.L|_CI.R", "", var),
+            var = gsub(".*_", "", var)
+          ) %>%
+          spread(var, val)
+      }
+      y.lim <- c(min(df$CI.L), max(df$CI.R))
+    }
+  }
+
+  # find maximum and minimum y axis values
 
   for(i in 1:length(subset_list)) {
     if (type == "reference") {
       if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'reference'.")
       if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
-        reference <- row_data[grep(ref.prot, row_data[,"name"]), "ID"]
+        reference <- row_data[grep(ref.prot, row_data[,"ID"]), "ID"]
         col.ref <- "ID"
-      } else {
+      } else{
         reference <- row_data[grep(ref.prot, row_data[,"name"]), "name"]
         col.ref <- "name"
       }
       reference.nm <-  row_data[grep(reference, row_data[,col.ref]), "name"]
-      if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
+      if(length(row_data[grep(ref.prot, row_data[,col.ref]), "name"]) == 0){
         stop(paste0("'", ref.prot, "' is not a valid protein name or ID in your dataset. Please provide an existing identifier for a reference protein for normalization when choosing type = 'reference'."))
       }
 
@@ -1959,57 +2065,94 @@ prot.plot_bar <- function (dep,
             error,
           CI.R = mean + error
         ) %>% data.frame(check.names = FALSE)
-
-      p <-
-        ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
-        geom_col(aes(y = mean, fill = condition), colour = "black")
-      if (length(unique(dep$condition)) <= 8) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
-      } else if (length(unique(dep$condition)) <= 12) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+      if(!combine){
+        p <-
+          ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
+          geom_col(aes(y = mean, fill = condition), colour = "black")
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+            "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          geom_point(
+            data = df_reps,
+            aes(condition, val, fill = replicate),
+            shape = 23,
+            size = shape.size,
+            color = "black",
+            position = position_dodge(width = 0.3)
+          ) +
+          scale_fill_manual(values = case_when(
+            as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
+            as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+          ) +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+          labs(
+            x = "Baits",
+            y = expr(log[2](intensity)-log[2](intensity[!!reference.nm])  ~
+                       "(\u00B195% CI)"),
+            col = "Rep"
+          ) + facet_wrap( ~ rowname) +
+          theme(basesize = 12) + theme_DEP2()
+        w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
+        h <- 10
       } else {
-        p <- p + scale_fill_manual(values = c(
-          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-          "green1", "yellow4", "yellow3", "darkorange4", "brown"
-        ))
+        p <- ggplot(df, aes(x = rowname, mean, fill = condition)) + geom_hline(yintercept = 0) +
+          geom_col(colour = "black", position = position_dodge())
+
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+            "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(width = 0.9)) +
+          labs(
+            x = "Baits",
+            y = expr(log[2](intensity)-log[2](intensity[!!reference.nm])  ~
+                       "(\u00B195% CI)"),
+            col = "Rep"
+          ) +
+          theme(basesize = 12) + theme_DEP2()
+
       }
-      p <- p +
-        ggnewscale::new_scale_fill() +
-        geom_point(
-          data = df_reps,
-          aes(condition, val, fill = replicate),
-          shape = 23,
-          size = shape.size,
-          color = "black",
-          position = position_dodge(width = 0.3)
-        ) +
-        scale_fill_manual(values = case_when(
-          as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
-          as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
-        ) +
-        geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
-        labs(
-          x = "Baits",
-          y = expr(log[2](intensity)-log[2](intensity[!!reference.nm])  ~
-                           "(\u00B195% CI)"),
-          col = "Rep"
-        ) + facet_wrap( ~ rowname) +
-        theme(basesize = 12) + theme_DEP2()
       w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
       h <- 10
 
-
     }
-    if (type == "centered") {
-      ref.mean <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
-      means <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
-      df_reps <-
-        data.frame(SummarizedExperiment::assay(subset_list[[i]]) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
-        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
-                                                by = "ID")
+    if (type == "centered" || type == "abundance") {
+      if (type == "centered"){
+        means <- rowMeans(SummarizedExperiment::assay(subset_list[[i]]), na.rm = TRUE)
+        df_reps <-
+          data.frame(SummarizedExperiment::assay(subset_list[[i]]) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+          gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
+                                                  by = "ID")
+      }
+      else {
+        df_reps <-
+          data.frame(SummarizedExperiment::assay(subset_list[[i]]), check.names = FALSE) %>% tibble::rownames_to_column() %>%
+          gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
+                                                  by = "ID")
+      }
       if (convert_name == TRUE) {
         df_reps$rowname <- transform(df_reps,
                                      rowname = name_table[match(paste(df_reps$rowname),
@@ -2034,46 +2177,72 @@ prot.plot_bar <- function (dep,
           CI.R = mean + error
         ) %>% data.frame(check.names = FALSE)
 
-
-
-      p <-
-        ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
-        geom_col(aes(y = mean, fill = condition), colour = "black")
-      if (length(unique(dep$condition)) <= 8) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
-      } else if (length(unique(dep$condition)) <= 12) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+      if(!combine){
+        p <-
+          ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
+          geom_col(aes(y = mean, fill = condition), colour = "black")
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+            "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          geom_point(
+            data = df_reps,
+            aes(condition, val, fill = replicate),
+            shape = 23,
+            size = shape.size,
+            color = "black",
+            position = position_dodge(width = 0.3)
+          ) +
+          scale_fill_manual(values = case_when(
+            as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
+            as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+          ) +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+          labs(
+            x = "Baits",
+            y = expression(log[2] ~ "Centered intensity" ~
+                             "(\u00B195% CI)"),
+            col = "Rep"
+          ) + facet_wrap( ~ rowname) +
+          theme(basesize = 12) + theme_DEP2()
       } else {
-        p <- p + scale_fill_manual(values = c(
-          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-          "green1", "yellow4", "yellow3", "darkorange4", "brown"
-        ))
+        p <-
+          ggplot(df, aes(x = rowname, mean, fill = condition)) + geom_hline(yintercept = 0) +
+          geom_col(colour = "black", position = position_dodge())
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+            "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(width = 0.9)) +
+          labs(
+            x = "Baits",
+            y = expression(log[2] ~ "Centered intensity" ~
+                             "(\u00B195% CI)"),
+            col = "Rep"
+          ) +
+          theme(basesize = 12) + theme_DEP2()
       }
-      p <- p +
-        ggnewscale::new_scale_fill() +
-        geom_point(
-          data = df_reps,
-          aes(condition, val, fill = replicate),
-          shape = 23,
-          size = shape.size,
-          color = "black",
-          position = position_dodge(width = 0.3)
-        ) +
-        scale_fill_manual(values = case_when(
-          as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
-          as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
-        ) +
-        geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
-        labs(
-          x = "Baits",
-          y = expression(log[2] ~ "Centered intensity" ~
-                           "(\u00B195% CI)"),
-          col = "Rep"
-        ) + facet_wrap( ~ rowname) +
-        theme(basesize = 12) + theme_DEP2()
       w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
       h <- 10
     }
@@ -2106,29 +2275,56 @@ prot.plot_bar <- function (dep,
             ) %>%
             spread(var, val)
         }
-        p <-
-          ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
-          geom_col(aes(y = diff, fill = contrast), colour = "black")
-        if (length(unique(dep$condition)) <= 8) {
-          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
-        } else if (length(unique(dep$condition)) <= 12) {
-          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        if(!combine){
+          p <-
+            ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
+            geom_col(aes(y = diff, fill = contrast), colour = "black")
+          if (length(unique(dep$condition)) <= 8) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          } else if (length(unique(dep$condition)) <= 12) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          } else {
+            p <- p + scale_fill_manual(values = c(
+              "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+              "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+              "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+              "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+              "green1", "yellow4", "yellow3", "darkorange4", "brown"
+            ))
+          }
+          p <- p +
+            geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(width = 0.9)) +
+            labs(
+              x = "Contrasts",
+              y = expression(log[2] ~ "Fold change" ~
+                               "(\u00B195% CI)")) + facet_wrap( ~ name) +
+            theme(basesize = 12) + theme_DEP2()
         } else {
-          p <- p + scale_fill_manual(values = c(
-            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-            "green1", "yellow4", "yellow3", "darkorange4", "brown"
-          ))
+          p <-
+            ggplot(df, aes(x = name, diff, fill = contrast)) + geom_hline(yintercept = 0) +
+            geom_col(colour = "black", position = position_dodge())
+
+          if (length(unique(dep$condition)) <= 8) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          } else if (length(unique(dep$condition)) <= 12) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          } else {
+            p <- p + scale_fill_manual(values = c(
+              "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+              "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+              "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+              "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+              "green1", "yellow4", "yellow3", "darkorange4", "brown"
+            ))
+          }
+          p <- p +
+            geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(0.9)) +
+            labs(
+              x = "Contrasts",
+              y = expression(log[2] ~ "Fold change" ~
+                               "(\u00B195% CI)")) +
+            theme(basesize = 12) + theme_DEP2()
         }
-        p <- p +
-          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
-          labs(
-            x = "Contrasts",
-            y = expression(log[2] ~ "Fold change" ~
-                             "(\u00B195% CI)")) + facet_wrap( ~ name) +
-          theme(basesize = 12) + theme_DEP2()
 
 
       } else {
@@ -2159,38 +2355,69 @@ prot.plot_bar <- function (dep,
             ) %>%
             spread(var, val)
         }
+        if(!combine){
+          p <-
+            ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
+            geom_col(aes(y = diff, fill = contrast), colour = "black")
+          if (length(unique(dep$condition)) <= 8) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          } else if (length(unique(dep$condition)) <= 12) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          } else {
+            p <- p + scale_fill_manual(values = c(
+              "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+              "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+              "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+              "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+              "green1", "yellow4", "yellow3", "darkorange4", "brown"
+            ))
+          }
+          p <- p +
+            geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+            labs(
+              x = "Contrasts",
+              y = expression(log[2] ~ "Fold change" ~
+                               "(\u00B195% CI)")) + facet_wrap( ~ ID) +
+            theme(basesize = 12) + theme_DEP2()
 
-        p <-
-          ggplot(df, aes(contrast, diff)) + geom_hline(yintercept = 0) +
-          geom_col(aes(y = diff, fill = contrast), colour = "black")
-        if (length(unique(dep$condition)) <= 8) {
-          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
-        } else if (length(unique(dep$condition)) <= 12) {
-          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
         } else {
-          p <- p + scale_fill_manual(values = c(
-            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
-            "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
-            "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
-            "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
-            "green1", "yellow4", "yellow3", "darkorange4", "brown"
-          ))
+          p <-
+            ggplot(df, aes(x = ID, diff, fill = contrast)) + geom_hline(yintercept = 0) +
+            geom_col(colour = "black", position = position_dodge())
+
+          if (length(unique(dep$condition)) <= 8) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+          } else if (length(unique(dep$condition)) <= 12) {
+            p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+          } else {
+            p <- p + scale_fill_manual(values = c(
+              "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+              "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+              "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+              "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+              "green1", "yellow4", "yellow3", "darkorange4", "brown"
+            ))
+          }
+          p <- p +
+            geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(width = 0.9)) +
+            labs(
+              x = "Contrasts",
+              y = expression(log[2] ~ "Fold change" ~
+                               "(\u00B195% CI)")) +
+            theme(basesize = 12) + theme_DEP2()
         }
-        p <- p +
-          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
-          labs(
-            x = "Contrasts",
-            y = expression(log[2] ~ "Fold change" ~
-                             "(\u00B195% CI)")) + facet_wrap( ~ ID) +
-          theme(basesize = 12) + theme_DEP2()
-
-
       }
       w <- 8+log(max(str_count(df[,"contrast"]))-3, base = 1.6)
       h <- 10
     }
-
+    if(!is.null(y.lim)){
+      p <- p + scale_y_continuous(limits = y.lim)
+    }
     if (export == TRUE) {
+      if(!is.null(width))
+        w <- width
+      if(!is.null(height))
+        h <- height
       if (!is.null(export.nm)) {
         if (length(proteins) <= 8) {
           export_name <- paste0("Plots/", export.nm)
@@ -2220,8 +2447,8 @@ prot.plot_bar <- function (dep,
       )
 
       grDevices::pdf(paste0(export_name, ".pdf"),
-          width = w,
-          height = h)
+                     width = w,
+                     height = h)
       print(p)
       grDevices::dev.off()
 
@@ -2235,9 +2462,9 @@ prot.plot_bar <- function (dep,
       print(p)
       grDevices::dev.off()
     }
-    if(length(proteins)>8){
-      plot = FALSE
-    }
+    # if(length(proteins)>8){
+    #   plot = FALSE
+    # }
     if (plot) {
       plot(p)
     } else {
@@ -2254,7 +2481,7 @@ prot.plot_bar <- function (dep,
                           "log2_fold_change", "CI.L", "CI.R")
       }
       if (length(proteins) <= 8) {
-        return(df)
+        invisible(df)
       }
     }
   } #for(i in 1:length(subset_list))
@@ -2372,8 +2599,9 @@ plot_coverage <- function (se, plot = TRUE)
 }
 
 meanSdPlot <- function (x, ranks = TRUE, xlab = ifelse(ranks, "rank(mean)",
-                                         "mean"), ylab = "sd", pch, plot = TRUE, bins = 50, ...)
+                                                       "mean"), ylab = "sd", pch, plot = TRUE, bins = 50, ...)
 {
   vsn::meanSdPlot(SummarizedExperiment::assay(x), ranks = ranks, xlab = xlab, ylab = ylab,
                   pch = pch, plot = plot, ...)
 }
+

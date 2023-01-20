@@ -100,7 +100,6 @@ Imports:
     vsn
 Suggests: 
     DelayedArray,
-    DEP,
     edgeR,
     ggpubr,
     jsonlite,

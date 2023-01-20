@@ -88,6 +88,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @param expdesign (_optional, if made previously_) An R dataframe object or a table file containing the columns 'label', 'condition', and 'replicate' with label = "condition_replicate". If \code{NULL}, an experimental design table will be created automatically.
 #' @param csvsep (Character string) separator used in CSV files (ignored for other file types). Default: \code{";"}
 #' @param dec (Character string) decimal separator used in CSV, TSV or TXT files (ignored for other file types). Default: \code{"."}
+#' @param na.strings A character vector of strings which are to be interpreted as NA values.
 #' @param sheet (Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (_optional_).
 #' @param filter (Character string) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.
 #' @param rsd_thresh (Numeric, optional) Provide a relative standard deviation (RSD) threshold **in %** for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded.
@@ -101,10 +102,12 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @return A filtered SummarizedExperiment object.
 #' @export
 #'
+#' @importFrom SummarizedExperiment assay rowData colData
 prot.read_data <- function (data = "dat_prot.csv",
                             expdesign = NULL,
                             csvsep = ";",
                             dec = ".",
+                            na.strings = "",
                             sheet = 1,
                             filter = c("Reverse", "Potential contaminant"),
                             rsd_thresh = NULL,
@@ -584,18 +587,34 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   return(results)
 }
 
-
-####____prot.impute____####
-#' Title
+#' Impute missing values in a SummarizedExperiment object
 #'
-#' @param se
-#' @param fun
-#' @param ...
+#' Imputes missing values in a SummarizedExperiment object.
 #'
-#' @return
+#' @param se A SummarizedExperiment object
+#' @param fun A character string specifying the imputation method to use.
+#'   The available methods are "bpca", "knn", "QRILC", "MLE", "MinDet",
+#'   "MinProb", "man", "min", "zero", "mixed", "nbavg", and "SampMin".
+#' @param ... Additional arguments passed to the imputation function.
+#'
+#' @return A SummarizedExperiment object with imputed values
+#'
 #' @export
 #'
+#' @details "SampMin" replaces missing values with the minimum value found in each sample. For information about the remaining imputation methods, see \code{help("imputeMethods", "MsCoreUtils")}
+#'
 #' @examples
+#' data(mset)
+#' se <- make_se(mset)
+#' se <- prot.impute(se, fun = "knn")
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment rowData assay
+#' @importFrom MSnbase exprs impute
+#'
+#' @seealso \code{\link{prot.make_unique}}, \code{\link{prot.make_se}}
+#'
+#' @keywords imputation, SummarizedExperiment
 prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
                                      "MLE", "MinDet", "MinProb", "man",
                                      "min", "zero", "mixed", "nbavg", "SampMin"), ...)
@@ -634,17 +653,22 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
 }
 
 ####____prot.normalize_vsn____####
-# Modified normalize_vsn function from package DEP; automatically prints and exports meanSDPlot
-#' Title
+#' Normalize the data via variance stabilization normalization
 #'
-#' @param se
-#' @param plot
-#' @param export
-#'
-#' @return
+#' @param se A SummarizedExperiment object
+#' @param plot Logical. If TRUE, plots the meanSdPlot
+#' @param export Logical. If TRUE, exports the meanSdPlot in pdf and png
+#' @return A SummarizedExperiment object
 #' @export
 #'
-#' @examples
+#' @importFrom assertthat assert_that
+#' @importFrom vsn vsnMatrix predict
+#' @importFrom SummarizedExperiment assay
+#' @importFrom grDevices pdf png
+#' @importFrom utils dir.create
+#' @importFrom stats meanSdPlot
+#' @importFrom base message
+#'
 prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   # Normalize the data (including log2 transformation)
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
@@ -683,6 +707,7 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE) {
   return(se_vsn)
 }
 ####____prot.pca____####
+
 #' Title
 #'
 #' @param deferred
@@ -892,9 +917,9 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
   }
   limma_res <- purrr::map_df(cntrst, retrieve_fun)
   table <- limma_res %>% select(rowname, logFC, CI.L, CI.R,
-                                P.Value, qval, comparison) %>% mutate(comparison = gsub(" - ",
+                                P.Value, qval, comparison) %>% dplyr::mutate(comparison = gsub(" - ",
                                                                                         "_vs_", comparison)) %>% gather(variable, value,
-                                                                                                                        -c(rowname, comparison)) %>% mutate(variable = recode(variable,
+                                                                                                                        -c(rowname, comparison)) %>% dplyr::mutate(variable = recode(variable,
                                                                                                                                                                               logFC = "diff", P.Value = "p.val", qval = "p.adj")) %>%
     unite(temp, comparison, variable) %>% tidyr::spread(temp, value)
   SummarizedExperiment::rowData(se) <- merge(SummarizedExperiment::rowData(se, use.names = FALSE), table,
@@ -991,7 +1016,7 @@ prot.get_results <- function (dep)
     gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep)),
                                             by = "ID")
   centered <- group_by(centered, rowname, condition) %>% dplyr::summarize(val = mean(val,
-                                                                              na.rm = TRUE)) %>% mutate(val = signif(val, digits = 3)) %>%
+                                                                              na.rm = TRUE)) %>% dplyr::mutate(val = signif(val, digits = 3)) %>%
     tidyr::spread(condition, val)
   colnames(centered)[2:ncol(centered)] <- paste(colnames(centered)[2:ncol(centered)],
                                                 "_centered", sep = "")
@@ -1002,7 +1027,7 @@ prot.get_results <- function (dep)
                                          colnames(ratio)[2:ncol(ratio)])
   df <- left_join(ratio, centered, by = "rowname")
   pval <- as.data.frame(row_data) %>% tibble::column_to_rownames("name") %>%
-    select(ends_with("p.val"), ends_with("p.adj"),
+    select(ends_with("p.val"), ends_with("p.adj"), ends_with("imputed"),
            ends_with("significant")) %>% tibble::rownames_to_column()
   pval[, grep("p.adj", colnames(pval))] <- pval[, grep("p.adj",
                                                        colnames(pval))] %>% signif(digits = 3)
@@ -1190,7 +1215,7 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
     res@organism <- species
     res@keytype <- keyType
   }
-  res <- mutate(res, richFactor = Count / as.numeric(sub("/\\d+", "", BgRatio)))
+  res <- dplyr::mutate(res, richFactor = Count / as.numeric(sub("/\\d+", "", BgRatio)))
   return(res)
 }
 
@@ -1357,7 +1382,7 @@ make_se <- function (proteins_unique, columns, expdesign)
   raw <- proteins_unique[, columns]
   raw[raw == 0] <- NA
   raw <- log2(raw)
-  expdesign <- mutate(expdesign, condition = make.names(condition)) %>%
+  expdesign <- dplyr::mutate(expdesign, condition = make.names(condition)) %>%
     tidyr::unite(ID, condition, replicate, remove = FALSE)
   rownames(expdesign) <- expdesign$ID
   matched <- match(make.names(delete_prefix(expdesign$label)),
@@ -1502,7 +1527,7 @@ prot.make_unique <- function (proteins, names, ids, delim = ";")
       proteins <- proteins[!double_NAs, ]
     }
   }
-  proteins_unique <- proteins %>% mutate(name = gsub(paste0(delim,
+  proteins_unique <- proteins %>% dplyr::mutate(name = gsub(paste0(delim,
                                                             ".*"), "", get(names)), ID = gsub(paste0(delim, ".*"),
                                                                                               "", get(ids)), name = make.unique(ifelse(name == "" |
                                                                                                                                          is.na(name), ID, name)))
@@ -1548,7 +1573,7 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
   rownames(row_data) <- row_data$name
   if (mode == "char") {
     col_data <- data.frame(label = colnames(raw), stringsAsFactors = FALSE) %>%
-      mutate(condition = substr(label, 1, nchar(label) -
+      dplyr::mutate(condition = substr(label, 1, nchar(label) -
                                   chars), replicate = substr(label, nchar(label) +
                                                                1 - chars, nchar(label))) %>% unite(ID, condition,
                                                                                                    replicate, remove = FALSE)
