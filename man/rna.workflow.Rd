@@ -2,8 +2,7 @@
 % Please edit documentation in R/transcriptomics_computation.R
 \name{rna.workflow}
 \alias{rna.workflow}
-\title{import SummarizedExperiment
-import IHW}
+\title{RNA sequencing workflow}
 \usage{
 rna.workflow(
   se,
@@ -14,7 +13,7 @@ rna.workflow(
   type = c("all", "control", "manual"),
   design = "~ condition",
   size.factors = NULL,
-  altHypothesis = NULL,
+  altHypothesis = c("greaterAbs", "lessAbs", "greater", "less"),
   control = NULL,
   contrast = NULL,
   controlGenes = NULL,
@@ -45,7 +44,88 @@ rna.workflow(
   quiet = FALSE
 )
 }
+\arguments{
+\item{se}{A SummarizedExperiment object, generated with read_prot().}
+
+\item{imp_fun}{(Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{rna.impute}}) for details.}
+
+\item{q}{(Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.}
+
+\item{knn.rowmax}{(Numeric) The maximum percent missing data allowed in any row for \code{imp_fun = 'knn'}. Default: 0.5.}
+
+\item{type}{(Character string) Type of differential analysis to perform. "all" (contrast each condition with every other condition), "control" (contrast each condition to a defined control condition), "manual" (manually define selected conditions).}
+
+\item{design}{Formula for the design matrix.}
+
+\item{size.factors}{Optional: Manually define size factors for normalization.}
+
+\item{altHypothesis}{Specify those genes you are interested in finding. The test provides p values for the null hypothesis, the complement of the set defined by altHypothesis. For further details, see \code{\link[DESeq2]{results}}.}
+
+\item{control}{Control condition; required if type = "control".}
+
+\item{contrast}{(String or vector of strings) Defined test(s) for differential analysis in the form "A_vs_B"; required if type = "manual".}
+
+\item{controlGenes}{Specifying those genes to use for size factor estimation (e.g. housekeeping or spike-in genes).}
+
+\item{pAdjustMethod}{Method for adjusting p values. Available options are "IHW","BH".}
+
+\item{alpha}{Significance threshold for adjusted p values.}
+
+\item{alpha.independent}{Adjusted p value threshold for independent filtering or NULL. If the adjusted p-value cutoff (FDR) will be a value other than 0.1, alpha should be set to that value.}
+
+\item{alpha_pathways}{Significance threshold for pathway analysis.}
+
+\item{lfcShrink}{Use shrinkage to calculate log2 fold change values.}
+
+\item{shrink.method}{Method for shrinkage. Available options are "apeglm", "ashr", "normal". See \code{\link[DESeq2]{lfcShrink}} for details.}
+
+\item{lfc}{Relevance threshold for absolute log2(fold change) values. Used to filter unshrunken lfc values
+or in shrinkage method "apeglm" or "normal".}
+
+\item{heatmap.show_all}{Shall all samples be displayed in the heatmap or only the samples contained in the defined
+"contrast"? (only applicable for type = "manual")}
+
+\item{heatmap.kmeans}{Shall the proteins be clustered in the heat map?}
+
+\item{k}{Number of protein clusters in heat map if kmeans = TRUE.}
+
+\item{heatmap.col_limit}{Define the breaks in the heat map legends.}
+
+\item{heatmap.show_row_names}{Show protein names in heat map?}
+
+\item{heatmap.row_font_size}{Font size of protein names if show_row_names = TRUE.}
+
+\item{volcano.add_names}{Display names next to symbols in volcano plot.}
+
+\item{volcano.label_size}{Size of labels in volcano plot.}
+
+\item{volcano.adjusted}{Display adjusted p-values on y axis of volcano plot?}
+
+\item{plot}{Shall plots be returned in the Plots pane?}
+
+\item{export}{Shall plots be exported as PDF and PNG files?}
+
+\item{report}{Shall a report (HTML and PDF) be created?}
+
+\item{report.dir}{Folder name for created report (if report = TRUE)}
+
+\item{pathway_enrichment}{Perform pathway over-representation analysis for each tested contrast}
+
+\item{pathway_kegg}{Perform pathway over-representation analysis with gene sets in the KEGG database}
+
+\item{kegg_organism}{Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')}
+
+\item{custom_pathways}{Dataframe providing custom pathway annotations.}
+
+\item{quiet}{Suppress messages and warnings.}
+}
+\value{
+The function returns a SummarizedExperiment object with added columns for log2 fold change, p-values and adjusted p-values for each comparison.
+It also includes a column for significant genes for each comparison and a column for significant genes overall.
+Additionally, the function generates various plots and a report (if specified).
+}
 \description{
-import SummarizedExperiment
-import IHW
+This function performs a complete RNA sequencing workflow, including imputation of missing values, normalization,
+principal component analysis, differential expression analysis, and pathway analysis. The function also provides
+several options for plotting, exporting plots, and creating a report.
 }

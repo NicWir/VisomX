@@ -9,7 +9,6 @@
 #'
 #' @return A filtered SummarizedExperiment object.
 #' @export
-#' @references Xiaofei Zhang, Arne H. Smits, Gabrielle B.A. van Tilburg, Huib Ovaa, Wolfgang Huber and Michiel Vermeulen. Proteome-wide identification of ubiquitin interactions using UbIA-MS. Nature Protocols (2018).
 prot.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
                                  thr = NULL, min = NULL)
 {
@@ -91,7 +90,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @param na.strings A character vector of strings which are to be interpreted as NA values.
 #' @param sheet (Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (_optional_).
 #' @param filter (Character string) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.
-#' @param rsd_thresh (Numeric, optional) Provide a relative standard deviation (RSD) threshold **in %** for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded.
+#' @param rsd_thresh (Numeric, optional) Provide a relative standard deviation (RSD) threshold **in %** for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded. The RSD filter is applied **before** further missing value filters based on the three \code{filt_} arguments.
 #' @param name (Character string) Provide the header of the column containing protein names.
 #' @param id (Character string) Provide the header of the column containing protein IDs
 #' @param pfx (Character string) Provide the common prefix for headers containing abundance values (e.g., "abundances.").

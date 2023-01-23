@@ -26,6 +26,3 @@ A filtered SummarizedExperiment object.
 \description{
 \code{prot.filter_missing} filters a proteomics dataset based on missing values. Different types of filtering can be applied, which range from only keeping proteins without missing values to keeping proteins with a certain percent valid values in all samples or keeping proteins that are complete in at least one condition.
 }
-\references{
-Xiaofei Zhang, Arne H. Smits, Gabrielle B.A. van Tilburg, Huib Ovaa, Wolfgang Huber and Michiel Vermeulen. Proteome-wide identification of ubiquitin interactions using UbIA-MS. Nature Protocols (2018).
-}

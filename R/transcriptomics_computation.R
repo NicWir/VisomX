@@ -1,21 +1,46 @@
-####____rna.read_data____####
-rna.read_data <- function (data = NULL, # File or dataframe containing transcriptomics data
+#' Read Transcriptomics Data
+#'
+#' Reads transcriptomics data from one/several file(s) or dataframe and creates a \code{SummarizedExperiment} object.
+#'
+#' @param data File or dataframe containing transcriptomics data, if \code{files.ind} is not used.
+#' @param files.ind Prefixes of several files in the working directory containing transcriptomics data, if \code{data} is not used.
+#' @param expdesign Experimental design as file path or data frame, if made previously.
+#' @param csvsep Delimiter if reading CSV file(s).
+#' @param dec Decimal separator if reading CSV, TSV, or TXT files.
+#' @param sheet Sheet of an Excel file to be read.
+#' @param name Header of column containing primary gene IDs (e.g., gene names).
+#' @param id Header of column containing alternative gene IDs (e.g., locus IDs).
+#' @param values Name of the column containing the values (if \code{files.ind != NULL}).
+#' @param id2name.table File containing a table with ID to name mappings.
+#' @param id2name.id Header of column containing alternative gene IDs in \code{id2name.table}.
+#' @param id2name.name Header of column containing primary gene IDs in \code{id2name.table}.
+#' @param pfx.counts Prefix in headers of columns containing gene abundances (if \code{data != NULL}).
+#' @param rsd_thresh Provide a relative standard deviation (RSD) threshold **in %** for genes. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the gene is discarded. The RSD filter is applied **before** further missing value filters based on the three \code{filt_} arguments.
+#' @param filt_type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep genes with valid values in all samples. "condition" will keep genes that have a maximum of \code{filt_thr} missing values in at least one condition. "fraction" will keep genes that have a \code{filt_min} fraction of valid values in all samples.
+#' @param filt_thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{filt_type = "condition"}. In other words: "keep genes that have a maximum of 'filt_thr' missing values in at least one condition."
+#' @param filt_min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any genes if \code{filt_type = "fraction"}.
+#'
+#' @return Returns a \code{SummarizedExperiment} object.
+#'
+#' @export
+#'
+rna.read_data <- function (data = NULL,
                            files.ind = NULL,
-                           expdesign = NULL, # Experimental design as file path or data frame, if made previously
-                           csvsep = ";", # optional: delimiter if reading CSV file(s)
+                           expdesign = NULL,
+                           csvsep = ";",
                            dec = ".",
                            sheet = 1,
-                           name = "SymbolID", # Header of column containing primary protein IDs
-                           id = 'gene_id', # Header of column containing alternative protein IDs
+                           name = "SymbolID",
+                           id = 'gene_id',
                            values = "FPKM",
                            id2name.table = NULL,
                            id2name.id = NULL,
                            id2name.name = NULL,
-                           pfx.counts = "counts.", # Prefix in headers of columns containing gene abundances (if data != NULL)
-                           rsd_thresh = NULL,  # RSD filter in %!
-                           filt_type = NULL,
-                           filt_thr = 3, # keep genes that have a maximum of 'filt_thr' missing values in at least one condition.
-                           filt_min = NULL # Sets the threshold for the minimum fraction of valid values allowed for any protein if type = "fraction".
+                           pfx.counts = "counts.",
+                           rsd_thresh = NULL,
+                           filt_type =  c("condition", "complete", "fraction", NULL),
+                           filt_thr = 3,
+                           filt_min = NULL
 ) {
   assertthat::assert_that(is.character(name),
                           length(name) == 1,
@@ -76,7 +101,7 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
   # Test for occurence of prefix for abundance columns.
   if (!(any(grepl(pfx.counts, colnames(dat))))) {
     stop(paste0("The prefix '", pfx.counts, "' does not exist in any column of '",
-                data, "'. Please provide a valid prefix to identify columns with protein abundances."), call. = F)
+                data, "'. Please provide a valid prefix to identify columns with gene abundances."), call. = F)
   }
 
   # Make unique names using the annotations in the as name and id defined columns as primary and
@@ -107,13 +132,13 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
     }
 
   } else if (!any(colnames(dat) %in% name) && !any(colnames(dat) %in% id)) {
-    stop("\"", name, "\" and \"", id, "\" are not columns in \"", data, "\".", "Please provide valid column names with protein identifiers as \"name= \" and \"id= \".",
+    stop("\"", name, "\" and \"", id, "\" are not columns in \"", data, "\".", "Please provide valid column names with gene identifiers as \"name= \" and \"id= \".",
          call. = F)
   } else if (!any(colnames(dat) %in% name)) {
-    stop("\"", name, "\" is not a column in \"", data, "\".", "Please provide a valid column name with protein names as \"name= \".",
+    stop("\"", name, "\" is not a column in \"", data, "\".", "Please provide a valid column name with gene names as \"name= \".",
          call. = F)
   } else if (!any(colnames(dat) %in% id)) {
-    stop("\"", id, "\" is not a column in \"", data, "\".", "Please provide a valid column name with protein identifiers as \"id= \".",
+    stop("\"", id, "\" is not a column in \"", data, "\".", "Please provide a valid column name with gene identifiers as \"id= \".",
          call. = F)
   }
 
@@ -228,7 +253,17 @@ rna.read_data <- function (data = NULL, # File or dataframe containing transcrip
   return(rna_se)
 }
 
-####____rna.filter_missing___####
+#' Filter genes based on missing values
+#'
+#' \code{rna.filter_missing} filters a transcriptomics dataset based on missing values. Different types of filtering can be applied, which range from only keeping genes without missing values to keeping genes with a certain percent valid values in all samples or keeping genes that are complete in at least one condition.
+#'
+#' @param se \code{SummarizedExperiment} object, transcriptomics data parsed with \code{\link{rna.read_data}}.
+#' @param type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep genes with valid values in all samples. "condition" will keep genes that have a maximum of \code{thr} missing values in at least one condition. "fraction" will keep genes that have a \code{min} fraction of valid values in all samples.
+#' @param thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{type = "condition"}. In other words: "keep genes that have a maximum of 'thr' missing values in at least one condition."
+#' @param min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any gene if \code{type = "fraction"}.
+#'
+#' @return A filtered SummarizedExperiment object.
+#' @export
 rna.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
                                  thr = NULL, min = NULL)
 {
@@ -293,48 +328,92 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
   return(filtered)
 }
 
-####____rna.workflow____####
-#' import SummarizedExperiment
-#' import IHW
+#' RNA sequencing workflow
+#'
+#' This function performs a complete RNA sequencing workflow, including imputation of missing values, normalization,
+#' principal component analysis, differential expression analysis, and pathway analysis. The function also provides
+#' several options for plotting, exporting plots, and creating a report.
+#'
+#' @param se A SummarizedExperiment object, generated with read_prot().
+#' @param imp_fun (Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{rna.impute}}) for details.
+#' @param q (Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.
+#' @param knn.rowmax (Numeric) The maximum percent missing data allowed in any row for \code{imp_fun = 'knn'}. Default: 0.5.
+#' @param type (Character string) Type of differential analysis to perform. "all" (contrast each condition with every other condition), "control" (contrast each condition to a defined control condition), "manual" (manually define selected conditions).
+#' @param design Formula for the design matrix.
+#' @param size.factors Optional: Manually define size factors for normalization.
+#' @param altHypothesis  Specify those genes you are interested in finding. The test provides p values for the null hypothesis, the complement of the set defined by altHypothesis. For further details, see \code{\link[DESeq2]{results}}.
+#' @param control Control condition; required if type = "control".
+#' @param contrast (String or vector of strings) Defined test(s) for differential analysis in the form "A_vs_B"; required if type = "manual".
+#' @param controlGenes Specifying those genes to use for size factor estimation (e.g. housekeeping or spike-in genes).
+#' @param pAdjustMethod Method for adjusting p values. Available options are "IHW","BH".
+#' @param alpha Significance threshold for adjusted p values.
+#' @param alpha.independent Adjusted p value threshold for independent filtering or NULL. If the adjusted p-value cutoff (FDR) will be a value other than 0.1, alpha should be set to that value.
+#' @param alpha_pathways Significance threshold for pathway analysis.
+#' @param lfcShrink Use shrinkage to calculate log2 fold change values.
+#' @param shrink.method Method for shrinkage. Available options are "apeglm", "ashr", "normal". See \code{\link[DESeq2]{lfcShrink}} for details.
+#' @param lfc Relevance threshold for absolute log2(fold change) values. Used to filter unshrunken lfc values
+#' or in shrinkage method "apeglm" or "normal".
+#' @param heatmap.show_all Shall all samples be displayed in the heatmap or only the samples contained in the defined
+#' "contrast"? (only applicable for type = "manual")
+#' @param heatmap.kmeans Shall the proteins be clustered in the heat map?
+#' @param k Number of protein clusters in heat map if kmeans = TRUE.
+#' @param heatmap.col_limit Define the breaks in the heat map legends.
+#' @param heatmap.show_row_names Show protein names in heat map?
+#' @param heatmap.row_font_size Font size of protein names if show_row_names = TRUE.
+#' @param volcano.add_names Display names next to symbols in volcano plot.
+#' @param volcano.label_size Size of labels in volcano plot.
+#' @param volcano.adjusted Display adjusted p-values on y axis of volcano plot?
+#' @param plot Shall plots be returned in the Plots pane?
+#' @param export Shall plots be exported as PDF and PNG files?
+#' @param report Shall a report (HTML and PDF) be created?
+#' @param report.dir Folder name for created report (if report = TRUE)
+#' @param pathway_enrichment Perform pathway over-representation analysis for each tested contrast
+#' @param pathway_kegg Perform pathway over-representation analysis with gene sets in the KEGG database
+#' @param kegg_organism Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
+#' @param custom_pathways Dataframe providing custom pathway annotations.
+#' @param quiet Suppress messages and warnings.
+#'
+#' @return The function returns a SummarizedExperiment object with added columns for log2 fold change, p-values and adjusted p-values for each comparison.
+#' It also includes a column for significant genes for each comparison and a column for significant genes overall.
+#' Additionally, the function generates various plots and a report (if specified).
 
+#' @export
 rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
-                          imp_fun = c("zero", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
+                          imp_fun = c("zero", "man", "bpca", "knn", "QRILC", "MLE", "MinDet",
                                       "MinProb", "min", "zero", "mixed", "nbavg", "SampMin"),
-                          q = 0.01, # q value for imputing missing values with method "fun = 'MinProb'".
-                          knn.rowmax = 0.5, # The maximum percent missing data allowed in any row (default 50%).
-                          # For any rows with more than rowmax% missing are imputed using the overall mean per sample.
-                          type = c("all", "control", "manual"), # Type of differential analysis to perform.
+                          q = 0.01,
+                          knn.rowmax = 0.5,
+                          type = c("all", "control", "manual"),
                           design = "~ condition",
                           size.factors = NULL,
-                          altHypothesis = NULL, # specify those genes you are interested in finding.  The test provides p values for the null hypothesis, the complement of the set defined by altHypothesis.
-                          control = NULL, # Control condition; required if type = "control".
-                          contrast = NULL, # Defined test for differential analysis "A_vs_B"; required if type = "manual".
-                          controlGenes = NULL, # specifying those genes to use for size factor estimation (e.g. housekeeping or spike-in genes)
+                          altHypothesis = c("greaterAbs", "lessAbs", "greater", "less"),
+                          control = NULL,
+                          contrast = NULL,
+                          controlGenes = NULL,
                           pAdjustMethod = c("IHW","BH"),
-                          alpha = 0.05, # Significance threshold for adj. p values.
-                          alpha.independent = 0.1, # adj. p value threshold for independent filtering or NULL
+                          alpha = 0.05,
+                          alpha.independent = 0.1,
                           alpha_pathways = 0.1,
                           lfcShrink = TRUE,
                           shrink.method = c("apeglm", "ashr", "normal"),
-                          lfc = 2, # Relevance threshold for absolute log2(fold change) values. Used to in lfcShrink (methods "apeglm" or "normal") or in filtering of unshrunken lfc values
-                          heatmap.show_all = TRUE, # Shall all samples be displayed in the heatmap or only the samples contained in the defined "contrast"?
-                          # (only applicable for type = "manual")
-                          heatmap.kmeans = F, # Shall the proteins be clustered in the heat map?
-                          k = 6, # Number of protein clusters in heat map if kmeans = TRUE.
-                          heatmap.col_limit = NA, # Define the breaks in the heat map legends.
-                          heatmap.show_row_names = TRUE, # Show protein names in heat map?
-                          heatmap.row_font_size = 6, # Font size of protein names if show_row_names = TRUE.
-                          volcano.add_names = FALSE, # Display names next to symbols in volcano plot.
-                          volcano.label_size = 2.5, # Size of labels in volcano plot if
-                          volcano.adjusted = TRUE, # Display adjusted p-values on y axis of volcano plot?
-                          plot = FALSE, # Shall plots be returned in the Plots pane?
-                          export = FALSE, # Shall plots be exported as PDF and PNG files?
-                          report = TRUE, # Shall a report (HTML and PDF) be created?
-                          report.dir = NULL, # Folder name for created report (if report = TRUE)
-                          pathway_enrichment = FALSE, # Perform pathway over-representation analysis for each tested contrast
-                          pathway_kegg = FALSE, # Perform pathway over-representation analysis with gene sets in the KEGG database
-                          kegg_organism = NULL, # Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
-                          custom_pathways = NULL, # Dataframe providing custom pathway annotations
+                          lfc = 2,
+                          heatmap.show_all = TRUE,
+                          heatmap.kmeans = F,
+                          k = 6,
+                          heatmap.col_limit = NA,
+                          heatmap.show_row_names = TRUE,
+                          heatmap.row_font_size = 6,
+                          volcano.add_names = FALSE,
+                          volcano.label_size = 2.5,
+                          volcano.adjusted = TRUE,
+                          plot = FALSE,
+                          export = FALSE,
+                          report = TRUE,
+                          report.dir = NULL,
+                          pathway_enrichment = FALSE,
+                          pathway_kegg = FALSE,
+                          kegg_organism = NULL,
+                          custom_pathways = NULL,
                           quiet = FALSE
 )
 {
@@ -743,7 +822,19 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   return(res)
 }
 
-####____rna.report_____####
+#' Generate a transcriptomics analysis report
+#'
+#' This function generates a report based on the results of an RNA analysis workflow.
+#'
+#' @param results A list object containing the results of an RNA analysis workflow.
+#' @param report.dir A character string specifying the directory in which to save the report.
+#' @param ... Additional parameters to be passed to the report.
+#' @return A report in the specified directory.
+#' @export
+#'
+#' @examples
+#'
+#' rna.report(results, report.dir = NULL)
 rna.report <- function(results, report.dir = NULL, ...){
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se",
@@ -794,9 +885,31 @@ rna.report <- function(results, report.dir = NULL, ...){
 }
 
 
-
-
-####____rna.impute____####
+#' Impute missing values in a SummarizedExperiment object
+#'
+#' This function imputes missing values in a SummarizedExperiment object,
+#' using the specified imputation method.
+#'
+#' @param se A SummarizedExperiment object.
+#' @param fun A character vector specifying the imputation method.
+#' Options include "zero", "bpca", "knn", "QRILC", "MLE", "MinDet",
+#' "MinProb", "man", "min", "zero", "mixed", "nbavg", and "SampMin".
+#' @param ... Additional arguments passed to the imputation method.
+#'
+#' @return A SummarizedExperiment object with missing values imputed.
+#' @export
+#'
+#' @details "SampMin" replaces missing values with the minimum value found in each sample. For information about the remaining imputation methods, see \code{help("imputeMethods", "MsCoreUtils")}
+#'
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom MSnbase impute
+#' @importFrom methods as
+#' @importFrom dplyr mutate_if
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom SummarizedExperiment assay
+#' @importFrom stats match.arg
+#'
 rna.impute <- function (se, fun = c("zero", "bpca", "knn", "QRILC",
                                      "MLE", "MinDet", "MinProb", "man",
                                      "min", "zero", "mixed", "nbavg", "SampMin"), ...)
@@ -842,7 +955,20 @@ rna.impute <- function (se, fun = c("zero", "bpca", "knn", "QRILC",
   return(se)
 }
 
-####____rna.make_ddsSE____####
+#' Create a SummarizedExperiment object
+#'
+#' This function takes gene expression data stored in a data frame with unique gene names
+#' and columns of expression data, as well as an experimental design data frame, and
+#' creates a SummarizedExperiment object.
+#'
+#' @param genes_unique A data frame with unique gene names and columns of expression data.
+#' @param columns A vector of the column positions or names with expression data in \code{genes_unique}.
+#' @param expdesign A data frame of experimental design.
+#'
+#' @return A SummarizedExperiment object.
+#'
+#' @export
+#' @details used internally by \code{rna.read_data()}.
 rna.make_se <- function(genes_unique, columns, expdesign)
 {
   assertthat::assert_that(is.data.frame(genes_unique), is.integer(columns),
@@ -888,154 +1014,4 @@ rna.make_se <- function(genes_unique, columns, expdesign)
   se <- SummarizedExperiment::SummarizedExperiment(assays = mat, colData = expdesign,
                                                    rowData = row_data)
   return(se)
-}
-
-
-rna.DESeq <- function (object, test = c("Wald", "LRT"), fitType = c("parametric", "local", "mean", "glmGamPoi"),
-                       sfType = c("ratio", "poscounts", "iterate"), controlGenes = NULL, betaPrior, full = design(object), reduced, quiet = FALSE,
-                       minReplicatesForReplace = 7, modelMatrixType, useT = FALSE,
-                       minmu = if (fitType == "glmGamPoi") 1e-06 else 0.5, parallel = FALSE,
-                       BPPARAM = bpparam())
-{
-  stopifnot(is(object, "DESeqDataSet"))
-  test <- match.arg(test, choices = c("Wald", "LRT"))
-  fitType <- match.arg(fitType, choices = c("parametric", "local",
-                                            "mean", "glmGamPoi"))
-  dispersionEstimator <- if (fitType == "glmGamPoi") {
-    "glmGamPoi"
-  }
-  else {
-    "DESeq2"
-  }
-  if (fitType == "glmGamPoi") {
-    minReplicatesForReplace <- Inf
-    if (parallel) {
-      warning("parallelization of DESeq() is not implemented for fitType='glmGamPoi'")
-    }
-  }
-  sfType <- match.arg(sfType, choices = c("ratio", "poscounts",
-                                          "iterate"))
-  if(!is.null(controlGenes)){
-    if(is.numeric(controlGenes)){
-      controlGenes <- controlGenes
-    } else if (is.character(controlGenes)){
-      controlGenes <- match(controlGenes, rownames(assay(object)))
-    }
-  }
-  stopifnot(is.logical(quiet))
-  stopifnot(is.numeric(minReplicatesForReplace))
-  stopifnot(is.logical(parallel))
-  modelAsFormula <- !is.matrix(full) & is(design(object), "formula")
-  if (missing(betaPrior)) {
-    betaPrior <- FALSE
-  }
-  else {
-    stopifnot(is.logical(betaPrior))
-  }
-  object <- sanitizeRowRanges(object)
-  if (test == "LRT") {
-    if (missing(reduced)) {
-      stop("likelihood ratio test requires a 'reduced' design, see ?DESeq")
-    }
-    if (betaPrior) {
-      stop("test='LRT' does not support use of LFC shrinkage, use betaPrior=FALSE")
-    }
-    if (!missing(modelMatrixType) && modelMatrixType == "expanded") {
-      stop("test='LRT' does not support use of expanded model matrix")
-    }
-    if (is.matrix(full) | is.matrix(reduced)) {
-      if (!(is.matrix(full) & is.matrix(reduced))) {
-        stop("if one of 'full' and 'reduced' is a matrix, the other must be also a matrix")
-      }
-    }
-    if (modelAsFormula) {
-      checkLRT(full, reduced)
-    }
-    else {
-      checkFullRank(full)
-      checkFullRank(reduced)
-      if (ncol(full) <= ncol(reduced)) {
-        stop("the number of columns of 'full' should be more than the number of columns of 'reduced'")
-      }
-    }
-  }
-  if (test == "Wald" & !missing(reduced)) {
-    stop("'reduced' ignored when test='Wald'")
-  }
-  if (dispersionEstimator == "glmGamPoi" && test == "Wald") {
-    warning("glmGamPoi dispersion estimator should be used in combination with a LRT and not a Wald test.",
-            call. = FALSE)
-  }
-  if (modelAsFormula) {
-    designAndArgChecker(object, betaPrior)
-    if (design(object) == formula(~1)) {
-      warning("the design is ~ 1 (just an intercept). is this intended?")
-    }
-    if (full != design(object)) {
-      stop("'full' specified as formula should equal design(object)")
-    }
-    modelMatrix <- NULL
-  }
-  else {
-    if (!quiet)
-      message("using supplied model matrix")
-    if (betaPrior == TRUE) {
-      stop("betaPrior=TRUE is not supported for user-provided model matrices")
-    }
-    checkFullRank(full)
-    modelMatrix <- full
-  }
-  attr(object, "betaPrior") <- betaPrior
-  stopifnot(length(parallel) == 1 & is.logical(parallel))
-  if (!is.null(sizeFactors(object)) || !is.null(normalizationFactors(object))) {
-    if (!quiet) {
-      if (!is.null(normalizationFactors(object))) {
-        message("using pre-existing normalization factors")
-      }
-      else {
-        message("using pre-existing size factors")
-      }
-    }
-  }
-  else {
-    if (!quiet)
-      message("estimating size factors")
-    object <- estimateSizeFactors(object, type = sfType, controlGenes = controlGenes, quiet = quiet)
-  }
-  if (!parallel) {
-    if (!quiet)
-      message("estimating dispersions")
-    object <- estimateDispersions(object, fitType = fitType,
-                                  quiet = quiet, modelMatrix = modelMatrix, minmu = minmu)
-    if (!quiet)
-      message("fitting model and testing")
-    if (test == "Wald") {
-      object <- nbinomWaldTest(object, betaPrior = betaPrior,
-                               quiet = quiet, modelMatrix = modelMatrix, modelMatrixType = modelMatrixType,
-                               useT = useT, minmu = minmu)
-    }
-    else if (test == "LRT") {
-      object <- nbinomLRT(object, full = full, reduced = reduced,
-                          quiet = quiet, minmu = minmu, type = dispersionEstimator)
-    }
-  }
-  else if (parallel) {
-    if (!missing(modelMatrixType)) {
-      if (betaPrior)
-        stopifnot(modelMatrixType == "expanded")
-    }
-    object <- DESeqParallel(object, test = test, fitType = fitType,
-                            betaPrior = betaPrior, full = full, reduced = reduced,
-                            quiet = quiet, modelMatrix = modelMatrix, useT = useT,
-                            minmu = minmu, BPPARAM = BPPARAM)
-  }
-  sufficientReps <- any(nOrMoreInCell(attr(object, "modelMatrix"),
-                                      minReplicatesForReplace))
-  if (sufficientReps) {
-    object <- refitWithoutOutliers(object, test = test, betaPrior = betaPrior,
-                                   full = full, reduced = reduced, quiet = quiet, minReplicatesForReplace = minReplicatesForReplace,
-                                   modelMatrix = modelMatrix, modelMatrixType = modelMatrixType)
-  }
-  metadata(object)[["version"]] <- packageVersion("DESeq2")
-  object
 }

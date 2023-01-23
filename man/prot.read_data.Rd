@@ -42,7 +42,7 @@ The table must contain:
 
 \item{filter}{(Character string) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.}
 
-\item{rsd_thresh}{(Numeric, optional) Provide a relative standard deviation (RSD) threshold \strong{in \%} for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded.}
+\item{rsd_thresh}{(Numeric, optional) Provide a relative standard deviation (RSD) threshold \strong{in \%} for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded. The RSD filter is applied \strong{before} further missing value filters based on the three \code{filt_} arguments.}
 
 \item{name}{(Character string) Provide the header of the column containing protein names.}
 
