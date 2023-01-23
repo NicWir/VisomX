@@ -1688,7 +1688,52 @@ prot.plot_heatmap_all <- function (se,
 }
 
 
-####____prot.plot_screeplot____####
+#' @title SCREE plot
+#'
+#' prot.plot_screeplot() creates a SCREE plot of the explained variation in the principal components of a 'princomp' object
+#'
+#' @param pcaobj An object of class 'princomp'
+#' @param components A numeric vector of principal component numbers to include in the plot
+#' @param xlim A numeric vector of length 2 specifying the x-axis limits
+#' @param ylim A numeric vector of length 2 specifying the y-axis limits. Default is c(0, 100)
+#' @param xlab A character string for x-axis label
+#' @param xlabAngle Numeric value for x-axis label angle
+#' @param xlabhjust Numeric value for x-axis label horizontal justification
+#' @param xlabvjust Numeric value for x-axis label vertical justification
+#' @param ylab A character string for y-axis label
+#' @param ylabAngle Numeric value for y-axis label angle
+#' @param ylabhjust Numeric value for y-axis label horizontal justification
+#' @param ylabvjust Numeric value for y-axis label vertical justification
+#' @param axisLabSize Numeric value for axis label size
+#' @param title A character string for the plot title
+#' @param subtitle A character string for the plot subtitle
+#' @param caption A character string for the plot caption
+#' @param titleLabSize Numeric value for title label size
+#' @param subtitleLabSize Numeric value for subtitle label size
+#' @param captionLabSize Numeric value for caption label size
+#' @param colBar A character string for the color of the bar chart
+#' @param drawCumulativeSumLine Logical value to indicate if the cumulative sum line should be plotted
+#' @param colCumulativeSumLine A character string for the color of the cumulative sum line
+#' @param sizeCumulativeSumLine Numeric value for the size of the cumulative sum line
+#' @param drawCumulativeSumPoints Logical value to indicate if the cumulative sum points should be plotted
+#' @param colCumulativeSumPoints A character string for the color of the cumulative sum points
+#' @param sizeCumulativeSumPoints Numeric value for the size of the cumulative sum points
+#' @param hline A numeric value for horizontal line
+#' @param hlineType A character string for the type of horizontal line
+#' @param hlineCol A character string for the color of the horizontal line
+#' @param hlineWidth Numeric value for the width of the horizontal line
+#' @param vline A numeric value for vertical line
+#' @param vlineType A character string for the type of vertical line
+#' @param vlineCol A character string for the color of the vertical line
+#' @param vlineWidth Numeric value for the width of the vertical line
+#' @param gridlines.major Logical value to indicate if major gridlines should be plotted
+#' @param gridlines.minor Logical value to indicate if minor gridlines should be plotted
+#' @param borderWidth Numeric value for the width of the border
+#' @param borderColour A character string for the color of the border
+#' @param plot Logical value to indicate if the plot should be plotted
+#' @param export Logical value to indicate if the plot should be exported as PNG and PDF
+#' @return A SCREE plot
+#' @export
 prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
                                  ylim = c(0, 100), xlab = "Principal component", xlabAngle = 90,
                                  xlabhjust = 0.5, xlabvjust = 0.5, ylab = "Explained variation (%)",
@@ -1785,7 +1830,66 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
     p
   }
 }
-####____prot.plot_loadings____####
+
+
+
+
+#' Plot the loadings of a principal components analysis
+#'
+#' @param pcaobj An object that contains the results of a PCA analysis.
+#' @param components The components to plot. Defaults to the first 5 components.
+#' @param rangeRetain a numeric value between 0 and 1 indicating the proportion of loading values to retain. Default is 0.05.
+#' @param absolute a logical value indicating whether to plot absolute loading values (TRUE) or signed loading values (FALSE). Default is FALSE.
+#' @param col a vector of colors for the points on the plot. Default is c("gold", "white", "royalblue").
+#' @param colMidpoint a numeric value indicating the midpoint for the color gradient. Default is 0.
+#' @param shape an integer indicating the shape of the points on the plot. Default is 21.
+#' @param shapeSizeRange a numeric vector of length 2 indicating the range of point sizes. Default is c(10, 10).
+#' @param legendPosition a character string indicating the position of the legend. Default is "top".
+#' @param legendLabSize an integer indicating the size of the legend labels. Default is 10.
+#' @param legendIconSize a numeric value indicating the size of the legend icons. Default is 3.
+#' @param xlim a numeric vector of length 2 indicating the range of the x-axis. Default is NULL.
+#' @param ylim a numeric vector of length 2 indicating the range of the y-axis. Default is NULL.
+#' @param labSize an integer indicating the size of the point labels. Default is 2.
+#' @param labhjust a numeric value indicating the horizontal justification of the point labels. Default is 1.5.
+#' @param labvjust a numeric value indicating the vertical justification of the point labels. Default is 0.
+#' @param drawConnectors a logical value indicating whether to draw connectors between points. Default is TRUE.
+#' @param positionConnectors a character string indicating the position of the connectors. Default is "right".
+#' @param widthConnectors a numeric value indicating the width of the connectors. Default is 0.5.
+#' @param typeConnectors a character string indicating the type of the connectors. Default is "closed".
+#' @param endsConnectors a character string indicating the ends of the connectors. Default is "first".
+#' @param lengthConnectors a numeric value indicating the length of the connectors. Default is unit(0.01, "npc").
+#' @param colConnectors a character string indicating the color of the connectors. Default is "grey50".
+#' @param xlab a character string indicating the label for the x-axis. Default is "Principal component".
+#' @param xlabAngle a numeric value indicating the angle of the x-axis label. Default is 0.
+#' @param xlabhjust a numeric value indicating the horizontal justification of the x-axis label. Default is 0.5.
+#' @param xlabvjust a numeric value indicating the vertical justification of the x-axis label. Default is 0.5.
+#' @param ylab a character string indicating the label for the y-axis. Default is "Component loading".
+#' @param ylabAngle a numeric value indicating the angle of the y-axis label. Default is 0.
+#' @param ylabhjust a numeric value indicating the horizontal justification of the y-axis label. Default is 0.5.
+#' @param ylabvjust a numeric value indicating the vertical justification of the y-axis label. Default is 0.5.
+#' @param axisLabSize an integer indicating the size of the axis labels. Default is 16.
+#' @param title a character string indicating the title of the plot. Default is an empty string.
+#' @param subtitle a character string indicating the subtitle of the plot. Default is an empty string.
+#' @param caption a character string indicating the caption of the plot. Default is an empty string.
+#' @param titleLabSize an integer indicating the size of the title label. Default is 16.
+#' @param subtitleLabSize an integer indicating the size of the subtitle label. Default is 12.
+#' @param captionLabSize an integer indicating the size of the caption label. Default is 12.
+#' @param hline a numeric vector indicating the horizontal lines to be plotted. Default is c(0).
+#' @param hlineType a character string indicating the type of the horizontal lines. Default is "longdash".
+#' @param hlineCol a character string indicating the color of the horizontal lines. Default is "black".
+#' @param hlineWidth a numeric value indicating the width of the horizontal lines. Default is 0.4.
+#' @param vline a numeric vector indicating the vertical lines to be plotted. Default is NULL.
+#' @param vlineType a character string indicating the type of the vertical lines. Default is "longdash".
+#' @param vlineCol a character string indicating the color of the vertical lines. Default is "black".
+#' @param vlineWidth a numeric value indicating the width of the vertical lines. Default is 0.4.
+#' @param gridlines.major a logical value indicating whether to show major gridlines. Default is TRUE.
+#' @param gridlines.minor a logical value indicating whether to show minor gridlines. Default is TRUE.
+#' @param borderWidth a numeric value indicating the width of the border. Default is 0.8.
+#' @param borderColour a character string indicating the color of the border. Default is "black".
+#' @param plot a logical value indicating whether to plot the graph. Default is TRUE.
+#' @param export a logical value indicating whether to export the plot. Default is TRUE.
+#' @return a scatter plot of the loading values for each gene/protein for the specified principal components in a PCA object.
+#' @export
 prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pcaobj, seq_len(5)),
                                 rangeRetain = 0.05, absolute = FALSE, col = c("gold",
                                                                               "white", "royalblue"), colMidpoint = 0, shape = 21,
@@ -1919,7 +2023,33 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
     p
   }
 }
-####____prot.plot_enrichment____REQUIRE(forcats)####
+
+
+
+#' Plot pathway enrichment
+#'
+#' Plots the enrichment of pathways in a given dataset.
+#'
+#' @param enrichset A data frame containing the enrichment results.
+#' @param title The title of the plot.
+#' @param subtitle The subtitle of the plot.
+#' @param plot Logical; whether to return the plot or not.
+#' @param export Logical; whether to export the plot as PDF an PNG files
+#' @param kegg Logical; whether the enrichment results are from KEGG or not.
+#'
+#' @return A ggplot object.
+#'
+#'
+#' @export
+#'
+#' @importFrom forcats fct_reorder
+#' @importFrom ggplot2 geom_segment geom_point scale_color_viridis_c
+#'   scale_size_area theme_bw xlab ylab ggtitle
+#' @importFrom grDevices pdf png
+#' @importFrom utils getwd dir.create message str_count if_else
+#'
+#' @seealso
+#' \code{\link{prot.enrichment}}
 prot.plot_enrichment <- function(enrichset,
                                  title = "Differentially enriched pathways",
                                  subtitle = "",
@@ -1927,7 +2057,6 @@ prot.plot_enrichment <- function(enrichset,
                                  export = FALSE,
                                  kegg = TRUE) {
 
-  require(forcats)
   p <- ggplot(enrichset, showCategory = 30,
               aes(richFactor, fct_reorder(Description, richFactor))) +
     geom_segment(aes(xend = 0, yend = Description)) +
@@ -2013,7 +2142,26 @@ prot.plot_enrichment <- function(enrichset,
   }
 }
 
-####____prot.plot_upset____####
+#' @title Plot an UpSet enrichment plot
+#'
+#' @description Plot an UpSet chart from an enrichment set
+#'
+#' @param enrichset An enrichment set object
+#' @param order.by A character string indicating how to order the sets
+#' @param point.size Numeric indicating the size of the points
+#' @param line.size Numeric indicating the size of the lines
+#' @param text.scale Numeric indicating the size of the text
+#' @param ... Further arguments to pass to the upset function
+#'
+#' @return An UpSetR plot
+#'
+#' @details For more information about upset plots, see https://upset.app/
+#'
+#' @examples
+#' prot.plot_upset(enrichset)
+#'
+#' @export
+#'
 prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
                             line.size = 1, text.scale = c(2, 2, 2, 2, 2, 1.5), ...)
 {
@@ -2023,8 +2171,34 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
                 point.size = point.size, line.size = line.size, text.scale = text.scale, ...)
 }
 
-####____prot.plot_bar____####
-# Plot bar plots of single proteins based on their Ensembl gene ID
+#' Plot bar plots for protein abundance or fold change
+#'
+#' This function generates bar plots for protein abundance or fold change, normalized by either a reference protein or centered to the mean. The user can also plot the contrast of two conditions.
+#'
+#' @param dep A SummarizedExperiment object containing the data.
+#' @param proteins A vector of protein names or IDs.
+#' @param type Type of plot: "abundance", "reference", "centered" or "contrast".
+#' @param ref.prot ID or name of the reference protein for normalization when type is "reference".
+#' @param contrast Name of the contrast for plotting when type is "contrast".
+#' @param subset A data frame containing a subset of the data to be plotted.
+#' @param combine Logical value indicating whether to combine the data from different conditions in one plot.
+#' @param y.lim Limits of the y axis.
+#' @param convert.name Logical value indicating whether to convert the protein names to reference names (e.g., gene names).
+#' @param name.table A data frame containing the mapping of protein names to reference names.
+#' @param match.id A vector of protein names or IDs that need to be matched in the name.table.
+#' @param match.name A vector of protein names that need to be matched in the name.table.
+#'
+#' @return A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.
+#'
+#' @export
+#'
+#' @importFrom SummarizedExperiment assay rowData colData
+#' @importFrom dplyr select group_by summarize mutate left_join
+#' @importFrom tidyr gather spread
+#' @importFrom stats qnorm
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom stringr str_split
+
 prot.plot_bar <- function (dep,
                            proteins,
                            combine = FALSE,
@@ -2709,17 +2883,24 @@ prot.plot_bar <- function (dep,
         colnames(df) <- c("protein", "contrast",
                           "log2_fold_change", "CI.L", "CI.R")
       }
-      if (length(proteins) <= 8) {
-        invisible(df)
-      }
+    }
+    if (length(proteins) <= 8) {
+      invisible(df)
     }
   } #for(i in 1:length(subset_list))
 }
 
-
-####____prot.boxplot_intensity____####
-# Modified plot_normalization function from package DEP with adjusted colors and
-# function to export plot as PDF and PNG
+#' Boxplot Intensity
+#'
+#' Generate boxplot for the intensity of each sample in a
+#' SummarizedExperiment object.
+#'
+#' @param se A SummarizedExperiment object.
+#' @param ... Additional SummarizedExperiment objects.
+#' @param plot Logical. Should the plot be printed?
+#' @param export Logical. Should the plot be exported as PDF and PNG files?
+#' @return (Invisibly) a ggplot object.
+#' @export
 prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE)
 {
   call <- match.call()
@@ -2793,17 +2974,39 @@ prot.boxplot_intensity <- function (se, ..., plot = TRUE, export = TRUE)
   if (plot == TRUE){
     print(p)
   }
+  invisible(p)
 }
 
-theme_DEP2 <- function ()
+#' @title Theme DEP2
+#' @description Modify the theme DEP1
+#' @param ... Arguments passed to \code{\link{theme_DEP1}}
+#' @return A modified theme
+#' @export
+theme_DEP2 <- function(...)
 {
-  theme <- theme_DEP1()
+  theme <- theme_DEP1(...)
   theme$axis.text.x$angle <- 90
   theme$axis.text.x$hjust <- 1
   theme$axis.text.x$vjust <- 0.5
   return(theme)
 }
 
+
+
+#' Plot coverage of a SummarizedExperiment
+#'
+#' @param se A SummarizedExperiment
+#' @param plot A logical indicating whether to return the coverage or not
+#'
+#' @return A data frame (if plot = FALSE) or a ggplot object
+#'
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment assay
+#' @importFrom tibble rownames_to_column
+#' @importFrom dplyr group_by summarize mutate
+#' @importFrom ggplot2 aes geom_col scale_fill_grey labs theme_DEP1
 plot_coverage <- function (se, plot = TRUE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
@@ -2827,6 +3030,28 @@ plot_coverage <- function (se, plot = TRUE)
   }
 }
 
+
+
+#' @title Plot row standard deviations versus row means
+#'
+#' @description
+#' This function creates a mean-sd plot for a given SummarizedExperiment object.
+#'
+#' @param x A SummarizedExperiment object.
+#' @param ranks A logical value indicating whether to plot the rank of the mean instead of the mean.
+#' @param xlab A character string for the x-axis label.
+#' @param ylab A character string for the y-axis label.
+#' @param pch A vector of plotting characters.
+#' @param plot A logical value indicating whether to plot the mean-sd plot.
+#' @param bins An integer indicating the number of bins in the plot.
+#' @param ... Other arguments to be passed to the underlying plotting function.
+#'
+#' @return
+#' If plot is TRUE, a mean-sd plot is returned. In any case returns a named list with five components: its elements px and py are the x- and y-coordinates of the individual data points in the plot; its first and second element are the x-coordinates and values of the running median estimator (the red line in the plot). Its element gg is the plot object (see examples). Depending on the value of plot, the method can (and by default does) have a side effect, which is to print gg on the active graphics device.
+#'
+#' @export
+#'
+#' @details See \code{\link[vsn]{meanSdPlot}} for further details
 meanSdPlot <- function (x, ranks = TRUE, xlab = ifelse(ranks, "rank(mean)",
                                                        "mean"), ylab = "sd", pch, plot = TRUE, bins = 50, ...)
 {
