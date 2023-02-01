@@ -33,9 +33,7 @@ An UpSetR plot
 Plot an UpSet chart from an enrichment set
 }
 \details{
-For more information about upset plots, see https://upset.app/
-}
-\examples{
-prot.plot_upset(enrichset)
+for further arguments, see \code{?UpSetR::upset}
 
+For more information about upset plots, see https://upset.app/
 }

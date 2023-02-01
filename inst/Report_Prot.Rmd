@@ -176,14 +176,16 @@ PCA loadings are the coefficients of the linear combination of the original vari
 \pagebreak
 ### Correlation matrix for samples with all proteins
 ```{r correlation_heatmap_all, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-    prot.plot_corrheatmap(dep, font_size = 12, significant = FALSE )
+    prot.plot_corrheatmap(dep, lower = 0.5,
+  upper = 1,  font_size = 12, significant = FALSE )
 ```
 \pagebreak
 ## Differential expression analysis
 
 ### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed proteins", "")` 
 ```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-  try(prot.plot_corrheatmap(dep, font_size = 12, significant = T ))
+  try(prot.plot_corrheatmap(dep, lower = 0.5,
+  upper = 1, font_size = 12, significant = T ))
 ```
 \pagebreak
 ### Heatmaps

@@ -2029,7 +2029,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
 #'
 #' @importFrom forcats fct_reorder
 #' @importFrom ggplot2 geom_segment geom_point scale_color_viridis_c
-#'   scale_size_area theme_bw xlab ylab ggtitle
+#'   scale_size_area theme_bw xlab ylab ggtitle ggplot
 #' @importFrom grDevices pdf png
 #'
 #' @seealso
@@ -2139,10 +2139,9 @@ prot.plot_enrichment <- function(enrichset,
 #'
 #' @return An UpSetR plot
 #'
-#' @details For more information about upset plots, see https://upset.app/
+#' @details for further arguments, see `?UpSetR::upset`
 #'
-#' @examples
-#' prot.plot_upset(enrichset)
+#' @details For more information about upset plots, see https://upset.app/
 #'
 #' @export
 #'
