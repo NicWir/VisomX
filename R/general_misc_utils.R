@@ -23,7 +23,6 @@ mcols <- getFromNamespace(x = "mcols", "S4Vectors")
   if(!tinytex::is_tinytex()){
     packageStartupMessage("TinyTex was not found on your system. To ensure full functionality of Visomx, please execute tinytex::install_tinytex().")
   }
-  setClass("ExactParam")
 }
 
 ####____enriched_pathways____####
