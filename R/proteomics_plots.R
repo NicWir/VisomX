@@ -133,7 +133,7 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
   })
   gather_join <- function(se) {
     SummarizedExperiment::assay(se) %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(.,
-                                                                                                          data.frame(SummarizedExperiment::colData(se)), by = "ID", check.names = FALSE)
+                                                                                                          data.frame(SummarizedExperiment::colData(se)), by = "ID")
   }
   df <- purrr::map_df(arglist, gather_join, .id = "var") %>%
     mutate(var = factor(var, levels = names(arglist)))
@@ -1097,7 +1097,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
            ".\nValid columns are: '", paste(columns,
                                             collapse = "', '"), "'.", call. = FALSE)
     }
-    anno <- SummarizedExperiment::colData(dep) %>% data.frame() %>% select(indicate)
+    anno <- SummarizedExperiment::colData(dep) %>% data.frame() %>% select(all_of(indicate))
     names <- colnames(anno)
     anno_col <- vector(mode = "list", length = length(names))
     names(anno_col) <- names
@@ -1204,7 +1204,7 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
       warning("Only used the following indicate column(s): '",
               paste0(indicate, collapse = "', '"), "'")
     }
-    anno <- select(col_data, indicate)
+    anno <- select(col_data, all_of(indicate))
     anno <- filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
     names <- colnames(anno)
     anno_col <- vector(mode = "list", length = length(names))
@@ -2344,7 +2344,7 @@ prot.plot_bar <- function (dep,
                                                                   Reduce(c, name_table[match.id]), ", "
                                                                 )))),
                                                           match.name]) %>%
-          select(rowname) %>% unlist(., use.names = F)
+          select(all_of(rowname)) %>% unlist(., use.names = F)
       }
       df_reps$replicate <- as.factor(df_reps$replicate)
 

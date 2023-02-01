@@ -539,7 +539,6 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   utils::write.table(results$results, paste(getwd(), "results.txt",
                                   sep = "/"), row.names = FALSE, sep = "\t")
 
-
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
     message(paste0("Writing results of KEGG pathway enrichment analysis to: ", getwd(), "'pora_kegg_contrast...txt'"))
@@ -1679,10 +1678,6 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
                              rowData = row_data)
   return(se)
 }
-
-####____manual_impute____(fromDEP) ####
-
-
 
 #' Imputation by random draws from a manually defined distribution
 #'
