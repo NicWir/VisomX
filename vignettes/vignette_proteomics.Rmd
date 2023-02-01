@@ -203,8 +203,9 @@ closer consideration:
     need to correspond to the IDs initially used to create the
     SummarizedExperiment with `prot.read_data()`.
 
--   Lastly, we choose to have a report generated and exported into a
-    subfolder of the current working directory.
+-   Lastly, we choose whether a report shall be generated and exported
+    into a subfolder of the current working directory (omitted because
+    of the long run time associated).
 
 ```{r workflow, include = T, eval = T}
 # Read TXT file with BioCyc pathways for P. putida KT2440
@@ -231,11 +232,67 @@ results <- prot.workflow(se = data,
         pathway_kegg = TRUE,
         kegg_organism = "ppu",
         custom_pathways = custom_df,
-        volcano.add_names = FALSE, # show protein labels
-        report = TRUE,
-        report.dir = "Report")
+        volcano.add_names = FALSE, # show protein labels in volcano
+        report = FALSE,
+        out.dir = tempdir()
+        )
 ```
 
+# Custom workflows
+
+If further customization of certain computational steps are required,
+all steps included within `run.workflow()` can also be performed
+manually. The following steps are required to end up with the same results list object as obtained with the workflow function:
+
+```{r CustomWorkflow, include = T, eval = F}
+# 1.  Perform data normalization: 
+prot_norm <- prot.normalize_vsn(se)
+
+# 2.  Missing value imputation
+
+#    a.   with imp_fun == "MinProb":
+        prot_imp <- prot.impute(prot_norm, fun = imp_fun, q = q)
+
+#    b.  with imp_fun == "knn":
+        prot_imp <- prot.impute(prot_norm, fun = imp_fun, rowmax = knn.rowmax)
+
+#    c.  for all other methods:
+        prot_imp <- prot.impute(prot_norm, fun = imp_fun)
+
+# 3.  Principal component analysis
+prot_pca <- prot.pca(SummarizedExperiment::assay(prot_imp))
+
+# 4.  Test for differential expression by empirical Bayes moderation of a linear model and defined contrasts:
+prot_diff <- prot.test_diff(prot_imp, type = type, control = control, test = contrast)
+
+# 5.  Denote significantly differential proteins: 
+prot_dep <- prot.add_rejections(prot_diff, alpha = alpha, lfc = lfc)
+
+# 6.  Generate a results table: 
+prot_res <- prot.get_results(prot_dep)
+
+# 7.  Pathway enrichment analysis
+
+#    a. Get vector of tested contrasts: 
+        contrasts <- SummarizedExperiment::rowData(prot_dep) %>%
+          data.frame(check.names = FALSE) %>%
+          select(ends_with("_diff")) %>%
+          colnames() %>% str_replace_all("_diff", "")
+        
+#    b. Perform pathway enrichment analysis
+        res.pathway <- enrich_pathways(prot_dep, contrasts, alpha_pathways = alpha_pathways,
+                                   pathway_kegg = pathway_kegg, kegg_organism = kegg_organism,
+                                   custom_pathways = custom_pathways)
+
+# 8.  Assemble results into list
+        results <- list(data = SummarizedExperiment::rowData(se), se = se, norm = prot_norm,
+                  imputed = prot_imp, pca = prot_pca, diff = prot_diff, dep = prot_dep,
+                  results = results, param = param)
+```
+
+# Plot Results
+
+Most plots available in `VisomX` are generated automatically within the report. Additionally, the figures are automatically exported as PNG and PDF files if argument `export = TRUE` when running `prot.workflow()`.
 
 # References
 

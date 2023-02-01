@@ -545,6 +545,9 @@ if(!is.null(out.dir)){
   utils::write.table(results$results, paste(getwd(), "results.txt",
                                   sep = "/"), row.names = FALSE, sep = "\t")
 
+  message("Save RData object")
+  save(results, file = paste(out_dir, "results.RData", sep = "/"))
+
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
     message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "'pora_kegg_contrast...txt'"))
@@ -1188,8 +1191,6 @@ prot.report <- function(results, report.dir = NULL, ...)
       Report.wd <- paste0(.libPaths()[i], "/VisomX")
     }
   }
-  message("Save RData object")
-  save(results, file = paste(wd, "results.RData", sep = "/"))
   file <- paste0(Report.wd, "/Report_Prot.Rmd")
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
