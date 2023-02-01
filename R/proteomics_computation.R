@@ -89,7 +89,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @param dec (Character string) decimal separator used in CSV, TSV or TXT files (ignored for other file types). Default: \code{"."}
 #' @param na.strings A character vector of strings which are to be interpreted as NA values.
 #' @param sheet (Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (_optional_).
-#' @param filter (Character string) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.
+#' @param filter (Character string or vector of strings) Provide the header of a column containing "+" or "-" to indicate if proteins should be discarded or kept, respectively.
 #' @param rsd_thresh (Numeric, optional) Provide a relative standard deviation (RSD) threshold **in %** for proteins. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the protein is discarded. The RSD filter is applied **before** further missing value filters based on the three \code{filt_} arguments.
 #' @param name (Character string) Provide the header of the column containing protein names.
 #' @param id (Character string) Provide the header of the column containing protein IDs
@@ -256,7 +256,7 @@ prot.read_data <- function (data = "dat_prot.csv",
 
   # Generate a SummarizedExperiment object using an experimental design
   abundance_columns <- grep(pfx, colnames(prot_unique))  # get abundance column numbers
-  prot_unique[,abundance_columns] <- na_if(prot_unique[,abundance_columns], "NA") # replace "NA" with NA
+  prot_unique[,abundance_columns] <- apply(prot_unique[,abundance_columns], 2, function(x) as.numeric(na_if(x, "NA"))) # replace "NA" with NA
   prot_unique[, abundance_columns] <- # convert to numeric
     sapply(1:length(abundance_columns), function (x)
       as.numeric(prot_unique[, abundance_columns[x]]))
