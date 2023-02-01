@@ -1702,8 +1702,6 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
 #' @importFrom tidyr gather
 #' @importFrom stats rnorm
 #'
-#' @useDynLib SummarizedExperiment
-#'
 #' @importFrom SummarizedExperiment assay
 #'
 #' @export manual_impute
