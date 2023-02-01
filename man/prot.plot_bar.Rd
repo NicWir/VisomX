@@ -12,12 +12,12 @@ prot.plot_bar(
   type = c("contrast", "centered", "reference", "abundance"),
   contrast = NULL,
   col.id = "ID",
+  name_table = NULL,
   match.id = "Accession",
   match.name = "Name",
   convert_name = FALSE,
   shape.size = 2.5,
   y.lim = NULL,
-  name_table = NULL,
   plot = TRUE,
   export = TRUE,
   export.nm = NULL,
@@ -30,7 +30,7 @@ prot.plot_bar(
 
 \item{proteins}{A vector of protein names or IDs.}
 
-\item{combine}{Logical value indicating whether to combine the data from different conditions in one plot.}
+\item{combine}{Logical value indicating whether to combine the data from different proteins in one plot.}
 
 \item{ref.prot}{ID or name of the reference protein for normalization when type is "reference".}
 
@@ -38,17 +38,29 @@ prot.plot_bar(
 
 \item{contrast}{Name of the contrast for plotting when type is "contrast".}
 
-\item{match.id}{A vector of protein names or IDs that need to be matched in the name.table.}
+\item{col.id}{Name of the column with protein IDs in \code{dep}.}
 
-\item{match.name}{A vector of protein names that need to be matched in the name.table.}
+\item{name_table}{A data frame containing the mapping of protein names to reference names.}
+
+\item{match.id}{The name of a column in \code{name_table} to find matches with \code{col.id}.}
+
+\item{match.name}{The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.}
+
+\item{convert_name}{Logical value indicating whether to convert the protein names to reference names based on \code{name_table} (e.g., gene names).}
+
+\item{shape.size}{Numeric value defining the (replicate) symbol size in the plot}
 
 \item{y.lim}{Limits of the y axis.}
 
-\item{subset}{A data frame containing a subset of the data to be plotted.}
+\item{plot}{wether to return the plot or not.}
 
-\item{convert.name}{Logical value indicating whether to convert the protein names to reference names (e.g., gene names).}
+\item{export}{Logical; whether to export the plot as PDF an PNG files}
 
-\item{name.table}{A data frame containing the mapping of protein names to reference names.}
+\item{export.nm}{Name of the output PDF and PNG files if \code{export = TRUE}.}
+
+\item{width}{Numeric value defining the width of the exported plot.}
+
+\item{height}{Numeric value defining the height of the exported plot.}
 }
 \value{
 A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.

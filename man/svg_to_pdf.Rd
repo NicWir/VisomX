@@ -2,13 +2,33 @@
 % Please edit documentation in R/fun_fluctuator.R
 \name{svg_to_pdf}
 \alias{svg_to_pdf}
-\title{Title}
+\title{Convert SVG to PDF}
 \usage{
-svg_to_pdf(svg = svg, out = NULL, dpi = 300, width = 2281, height = 2166)
+svg_to_pdf(
+  svg = svg,
+  inkscape_path = "C:/Program Files/Inkscape/bin/inkscape.exe",
+  out = NULL,
+  dpi = 300,
+  width = 2281,
+  height = 2166
+)
 }
 \arguments{
-\item{height}{}
+\item{svg}{character. File path to the svg file.}
+
+\item{inkscape_path}{The local path to the 'inkscape.exe' file.}
+
+\item{out}{character. File path to the output pdf file.}
+
+\item{dpi}{numeric. DPI of the output pdf file.}
+
+\item{width}{numeric. Width of the output pdf file.}
+
+\item{height}{numeric. Height of the output pdf file.}
+}
+\value{
+A message indicating the file path of the output pdf file.
 }
 \description{
-Title
+Convert SVG to PDF
 }

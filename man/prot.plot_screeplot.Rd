@@ -2,9 +2,7 @@
 % Please edit documentation in R/proteomics_plots.R
 \name{prot.plot_screeplot}
 \alias{prot.plot_screeplot}
-\title{SCREE plot
-
-prot.plot_screeplot() creates a SCREE plot of the explained variation in the principal components of a 'princomp' object}
+\title{SCREE plot}
 \usage{
 prot.plot_screeplot(
   pcaobj,
@@ -134,7 +132,5 @@ prot.plot_screeplot(
 A SCREE plot
 }
 \description{
-SCREE plot
-
 prot.plot_screeplot() creates a SCREE plot of the explained variation in the principal components of a 'princomp' object
 }

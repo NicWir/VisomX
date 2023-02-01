@@ -37,8 +37,7 @@ theme_DEP1 <- function (basesize = 15)
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment colData assay
 #' @importFrom tibble rownames_to_column
-#' @importFrom dplyr gather group_by summarize left_join
-#' @importFrom ggplot2 geom_col geom_hline labs theme_DEP2 scale_fill_brewer scale_fill_manual
+#' @importFrom ggplot2 geom_col geom_hline labs scale_fill_brewer scale_fill_manual
 #' @importFrom grDevices png pdf
 #'
 prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
@@ -97,8 +96,9 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
 
 
 #' @title Plot imputation results
-#' @description Plot the results of imputation as a density plot
+#' @description Plot the results of imputation as a density plot. It is recommended to log-transform the data before using this function.
 #' @param se SummarizedExperiment object
+#' @param ... Additional SummarizedExperiment objects. Can be input as named argument, for example: \code{"se2" = se2}
 #' @param plot logical, whether to plot the results or not (default: TRUE)
 #' @param basesize numeric, base font size (default: 12)
 #' @param export logical, whether to export the results as PNG and PDF or not (default: TRUE)
@@ -107,13 +107,11 @@ prot.plot_numbers <- function (se, plot = TRUE, export = FALSE)
 #'
 #' @importFrom assertthat assert_that
 #' @importFrom purrr map_df
-#' @importFrom ggplot2 geom_density stat_density facet_wrap labs theme_DEP1 scale_color_brewer scale_color_manual
+#' @importFrom ggplot2 geom_density stat_density facet_wrap labs scale_color_brewer scale_color_manual
 #' @importFrom grDevices png pdf dev.off
-#' @importFrom utils dir.create
 #' @importFrom SummarizedExperiment assay colData
-#' @importFrom dplyr left_join
 #' @importFrom magrittr %>%
-prot.plot_imputation <- function(se, plot = TRUE, basesize = 12, export = TRUE)
+prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = TRUE)
 {
   call <- match.call()
   call$export <- NULL
@@ -201,12 +199,9 @@ prot.plot_imputation <- function(se, plot = TRUE, basesize = 12, export = TRUE)
 #' @importFrom SummarizedExperiment assay
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom tibble rownames_to_column
-#' @importFrom dplyr pivot_longer
 #' @importFrom grDevices pdf
 #' @importFrom grDevices png
 #' @importFrom grDevices dev.off
-#' @importFrom utils dir.create
-#' @importFrom utils message
 #' @importFrom gridExtra marrangeGrob
 #'
 prot.plot_density <- function(se1,
@@ -398,11 +393,7 @@ prot.plot_density <- function(se1,
 #' @importFrom ComplexHeatmap Heatmap draw
 #' @importFrom grid gpar
 #' @importFrom grDevices pdf png dev.off
-#' @importFrom utils dir.create
 #'
-#' @seealso \code{\link{prot.clean_data}}
-#'
-#' @references
 #'
 prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
 {
@@ -456,13 +447,11 @@ prot.plot_missval <- function (se, plot = TRUE, export = TRUE, fontsize = 12)
 #'
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment assay
-#' @importFrom dplyr group_by summarize
 #' @importFrom tidyr gather
 #' @importFrom ggplot2 geom_density stat_density theme_minimal
 #' @importFrom grDevices pdf png
 #' @importFrom gridExtra grid.arrange
 #' @importFrom stringr str_replace
-#' @importFrom utils getwd dir.create
 prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"))
@@ -561,9 +550,9 @@ prot.plot_detect <- function (se, basesize = 10, plot = TRUE, export = TRUE)
   }
 }
 
-#' Plot Eesults of Principal Component Analysis
+#' Plot Results of Principal Component Analysis
 #'
-#' Performs PCA and of a given SummarizedExperiment object and plots the results.
+#' Performs PCA on a given SummarizedExperiment object with log2-transformed protein abundances and plots the results.
 #'
 #' @param dep SummarizedExperiment object
 #' @param x x-axis PC (default: 1)
@@ -808,13 +797,12 @@ prot.plot_pca <- function (dep,
 #'
 #' @importFrom SummarizedExperiment rowData
 #' @importFrom assertthat assert_that
-#' @importFrom ggplot2 geom_point geom_vline geom_hline geom_text_repel labs xlab ylab scale_colour_manual theme_bw theme coord_cartesian
+#' @importFrom ggplot2 geom_point geom_vline geom_hline labs xlab ylab scale_colour_manual theme_bw theme coord_cartesian
+#' @importFrom ggrepel geom_text_repel
 #' @importFrom ggh4x force_panelsizes
 #' @importFrom scales pretty_breaks
-#' @importFrom dplyr filter mutate arrange
 #' @importFrom stringr str_replace
 #' @importFrom grDevices pdf png dev.off
-#' @importFrom utils dir.create
 prot.plot_volcano <-
   function (dep,
             contrast,
@@ -1688,7 +1676,7 @@ prot.plot_heatmap_all <- function (se,
 }
 
 
-#' @title SCREE plot
+#' SCREE plot
 #'
 #' prot.plot_screeplot() creates a SCREE plot of the explained variation in the principal components of a 'princomp' object
 #'
@@ -2046,10 +2034,9 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
 #' @importFrom ggplot2 geom_segment geom_point scale_color_viridis_c
 #'   scale_size_area theme_bw xlab ylab ggtitle
 #' @importFrom grDevices pdf png
-#' @importFrom utils getwd dir.create message str_count if_else
 #'
 #' @seealso
-#' \code{\link{prot.enrichment}}
+#' \code{\link{pathway_enrich}}
 prot.plot_enrichment <- function(enrichset,
                                  title = "Differentially enriched pathways",
                                  subtitle = "",
@@ -2177,28 +2164,33 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 #'
 #' @param dep A SummarizedExperiment object containing the data.
 #' @param proteins A vector of protein names or IDs.
-#' @param type Type of plot: "abundance", "reference", "centered" or "contrast".
+#' @param combine Logical value indicating whether to combine the data from different proteins in one plot.
 #' @param ref.prot ID or name of the reference protein for normalization when type is "reference".
+#' @param type Type of plot: "abundance", "reference", "centered" or "contrast".
 #' @param contrast Name of the contrast for plotting when type is "contrast".
-#' @param subset A data frame containing a subset of the data to be plotted.
-#' @param combine Logical value indicating whether to combine the data from different conditions in one plot.
+#' @param col.id Name of the column with protein IDs in \code{dep}.
+#' @param name_table A data frame containing the mapping of protein names to reference names.
+#' @param match.id The name of a column in \code{name_table} to find matches with \code{col.id}.
+#' @param match.name The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.
+#' @param convert_name Logical value indicating whether to convert the protein names to reference names based on \code{name_table} (e.g., gene names).
+#' @param shape.size Numeric value defining the (replicate) symbol size in the plot
 #' @param y.lim Limits of the y axis.
-#' @param convert.name Logical value indicating whether to convert the protein names to reference names (e.g., gene names).
-#' @param name.table A data frame containing the mapping of protein names to reference names.
-#' @param match.id A vector of protein names or IDs that need to be matched in the name.table.
-#' @param match.name A vector of protein names that need to be matched in the name.table.
+#' @param plot wether to return the plot or not.
+#' @param export Logical; whether to export the plot as PDF an PNG files
+#' @param export.nm Name of the output PDF and PNG files if \code{export = TRUE}.
+#' @param width Numeric value defining the width of the exported plot.
+#' @param height Numeric value defining the height of the exported plot.
 #'
 #' @return A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.
 #'
 #' @export
 #'
 #' @importFrom SummarizedExperiment assay rowData colData
-#' @importFrom dplyr select group_by summarize mutate left_join
 #' @importFrom tidyr gather spread
 #' @importFrom stats qnorm
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom stringr str_split
-
+#'
 prot.plot_bar <- function (dep,
                            proteins,
                            combine = FALSE,
@@ -2206,12 +2198,12 @@ prot.plot_bar <- function (dep,
                            type = c("contrast", "centered", "reference", "abundance"),
                            contrast = NULL,
                            col.id = "ID",
+                           name_table = NULL,
                            match.id = "Accession",
                            match.name = "Name",
                            convert_name = FALSE,
                            shape.size = 2.5,
                            y.lim = NULL,
-                           name_table = NULL,
                            plot = TRUE,
                            export = TRUE,
                            export.nm = NULL,
@@ -3005,8 +2997,7 @@ theme_DEP2 <- function(...)
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment assay
 #' @importFrom tibble rownames_to_column
-#' @importFrom dplyr group_by summarize mutate
-#' @importFrom ggplot2 aes geom_col scale_fill_grey labs theme_DEP1
+#' @importFrom ggplot2 aes geom_col scale_fill_grey labs
 plot_coverage <- function (se, plot = TRUE)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),

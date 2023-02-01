@@ -1,4 +1,29 @@
-####____rna.plot_corrheatmap____####
+#' Plot a correlation heatmap
+#'
+#' This function plots a Pearson correlation heatmap for a given SummarizedExperiment object.
+#'
+#' @param dep A DESeqDataSet object.
+#' @param significant Logical. If TRUE, only significant correlations are plotted. Default is TRUE.
+#' @param lower Numeric. Lower limit of the color scale. Default is 0.
+#' @param upper Numeric. Upper limit of the color scale. Default is 1.
+#' @param pal Character. Brewer color palette to be used. Default is "PRGn". See \code{\link[RColorBrewer]{brewer.pal.info}} for options
+#' @param pal_rev Logical. If TRUE, color palette is reversed. Default is FALSE.
+#' @param indicate Character. Column name from colData to use for annotations. Default is NULL.
+#' @param font_size Numeric. Font size for labels. Default is 12.
+#' @param plot Logical. If FALSE, no plot is generated, only data frame is returned. Default is TRUE.
+#' @param ... Other arguments to be passed to \code{\link[ComplexHeatmap]{Heatmap}}.
+#'
+#' @return (Invisibly) a data frame with Pearson correlation values is returned.
+#'
+#' @export
+#'
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom assertthat assert_that
+#' @importFrom circlize colorRamp2
+#' @importFrom grid gpar
+#' @importFrom tibble rownames_to_column
+#' @importFrom SummarizedExperiment assay colData rowData
+#'
 rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
                                    pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE,
                                    ...)
@@ -77,23 +102,44 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
   }
 }
 
-####____rna.plot_heatmap____####
-rna.plot_heatmap <- function (dds, type = c("centered", "contrast"),
-                               contrast = NULL, # Analyze only genes contained in the specified contrast(s)
-                               show_all = TRUE, # Show protein abundances of all conditions or only of those in the specified constrast(s)
-                               pal = "RdBu",
-                               kmeans = FALSE, k = 6,
-                               col_limit = NA,
-                               indicate = NULL,
-                               clustering_distance = c("euclidean",
-                                                       "maximum", "manhattan", "canberra",
-                                                       "binary", "minkowski", "pearson", "spearman",
-                                                       "kendall", "gower"),
-                               show_row_names = FALSE,
-                               row_font_size = 6,
-                               col_font_size = 10,
-                               plot = TRUE,
-                               export = TRUE, ...)
+#' Plots a heatmap of the differentially expressed genes
+#'
+#' @param dds A DESeqDataSet object containing the normalized gene abundances and the associated metadata
+#' @param type Type of heatmap to plot. Either "centered" or "contrast".
+#' @param contrast (String or vector of strings) Analyze only significant genes contained in the specified contrast(s). Default is NULL. Contrasts must be given in the form "ConditionA_vs_ConditionB"
+#' @param show_all Show gene abundances of all conditions or only of those in the specified constrast(s). Default is TRUE
+#' @param pal Color palette to use. Default is "RdBu"
+#' @param kmeans Perform k-means clustering on the rows. Default is FALSE
+#' @param k Number of clusters to use when kmeans is TRUE. Default is 6
+#' @param col_limit Specify a custom range for the color scale of the heatmap. Default is NA, in which case the minimum and maximum of the color scale are calculated as the 5% and 95% percentiles.
+#' @param indicate Annotate the heatmap with the specified column from the metadata.
+#' @param clustering_distance Distance metric used for clustering. Default is "euclidean".
+#' @param show_row_names Show the gene names on the left side of the heatmap. Default is FALSE.
+#' @param row_font_size Font size for the gene names. Default is 6
+#' @param col_font_size Font size for the condition names. Default is 10
+#' @param plot Plot the heatmap. Default is TRUE
+#' @param export Export the heatmap as pdf and png. Default is TRUE
+#' @param ... Other parameters passed to the ComplexHeatmap::Heatmap function
+#' @return (Invisibly) returns a data frame with the genes and the normalized abundances
+#' @export
+rna.plot_heatmap <- function (dds,
+                              type = c("centered", "contrast"),
+                              contrast = NULL, # Analyze only genes contained in the specified contrast(s)
+                              show_all = TRUE, # Show gene abundances of all conditions or only of those in the specified constrast(s)
+                              pal = "RdBu",
+                              kmeans = FALSE,
+                              k = 6,
+                              col_limit = NA,
+                              indicate = NULL,
+                              clustering_distance = c("euclidean",
+                                                      "maximum", "manhattan", "canberra",
+                                                      "binary", "minkowski", "pearson", "spearman",
+                                                      "kendall", "gower"),
+                              show_row_names = FALSE,
+                              row_font_size = 6,
+                              col_font_size = 10,
+                              plot = TRUE,
+                              export = TRUE, ...)
 {
   if(is.null(contrast) & show_all == FALSE){
     contrast <- SummarizedExperiment::rowData(dds, use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(starts_with("lfc."))  %>%
@@ -331,11 +377,41 @@ rna.plot_heatmap <- function (dds, type = c("centered", "contrast"),
     }
     try(suppressWarnings(
       return <- df[unlist(ComplexHeatmap::row_order(ht1)), ]))
-    data.frame(protein = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number())
+    data.frame(gene = row.names(return), return, check.names = FALSE) %>% mutate(order = row_number())
   }
 }
 
-####____rna.plot_pca____####
+#' Plot Results of Principal Component Analysis
+#'
+#' Performs 'regularized log' transformation followed by PCA on a given DESeqDataSet object and plots the results.
+#'
+#' @param dep DESeqDataSet object
+#' @param x x-axis PC (default: 1)
+#' @param y y-axis PC (default: 2)
+#' @param indicate features to indicate in the plot ("condition" or "replicate")
+#' @param title title of the plot (default: "PCA plot - top \code{n} variable genes")
+#' @param label whether to label points in the plot (default: FALSE)
+#' @param n number of variables to take into account, sorted according to their variance in descending order. Only the \code{n} most variable genes are used to perform PCA. default: number of columns in \code{dep})
+#' @param point_size size of points in the plot (default: 4)
+#' @param label_size size of labels in the plot (default: 3)
+#' @param hline position of horizontal line (default: 0)
+#' @param hlineType type of horizontal line (default: 'longdash')
+#' @param hlineCol color of horizontal line (default: 'black')
+#' @param hlineWidth width of horizontal line (default: 0.4)
+#' @param vline position of vertical line (default: 0)
+#' @param vlineType type of vertical line (default: 'longdash')
+#' @param vlineCol color of vertical line (default: 'black')
+#' @param vlineWidth width of vertical line (default: 0.4)
+#' @param basesize base size of the plot (default: 15)
+#' @param plot whether to return the PCA plot (default: TRUE)
+#' @param export whether to export the PCA plot to the Plots directory as PNG and PDF file (default: TRUE)
+#'
+#' @return (invisibly) a data frame containing the PCA coordinates
+#'
+#' @importFrom DESeq2 rlog
+#' @importFrom SummarizedExperiment assay colData
+#'
+#' @export
 rna.plot_pca <- function (dds,
                            x = 1,
                            y = 2,
@@ -539,8 +615,25 @@ rna.plot_pca <- function (dds,
   }
 }
 
-
-####____rna.plot_imputation____####
+#' Plot imputation results
+#'
+#' This function takes a matrix or array of imputation results and plots the distribution of intensities. It is recommended to log-transform the data before using this function.
+#'
+#' @param assay A matrix or array of imputation results. If working with a DESeqDataSet or SummarizedExperiment object, the array can be retrieved via \code{SummarizedExperiment::assay(object)}.
+#' @param ... Additional matrices or arrays. Can be input as named argument, for example: \code{"matrix2" = log(matrix2)}
+#' @param colData A data frame of sample metadata.  If working with a DESeqDataSet or SummarizedExperiment object, the metadata can be retrieved via \code{SummarizedExperiment::colData(object)}.
+#' @param plot A logical indicating whether to plot the results.
+#' @param basesize Base font size for plotting.
+#' @param export A logical indicating whether to export the plot as PDF and PNG file into the /Plots folder.
+#' @return (Invisibly) A ggplot object.
+#'
+#' @export
+#'
+#' @import ggplot2
+#' @importFrom assertthat assert_that
+#' @importFrom purrr map_df
+#' @importFrom tidyr gather
+#'
 rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12, export = TRUE)
 {
   call <- match.call()
@@ -596,14 +689,35 @@ rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12,
 
   if (plot == TRUE){
     print(p)
-  } else {
-    return(p)
   }
+    invisible(p)
+
 }
 
-####____rna.plot_volcano____####
-#Revised volcano plot function from the DEP package with enhanced aesthetics.
 
+#' Plots a volcano plot for a given contrast
+#'
+#' @param dds A DESeqDataSet object
+#' @param contrast The contrast of interest in the format "conditionA_vs_conditionB"
+#' @param label_size The size of labels for the gene names
+#' @param alpha The alpha value used to determine significance.
+#' @param lfc The log2 fold change threshold.
+#' @param add_names Logical, whether to add gene names to the plot
+#' @param adjusted Logical, whether to plot adjusted p-values. The \code{alpha} threshold is applied to adjusted p values even if \code{adjusted = FALSE}.
+#' @param plot Logical, whether to return the volcano plot
+#' @param export Logical, whether to export the volcano plot as PND and PDF file
+#'
+#' @return (invisibly) A data frame with columns for gene, log2 fold change, and -log10 p-value
+#'
+#' @export
+#'
+#' @importFrom SummarizedExperiment rowData
+#' @importFrom assertthat assert_that
+#' @importFrom ggplot2 geom_point geom_vline geom_hline labs xlab ylab scale_colour_manual theme_bw theme coord_cartesian
+#' @importFrom ggh4x force_panelsizes
+#' @importFrom scales pretty_breaks
+#' @importFrom stringr str_replace
+#' @importFrom grDevices pdf png dev.off
 rna.plot_volcano <-
   function (dds,
             contrast,
@@ -882,7 +996,22 @@ rna.plot_volcano <-
     }
   }
 
-####____rna.plot_numbers____####
+#' Plot the number of genes identified in a DESeqDataSet object
+#'
+#' @param se A DESeqDataSet object
+#' @param plot Logical, if TRUE a plot is returned
+#' @param export Logical, if TRUE the plot is exported to the /Plots directory
+#'
+#' @return If plot = TRUE, returns a ggplot object. If plot = FALSE, returns a data frame with plotted values.
+#'
+#' @export
+#'
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment colData assay
+#' @importFrom tibble rownames_to_column
+#' @importFrom ggplot2 geom_col geom_hline labs scale_fill_brewer scale_fill_manual
+#' @importFrom grDevices png pdf
+#'
 rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
 {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"),
@@ -936,23 +1065,51 @@ rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
   }
 }
 
-####____prot.plot_bar____####
-# Plot bar plots of single genes based on their Ensembl gene ID
+#' Plot bar plots for gene abundance or fold change
+#'
+#' This function generates bar plots for gene abundance or fold change, normalized by either a reference gene or centered to the mean. The user can also plot the contrast of two conditions.
+#'
+#' @param dds A DESeqDataSet object containing the data.
+#' @param genes A vector of gene names or IDs.
+#' @param type Type of plot: "centered" or "contrast".
+#' @param shrunken.lfc A logical indicating if shrunken log2 fold changes should be used if \code{type = "contrast"}. Default is TRUE.
+#' @param contrast Name of the contrast for plotting when type is "contrast".
+#' @param col.id Name of the column with gene IDs in \code{dep}.
+#' @param name_table A data frame containing the mapping of gene names to reference names.
+#' @param match.id The name of a column in \code{name_table} to find matches with \code{col.id}.
+#' @param match.name The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.
+#' @param convert_name Logical value indicating whether to convert the gene names to reference names based on \code{name_table} (e.g., gene names).
+#' @param shape.size Numeric value defining the (replicate) symbol size in the plot
+#' @param collage A logical indicating if multiple plots for different genes should be combined into collages of up to 8 plots. Default is TRUE.
+#' @param plot wether to return the plot or not.
+#' @param export Logical; whether to export the plot as PDF an PNG files
+#' @param export.nm Name of the output PDF and PNG files if \code{export = TRUE}.
+#'
+#' @return If `plot` is set to FALSE and the length of `genes` is less than or equal to 8, a data frame with the log2 fold changes or log2 intensities, along with their lower and upper bounds of 95% confidence intervals, is returned.
+#'
+#' @export
+#'
+#' @importFrom SummarizedExperiment assay rowData colData
+#' @importFrom tidyr gather spread
+#' @importFrom stats qnorm
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom stringr str_split
+#'
 rna.plot_bar <- function (dds,
-                           genes,
-                           type = c("contrast", "centered"),
-                           shrunken.lfc = T,
-                           contrast = NULL,
-                           col.id = "ID",
-                           match.id = "Accession",
-                           match.name = "Name",
-                           convert_name = FALSE,
-                           shape.size = 2.5,
-                           name_table = NULL,
-                           collage = TRUE,
-                           plot = TRUE,
-                           export = TRUE,
-                           export.nm = NULL)
+                          genes,
+                          type = c("contrast", "centered"),
+                          shrunken.lfc = T,
+                          contrast = NULL,
+                          col.id = "ID",
+                          name_table = NULL,
+                          match.id = "Accession",
+                          match.name = "Name",
+                          convert_name = FALSE,
+                          shape.size = 2.5,
+                          collage = TRUE,
+                          plot = TRUE,
+                          export = TRUE,
+                          export.nm = NULL)
 {
   assertthat::assert_that(inherits(dds, "SummarizedExperiment"),
                           is.character(genes), is.character(type), is.logical(plot),
@@ -1007,7 +1164,7 @@ rna.plot_bar <- function (dds,
       possibilities_msg <- NULL
     }
     stop(paste0("The genes ", paste(genes, collapse=", "), " were not found in the column '", col.id,
-                "'. Please run `prot.plot_bar()` with a valid protein names in the 'genes' argument or provide the valid column ID in the 'col.id' argument.\n"),
+                "'. Please run `prot.plot_bar()` with a valid gene names in the 'genes' argument or provide the valid column ID in the 'col.id' argument.\n"),
          possibilities_msg, call. = FALSE)
   }
   if (any(!genes %in% row_data[,col.id])) {
@@ -1289,13 +1446,13 @@ rna.plot_bar <- function (dds,
       if (type == "centered") {
         df <- df %>% select(rowname, condition, mean, CI.L,
                             CI.R)
-        colnames(df) <- c("protein", "condition",
+        colnames(df) <- c("gene", "condition",
                           "log2_intensity", "CI.L", "CI.R")
       }
       if (type == "contrast") {
         df <- df %>% select(name, contrast, diff, CI.L, CI.R) %>%
           mutate(contrast = paste0(contrast))
-        colnames(df) <- c("protein", "contrast",
+        colnames(df) <- c("gene", "contrast",
                           "log2_fold_change", "CI.L", "CI.R")
       }
       if (length(genes) <= 8) {

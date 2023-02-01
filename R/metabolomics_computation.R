@@ -680,7 +680,7 @@ met.GetTtestRes <- function (mSetObj = NA, grp1, grp2, paired = FALSE, equal.var
 
 #' Impute missing variables
 #'
-#' Replace missing variables via a chosen method. Data need to be re-calibrated after this step, including \code{\link[VisomX::met.PerformFeatureFilter]{filtering}} as well as \code{\link[VisomX::met.normalize]{normalization, transformation, and scaling}}. Data imputation is performed as part of the data preparation workflow \code{\link[VisomX]{met.read_data}}.
+#' Replace missing variables via a chosen method. Data need to be re-calibrated after this step, including \code{\link[VisomX]{met.PerformFeatureFilter}} as well as \code{\link[VisomX]{met.normalize}}. Data imputation is performed as part of the data preparation workflow \code{\link[VisomX]{met.read_data}}.
 #'
 #' @param mSetObj Enter the name of the created mSet object ((see \code{\link[VisomX]{met.initialize}} and \code{\link[MetaboAnalystR]{Read.TextData}}).
 #' @param method (Character) Select the option to replace missing variables:
@@ -1338,6 +1338,7 @@ met.PreparePrenormData <- function (mSetObj = NA)
 #' @param anal.type (Character) Indicate the analysis module to be performed: \code{"stat", "pathora", "pathqea", "msetora", "msetssp", "msetqea", "ts", "cmpdmap", "smpmap",} or \code{"pathinteg"}.
 #' @param paired (Logical) Indicate if the data is paired (\code{TRUE}) or not (\code{FALSE}).
 #' @param csvsep (Character) Enter the separator used in the CSV file (only applicable if reading a ".csv" file).
+#' @param sheet (Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (_optional_).
 #' @param data.format (Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).
 #' @param lbl.type (Character) Specify the group label type, either categorical (\code{"disc"}) or continuous (\code{"cont"}).
 #' @param filt.feat (Character Vector) Enter the names of features to remove from the dataset.
@@ -1396,23 +1397,25 @@ met.PreparePrenormData <- function (mSetObj = NA)
 #' License: GNU GPL (>= 2)
 #' @export
 met.read_data <- function (data,
-          data.type = "conc", anal.type = "stat", paired = FALSE, # Parameters used to initialize dataSet object
-          csvsep = ";", # optional: delimiter if reading CSV file
-          dec = ".",
-          sheet = 1,
-          data.format = "rowu", lbl.type = "disc",
-          filt.feat = c(""),
-          filt.smpl = c(""),
-          filt.grp = c(""),
-          filt.method = "none",
-          remain.num = NULL,
-          qcFilter = "F",
-          qc.rsd = 25,
-          all.rsd = NULL,
-          imp.method = "lod",
-          export = FALSE,
-          img.format = "pdf",
-          dpi = dpi
+                           data.type = "conc",
+                           anal.type = "stat",
+                           paired = FALSE, # Parameters used to initialize dataSet object
+                           csvsep = ";", # optional: delimiter if reading CSV file
+                           dec = ".",
+                           sheet = 1,
+                           data.format = "rowu", lbl.type = "disc",
+                           filt.feat = c(""),
+                           filt.smpl = c(""),
+                           filt.grp = c(""),
+                           filt.method = "none",
+                           remain.num = NULL,
+                           qcFilter = "F",
+                           qc.rsd = 25,
+                           all.rsd = NULL,
+                           imp.method = "lod",
+                           export = FALSE,
+                           img.format = "pdf",
+                           dpi = dpi
 )
 {
   mSetObj <- suppressWarnings(met.initialize(data.type = data.type, anal.type = anal.type, paired = paired))
@@ -2706,6 +2709,9 @@ met.test_normalization <- function(mSetObj,
 #' @param scaleNorm (Character) Select option for scaling the data (see \code{\link[VisomX]{met.normalize}} for options).
 #' @param ref (Character) Enter the name of the reference sample or the reference feature (if \code{rowNorm = "GroupPQN"}, \code{"SamplePQN"}, or \code{"CompNorm"}.
 #' @param norm.vec (Numeric vector) Vector with sample-specific scaling factors. Only applicable for \code{rowNorm = "SpecNorm"}.
+#' @param contrast.type
+#' @param control
+#' @param contrast
 #' @param class_order (Logical, \code{TRUE} or \code{FALSE}) Class order matters (i.e. implying time points, disease severity, etc.).
 #' @param alpha (Numeric) Enter significance threshold for adjusted p values (false discovery rate - FDR; for ANOVA with post-hoc analyses).
 #' @param lfc (Numeric) Enter relevance threshold for log2 fold changes in pair-wise comparisons (for ANOVA with post-hoc analyses).
@@ -2735,6 +2741,8 @@ met.test_normalization <- function(mSetObj,
 #' @author Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
+
+
 met.workflow <- function(mSetObj,
          rowNorm = "NULL", # Option for row-wise normalization
          transNorm = "NULL", # Option to transform the data, "LogNorm" for Log Normalization, and "CrNorm" for Cubic Root Transformation.
@@ -2989,6 +2997,23 @@ met.workflow <- function(mSetObj,
   return(mSetObj)
 }
 
+
+
+#' Perform a Principal Component Analysis
+#'
+#' This function performs a Principal Component Analysis (PCA) on the normalized data set stored in the mSetObj object.
+#'
+#' @param mSetObj An mSet object containing normalized data
+#'
+#' @return An mSet object with the PCA results stored in the analSet element.
+#'
+#' @export
+#'
+#'
+met.PCA.Anal <- function (mSetObj = NA)
+{
+  ...
+}
 met.PCA.Anal <- function (mSetObj = NA)
 {
   pca <- stats::prcomp(mSetObj$dataSet$norm, center = TRUE, scale = F)

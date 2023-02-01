@@ -905,10 +905,8 @@ rna.report <- function(results, report.dir = NULL, ...){
 #' @importFrom assertthat assert_that
 #' @importFrom MSnbase impute
 #' @importFrom methods as
-#' @importFrom dplyr mutate_if
 #' @importFrom SummarizedExperiment rowData
 #' @importFrom SummarizedExperiment assay
-#' @importFrom stats match.arg
 #'
 rna.impute <- function (se, fun = c("zero", "bpca", "knn", "QRILC",
                                      "MLE", "MinDet", "MinProb", "man",

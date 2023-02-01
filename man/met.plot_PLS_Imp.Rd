@@ -46,7 +46,7 @@ Data container after partial least squares-discriminant analysis (\code{\link[Vi
 \item{title}{(Logical) \code{TRUE} to add a title with the used normalization, transformation, and scaling method, or \code{FALSE} to not add any title.}
 }
 \value{
-The input mSet object with added dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.imp_\emph{type}_\emph{feat.nm}.plot)}.
+The input mSet object with added dot plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.imp_type_feat.nm.plot)}.
 }
 \description{
 \code{met.plot_PLS_Imp} visualizes the features' importance in the PLS-DA model.

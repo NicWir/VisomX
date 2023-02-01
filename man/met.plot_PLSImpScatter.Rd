@@ -46,7 +46,7 @@ Data container after partial least squares-discriminant analysis (\code{\link[Vi
 \item{title}{(Character) Define the title if \code{show.title = TRUE}}
 }
 \value{
-The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_\emph{feat.nm_}.plot)}.
+The input mSet object with added scatter plot. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$pls.ImpScatter_plot_feat.nm_.plot)}.
 }
 \description{
 \code{met.plot_PLSImpScatter} visualizes the features' importance in the PLS-DA model by comparing VIP scores and coefficients.

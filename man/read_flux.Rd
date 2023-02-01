@@ -2,17 +2,17 @@
 % Please edit documentation in R/fun_fluctuator.R
 \name{read_flux}
 \alias{read_flux}
-\title{Title}
+\title{Reads flux data from a file or data frame}
 \usage{
 read_flux(
   file.data = dat_flux,
   csvsep = ";",
   dec = ".",
   sheet.data = 1,
+  file.match = "eq_bigg.csv",
   sheet.match = 1,
   rename.reaction = TRUE,
   rescale.reaction = NULL,
-  file.match = "eq_bigg.csv",
   col.id = "Reaction ID",
   col.eq = "Equation",
   col.flux = "Value (\%)",
@@ -21,8 +21,35 @@ read_flux(
 )
 }
 \arguments{
-\item{FBA}{}
+\item{file.data}{Path to the file containing the flux data. Alternatively, a data frame can be provided.}
+
+\item{csvsep}{Separator used in the file. Default is ";".}
+
+\item{dec}{Decimal separator used in the file. Default is ".".}
+
+\item{sheet.data}{Sheet number to read from the file. Default is 1.}
+
+\item{file.match}{Path to the file containing the equation-BiGG name matches.}
+
+\item{sheet.match}{Sheet number to read from the file matching equations to BiGG reaction names. Default is 1.}
+
+\item{rename.reaction}{Logical, whether to rename reactions according to BiGG standard. Default is TRUE.}
+
+\item{rescale.reaction}{Name of a reaction to normalize all fluxes (will be set as 100\%). Default is NULL.}
+
+\item{col.id}{Name of the column containing reaction IDs. Default is "Reaction ID".}
+
+\item{col.eq}{Name of the column containing carbon transition equations. Default is "Equation".}
+
+\item{col.flux}{Name of the column containing flux values. Default is "Value (\%)".}
+
+\item{col.sd}{Name of the column containing standard deviation values. Default is "Standard Deviation".}
+
+\item{FBA}{Logical, whether the data is from an FBA simulation. Default is FALSE.}
+}
+\value{
+A data frame with reaction IDs, equations, flux values, and standard deviation.
 }
 \description{
-Title
+Reads flux data from a file or data frame
 }

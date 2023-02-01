@@ -5,17 +5,14 @@ Version: 0.0.0.9000
 Authors@R: 
     person("Nicolas T.", "Wirth", , "mail.nicowirth@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0799-1321"))
-Description: This package represents a comprehensive suite of functions
-    for robust and reproducible analysis of various omics data. It
-    includes popular packages for Omics for data processing,
-    normalization, statistical analysis, pattern enrichment analysis and
-    visualization (metabomics: MetaboAnalystR, proteomics: DEP, transcriptomics: DESeq2, fluxomics
-    data visualization: fluctuator). VisomX includes all the original
-    features, but adds user-friendly wrapper functions that allow complete
-    data analysis workflows to be executed in a single step. The results
-    of these workflows are summarized in detailed reports as well as in R
-    data containers that can be intuitively navigated.
-License: GPL (>= 3)
+Description: A comprehensive suite of functions to perform robust and
+    reproducible analysis of omics data. The package includes popular
+    tools for processing, normalizing, analyzing, and visualizing
+    metabomics, proteomics, transcriptomics, and fluxomics data. With
+    VisomX, complete data analysis workflows can be executed in a single
+    step and results are summarized in detailed reports and R data
+    containers for easy navigation.
+License: Artistic License 2.0
 URL: https://github.com/NicWir/VisomX
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
@@ -25,12 +22,12 @@ Depends:
     R (>= 4.0),
     stringr,
     tidyr
-biocViews:
 Imports: 
+    apeglm,
     assertthat,
     Biobase,
+    BiocParallel,
     BiocSingular,
-    Cairo,
     caret,
     circlize,
     cluster,
@@ -39,20 +36,26 @@ Imports:
     data.table,
     DESeq2,
     DOSE,
+    edgeR,
     ellipse,
     fdrtool,
     fluctuator,
     forcats,
+    genefilter,
     ggh4x,
     ggnewscale,
     ggplot2,
     ggpubr,
     ggrepel,
     ggVennDiagram,
+    GlobalAncova,
+    globaltest,
     grid,
     gridExtra,
+    IHW,
     impute,
     kableExtra,
+    KEGGgraph,
     knitr,
     lattice,
     limma,
@@ -70,19 +73,6 @@ Imports:
     progress,
     purrr,
     qs,
-    apeglm,
-    BiocParallel,
-    clusterProfiler,
-    DESeq2,
-    DOSE,
-    edgeR,
-    genefilter,
-    GlobalAncova,
-    globaltest,
-    IHW,
-    KEGGgraph,
-    sva,
-    PCAtools,
     qvalue,
     RColorBrewer,
     readxl,
@@ -94,14 +84,13 @@ Imports:
     scales,
     stats,
     SummarizedExperiment,
+    sva,
     tibble,
     tinytex,
     UpSetR,
     vsn
 Suggests: 
     DelayedArray,
-    edgeR,
-    ggpubr,
     jsonlite,
     MetaboAnalystR,
     multtest
@@ -112,9 +101,8 @@ Remotes:
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA,
     github::stephenslab/mixsqp
+biocViews:
 Encoding: UTF-8
-GithubRepo: VisomX
-GithubUsername: NicWir
 NeedsCompilation: yes
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3

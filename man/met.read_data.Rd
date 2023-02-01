@@ -41,6 +41,8 @@ met.read_data(
 
 \item{dec}{(Character) decimal separator used in CSV, TSV and TXT files.}
 
+\item{sheet}{(Integer or Character string) Number or name of the sheet with proteomics data in XLS or XLSX files (\emph{optional}).}
+
 \item{data.format}{(Character) Specify if samples are paired and in rows (\code{"rowp"}), unpaired and in rows (\code{"rowu"}), in columns and paired (\code{"colp"}), or in columns and unpaired (\code{"colu"}).}
 
 \item{lbl.type}{(Character) Specify the group label type, either categorical (\code{"disc"}) or continuous (\code{"cont"}).}

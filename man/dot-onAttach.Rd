@@ -9,7 +9,14 @@
 \arguments{
 \item{libname}{library name}
 
-\item{pkgname}{package name}
+\item{pkgname}{package name
+importFrom grDevices col2rgb colorRampPalette
+importFrom graphics boxplot par
+importFrom stats as.formula cor density dist filter
+importFrom stats kruskal.test median model.matrix p.adjust
+importFrom stats quantile relevel runif sd t.test var
+importFrom stats wilcox.test
+importFrom utils write.csv}
 }
 \description{
 Changes debug option for package \code{rgl} to avoid Rstudio crashing upon attaching it and prints welcome message

@@ -2,15 +2,16 @@
 % Please edit documentation in R/fun_fluctuator.R
 \name{flux_to_map}
 \alias{flux_to_map}
-\title{...}
+\title{Create a metabolic map with fluxes and export as SVG file}
 \usage{
 flux_to_map(
   df = "dat_flux",
   template = NULL,
   result.nm = NULL,
-  pal = "G",
+  pal = c("G", "R", "O", "B", "BYR", "BW", "YR", "PuRd"),
   title = "",
   export = TRUE,
+  inkscape_path = "C:/Program Files/Inkscape/bin/inkscape.exe",
   export_dpi = 300,
   export_width = 2281,
   export_height = 2166,
@@ -18,11 +19,31 @@ flux_to_map(
 )
 }
 \arguments{
-\item{df}{data frame}
+\item{df}{A dataframe containing fluxes and standard deviations.}
+
+\item{template}{A template SVG file containing the metabolic map.}
+
+\item{result.nm}{The name of the output SVG file.}
+
+\item{pal}{The color palette for the flux arrows. G, green; R, red; O, orange; BYR, blue-yellow-red; BW, black-white (grayscale); YR, yellow-red; PuRd, purple-red.}
+
+\item{title}{The title of the output plot.}
+
+\item{export}{A logical value indicating whether to export the plot as a PNG and PDF file.}
+
+\item{inkscape_path}{The local path to the 'inkscape.exe' file. Required if \code{export = TRUE}.}
+
+\item{export_dpi}{The dpi of the exported PNG and PDF file.}
+
+\item{export_width}{The width of the exported PNG and PDF file. The width of the template SVG can be inspected after opening it in InkScape.}
+
+\item{export_height}{The height of the exported PNG and PDF file. The height of the template SVG can be inspected after opening it in InkScape.}
+
+\item{FBA}{A logical value indicating whether the dataframe contains FBA results. If TRUE, standard deviations are ignored.}
 }
 \value{
-The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+A metabolic map with fluxes.
 }
 \description{
-...
+\code{flux_to_map} takes a table file or dataframe as well as a template map in SVG format to visualize metabolic flux values in their metabolic context.
 }

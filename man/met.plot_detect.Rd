@@ -36,7 +36,7 @@ Density and CumSum plots of intensities of proteins with and without missing val
 of compound intensities with and without missing values.
 }
 \references{
-adapted from \code{\link[DEP]{plot_detect}} (\url{https://bioconductor.org/packages/DEP/}).
+adapted from package DEP (\url{https://bioconductor.org/packages/DEP/}).
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}

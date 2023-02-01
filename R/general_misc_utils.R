@@ -6,6 +6,13 @@ mcols <- getFromNamespace(x = "mcols", "S4Vectors")
 #'
 #' @param libname library name
 #' @param pkgname package name
+#' importFrom grDevices col2rgb colorRampPalette
+#' importFrom graphics boxplot par
+#' importFrom stats as.formula cor density dist filter
+#' importFrom stats kruskal.test median model.matrix p.adjust
+#' importFrom stats quantile relevel runif sd t.test var
+#' importFrom stats wilcox.test
+#' importFrom utils write.csv
 .onAttach <- function (libname, pkgname){
   options(rgl.debug = TRUE)
   k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")

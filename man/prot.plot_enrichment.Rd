@@ -33,5 +33,5 @@ A ggplot object.
 Plots the enrichment of pathways in a given dataset.
 }
 \seealso{
-\code{\link{prot.enrichment}}
+\code{\link{pathway_enrich}}
 }

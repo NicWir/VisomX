@@ -2,13 +2,34 @@
 % Please edit documentation in R/fun_fluctuator.R
 \name{svg_to_png}
 \alias{svg_to_png}
-\title{Title}
+\title{Convert SVG to PNG (requires Python and InkScape installed)}
 \usage{
-svg_to_png(svg = svg, out = NULL, dpi = 300, width = 2281, height = 2166)
+svg_to_png(
+  svg = svg,
+  inkscape_path = "C:/Program Files/Inkscape/bin/inkscape.exe",
+  out = NULL,
+  dpi = 300,
+  width = 2281,
+  height = 2166
+)
 }
 \arguments{
-\item{height}{}
+\item{svg}{A character string specifying the path of the SVG file to be converted.}
+
+\item{inkscape_path}{The local path to the 'inkscape.exe' file.}
+
+\item{out}{A character string specifying the desired name of the output file. If \code{NULL} (the default), the output file will have the same name as the input file, but with a .png extension.}
+
+\item{dpi}{A numeric value specifying the desired dots per inch of the output file. The default is 300.}
+
+\item{width}{A numeric value specifying the desired width of the output file. The default is 2281.}
+
+\item{height}{A numeric value specifying the desired height of the output file. The default is 2166.}
+}
+\value{
+A message specifying the location of the output file.
 }
 \description{
-Title
+This function converts an SVG file to a PNG file by calling the respective InkScape function through Python.
 }
+\keyword{internal}

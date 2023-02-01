@@ -2,16 +2,33 @@
 % Please edit documentation in R/fun_fluctuator.R
 \name{png_to_gif}
 \alias{png_to_gif}
-\title{...}
+\title{Convert PNGs to an animated GIF}
 \usage{
 png_to_gif(png, ..., fps = 0.5, out = "Plots/animated_gif.gif")
 }
 \arguments{
-\item{png}{PNG image file}
+\item{png}{Path to a PNG file.}
+
+\item{...}{Paths to additional PNG files.}
+
+\item{fps}{Frames per second for the animated GIF.}
+
+\item{out}{Path to the output file.}
 }
 \value{
-The input mSet object with imputed data at mSetObj$dataSet$data_proc.
+A list of \code{\link{magick}} objects.
 }
 \description{
-...
+Converts a vector of PNG files to an animated GIF.
+}
+\examples{
+\dontrun{
+png_files <- list.files(path = "Plots/",
+                        pattern = "*.png",
+                        full.names = TRUE)
+png_to_gif(png = png_files,
+           fps = 1.0,
+           out = "Plots/animated_gif.gif")
+}
+
 }

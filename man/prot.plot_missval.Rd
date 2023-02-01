@@ -21,6 +21,3 @@ A binary heatmap of missing values in the SummarizedExperiment.
 \description{
 This function takes a SummarizedExperiment object and creates a binary heatmap of missing values in the assay.
 }
-\seealso{
-\code{\link{prot.clean_data}}
-}
