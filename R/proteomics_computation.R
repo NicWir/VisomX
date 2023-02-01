@@ -663,9 +663,6 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
 #' @importFrom vsn vsnMatrix predict
 #' @importFrom SummarizedExperiment assay
 #' @importFrom grDevices pdf png
-#' @importFrom utils dir.create
-#' @importFrom stats meanSdPlot
-#' @importFrom base message
 #'
 prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE)
   {
@@ -821,7 +818,6 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
 #' @importFrom purrr map_df
 #' @importFrom tidyr spread
 #' @importFrom dplyr mutate select
-#' @importFrom tibble rownames_to_column
 #' @importFrom utils combn
 #'
 #' @importFrom SummarizedExperiment assay
@@ -1031,7 +1027,7 @@ prot.add_rejections <- function (diff, alpha = 0.05, lfc = 1)
 #' @importFrom SummarizedExperiment rowData assay colData
 #' @importFrom dplyr group_by summarize mutate
 #' @importFrom tidyr spread
-#' @importFrom tibble column_to_rownames rownames_to_column
+#' @importFrom tibble column_to_rownames
 prot.get_results <- function (dep)
 {
   assertthat::assert_that(inherits(dep, "SummarizedExperiment"))
@@ -1221,8 +1217,6 @@ prot.report <- function(results, report.dir = NULL, ...){
 #'
 #' @export
 #'
-#' @importFrom clusterProfiler organismMapper
-#' @importFrom clusterProfiler prepare_KEGG
 #' @importFrom Biobase reverseSplit
 pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                                  pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
@@ -1705,7 +1699,7 @@ make_se_parse <- function (proteins_unique, columns, mode = c("char", "delim"),
 #'
 #' @importFrom assertthat assert_that
 #' @importFrom dplyr filter group_by summarise
-#' @importFrom tidyr gather rownames_to_column
+#' @importFrom tidyr gather
 #' @importFrom stats rnorm
 #'
 #' @useDynLib SummarizedExperiment
@@ -1727,7 +1721,7 @@ manual_impute <- function (se, scale = 0.3, shift = 1.8)
     stop("No missing values in '", deparse(substitute(se)),
          "'", call. = FALSE)
   }
-  stat <- se_assay %>% data.frame() %>% rownames_to_column() %>%
+  stat <- se_assay %>% data.frame() %>% tibble::rownames_to_column() %>%
     gather(samples, value, -rowname) %>% filter(!is.na(value)) %>%
     group_by(samples) %>% summarise(mean = mean(value), median = median(value),
                                     sd = sd(value), n = n(), infin = nrow(se_assay) - n)

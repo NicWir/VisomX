@@ -36,7 +36,6 @@ theme_DEP1 <- function (basesize = 15)
 #'
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment colData assay
-#' @importFrom tibble rownames_to_column
 #' @importFrom ggplot2 geom_col geom_hline labs scale_fill_brewer scale_fill_manual
 #' @importFrom grDevices png pdf
 #'
@@ -198,7 +197,6 @@ prot.plot_imputation <- function(se, ..., plot = TRUE, basesize = 12, export = T
 #'
 #' @importFrom SummarizedExperiment assay
 #' @importFrom RColorBrewer brewer.pal
-#' @importFrom tibble rownames_to_column
 #' @importFrom grDevices pdf
 #' @importFrom grDevices png
 #' @importFrom grDevices dev.off
@@ -1064,7 +1062,6 @@ prot.plot_volcano <-
 #' @importFrom assertthat assert_that
 #' @importFrom circlize colorRamp2
 #' @importFrom grid gpar
-#' @importFrom tibble rownames_to_column
 #' @importFrom SummarizedExperiment assay colData rowData
 #'
 prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1, pal = "PRGn",
@@ -2996,7 +2993,6 @@ theme_DEP2 <- function(...)
 #'
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment assay
-#' @importFrom tibble rownames_to_column
 #' @importFrom ggplot2 aes geom_col scale_fill_grey labs
 plot_coverage <- function (se, plot = TRUE)
 {
