@@ -18,9 +18,6 @@ link-citations: true
 lang: en-US
 zotero: true
 bibliography: references.bib
-editor_options: 
-  markdown: 
-    wrap: 72
 ---
 
 ```{=latex}
