@@ -13,7 +13,8 @@ Description: A comprehensive suite of functions to perform robust and
     step and results are summarized in detailed reports and R data
     containers for easy navigation.
 License: Artistic License 2.0
-URL: https://github.com/NicWir/VisomX
+URL: https://github.com/NicWir/VisomX,
+    https://nicwir.github.io/VisomX/
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
     dplyr,
