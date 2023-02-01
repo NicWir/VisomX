@@ -83,12 +83,12 @@ install_github("NicWir/VisomX", dependencies = TRUE)
 
 Load the package:
 
-```{r echo = T, eval = F, results = "hide"}
+```{r library, echo = T, eval = F, results = "hide"}
 # Load the VisomX package
 library(VisomX)
 ```
 
-```{r echo = F, eval = T, include = F, results = "hide"}
+```{r libraryCode, echo = F, eval = T, include = F, results = "hide"}
 # Load the VisomX package
 suppressPackageStartupMessages(library(VisomX))
 ```
@@ -107,7 +107,7 @@ protein abundances was performed prior to this analysis.
 
 The path to the example dataset can be extracted with:
 
-```{r echo = T, eval = T, include = T, results = "asis"}
+```{r SamplePath, echo = T, eval = T, include = T, results = "asis"}
 system.file("prot_KT2440_glc_ac_LB.txt", package = "VisomX")
 
 ```
@@ -149,7 +149,7 @@ missing values. For details, run `help("prot.read_data", "VisomX")`.
 Here, we filter proteins that are not present in at least 6 out of 9
 samples.
 
-```{r include = T, eval = T}
+```{r read, include = T, eval = T}
 # Read data, incl. filtering
 data <- prot.read_data(
           data = system.file("prot_KT2440_glc_ac_LB.txt", package = "VisomX"),
@@ -206,7 +206,7 @@ closer consideration:
 -   Lastly, we choose to have a report generated and exported into a
     subfolder of the current working directory.
 
-```{r include = T, eval = T}
+```{r workflow, include = T, eval = T}
 # Read TXT file with BioCyc pathways for P. putida KT2440
 custom_df <-
   read.table(
@@ -231,6 +231,7 @@ results <- prot.workflow(se = data,
         pathway_kegg = TRUE,
         kegg_organism = "ppu",
         custom_pathways = custom_df,
+        volcano.add_names = FALSE, # show protein labels
         report = TRUE,
         report.dir = "Report")
 ```

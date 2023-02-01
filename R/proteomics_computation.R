@@ -338,6 +338,7 @@ prot.read_data <- function (data = "dat_prot.csv",
 #' @param pathway_kegg (Logical) Perform pathway over-representation analysis with gene sets in the KEGG database (\code{TRUE}) or not \code{FALSE}).
 #' @param kegg_organism (Character string) Identifier of the organism in the KEGG database (if \code{pathway_kegg = TRUE})
 #' @param custom_pathways (a R dataframe object) Data frame providing custom pathway annotations. The table must contain a "Pathway" column listing identified pathway in the studies organism, and an "Accession" column listing the proteins (or genes) each pathway is composed of. The **Accession** entries must match with protein **IDs**.
+#' @param out.dir (Character string) absolute path to the location where result TXT files should be exported to.
 #'
 #' @return A list containing `SummarizedExperiment` object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
 #' @export
@@ -371,7 +372,8 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           pathway_enrichment = FALSE, # Perform pathway over-representation analysis for each tested contrast
                           pathway_kegg = FALSE, # Perform pathway over-representation analysis with gene sets in the KEGG database
                           kegg_organism = NULL, # Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
-                          custom_pathways = NULL) # Dataframe providing custom pathway annotations
+                          custom_pathways = NULL, # Dataframe providing custom pathway annotations
+                          out.dir = NULL)
 {
   # Show error if inputs are not the required classes
   if(is.integer(alpha)) alpha <- as.numeric(alpha)
@@ -526,7 +528,11 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     }
   }
 
-
+if(!is.null(out.dir)){
+  out_dir <- out.dir
+} else {
+  out_dir <- getwd()
+}
 
 
 
@@ -541,32 +547,32 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
-    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", getwd(), "'pora_kegg_contrast...txt'"))
+    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "'pora_kegg_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_kegg_up)){
       if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
-        utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
+        utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(out_dir, paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
     for(i in 1:length(res.pathway$ls.pora_kegg_dn)){
       if(!is.null(res.pathway$ls.pora_kegg_dn[[i]])){
-        utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
+        utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(out_dir, paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
   }
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
     results <- c(results, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
-    message(paste0("Writing results of custom pathway enrichment analysis to: ", getwd(), "'pora_custom_contrast...txt'"))
+    message(paste0("Writing results of custom pathway enrichment analysis to: ", out_dir, "'pora_custom_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_custom_up)){
       if(!is.null(res.pathway$ls.pora_custom_up[[i]])){
-        utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
+        utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(out_dir, paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
     for(i in 1:length(res.pathway$ls.pora_custom_dn)){
       if(!is.null(res.pathway$ls.pora_custom_dn[[i]])){
-        utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
+        utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(out_dir, paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
                                                 sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
@@ -1138,7 +1144,8 @@ get_annotation <- function (dep, indicate)
 #' @param ... Additional parameters to be passed to markdown to generate the report.
 #' currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k
 #' @export
-prot.report <- function(results, report.dir = NULL, ...){
+prot.report <- function(results, report.dir = NULL, ...)
+{
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se", "norm",
              "imputed", "diff", "dep", "results",
@@ -1169,10 +1176,10 @@ prot.report <- function(results, report.dir = NULL, ...){
     pora_custom_dn <- results$pora_custom_dn
   }
   if(!is.null(report.dir)){
-    wd <- paste0(getwd(), "/", report.dir)
+    wd <- report.dir
   } else {
     wd <- paste(getwd(), "/Report.prot_", format(Sys.time(),
-                                            "%Y%m%d_%H%M%S"), sep = "")
+                                                 "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
   for(i in 1:length(.libPaths())){

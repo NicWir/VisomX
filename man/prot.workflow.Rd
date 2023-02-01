@@ -32,7 +32,8 @@ prot.workflow(
   pathway_enrichment = FALSE,
   pathway_kegg = FALSE,
   kegg_organism = NULL,
-  custom_pathways = NULL
+  custom_pathways = NULL,
+  out.dir = NULL
 )
 }
 \arguments{
@@ -89,6 +90,8 @@ prot.workflow(
 \item{kegg_organism}{(Character string) Identifier of the organism in the KEGG database (if \code{pathway_kegg = TRUE})}
 
 \item{custom_pathways}{(a R dataframe object) Data frame providing custom pathway annotations. The table must contain a "Pathway" column listing identified pathway in the studies organism, and an "Accession" column listing the proteins (or genes) each pathway is composed of. The \strong{Accession} entries must match with protein \strong{IDs}.}
+
+\item{out.dir}{(Character string) absolute path to the location where result TXT files should be exported to.}
 }
 \value{
 A list containing \code{SummarizedExperiment} object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
