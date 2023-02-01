@@ -748,6 +748,8 @@ ExactParam <- function (deferred = FALSE, fold = Inf)
 prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
                       rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam())
 {
+  new("ExactParam", deferred = as.logical(FALSE),
+      fold = as.numeric(Inf))
   if (is.data.frame(mat)) {
     mat <- as.matrix(mat)
   }
@@ -772,7 +774,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
     vars <- vars[keep]
   }
   if (is.null(rank)) {
-    if ("ExactParam" %in% is(BSPARAM) || is(BSPARAM, "ExactParam")) {
+    if (is(BSPARAM, "ExactParam")) {
       rank <- min(dim(mat))
     }
     else {
