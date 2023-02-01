@@ -1225,7 +1225,6 @@ prot.report <- function(results, report.dir = NULL, ...){
 #' @importFrom clusterProfiler organismMapper
 #' @importFrom clusterProfiler prepare_KEGG
 #' @importFrom Biobase reverseSplit
-#' @importFrom DOSE enricher_internal
 pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                                  pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                                  minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
