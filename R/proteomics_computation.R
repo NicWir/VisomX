@@ -772,7 +772,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
     vars <- vars[keep]
   }
   if (is.null(rank)) {
-    if (is(BSPARAM, "ExactParam")) {
+    if ("ExactParam" %in% is(BSPARAM) || is(BSPARAM, "ExactParam")) {
       rank <- min(dim(mat))
     }
     else {
