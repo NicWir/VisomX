@@ -815,7 +815,6 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
 #' @return A SummarizedExperiment object with the results of the differential expression test that can be accessed with \code{ SummarizedExperiment::rowData(se)}
 #' @export
 #'
-#' @importFrom assertthat is.character
 #' @importFrom stats terms.formula
 #' @importFrom limma lmFit makeContrasts contrasts.fit eBayes topTable
 #' @importFrom fdrtool fdrtool
