@@ -404,7 +404,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     prot_imp <- prot.impute(prot_norm, fun = imp_fun)
   }
   # Perform PCA Analysis
-  prot_pca <- prot.pca(SummarizedExperiment::assay(prot_imp))
+  prot_pca <- prot.pca(SummarizedExperiment::assay(prot_imp), in_workflow = TRUE)
   # Test for differential expression by empirical Bayes moderation
   # of a linear model and defined contrasts
   prot_diff <- prot.test_diff(prot_imp, type = type, control = control, test = contrast)
@@ -733,6 +733,7 @@ ExactParam <- function (deferred = FALSE, fold = Inf)
 #' @param removeVar A numeric value between 0 and 1 indicating the fraction of variables to remove based on variance.
 #' @param transposed A logical indicating whether the matrix is transposed.
 #' @param BSPARAM An object of class \code{ExactParam} or \code{ApproxParam}.
+#' @param in_workflow Indicated whether this function is called from within `prot.workflow`.
 #'
 #' @return A list with components \code{rotated}, \code{loadings}, \code{variance}, \code{sdev}, \code{metadata}, \code{xvars}, \code{yvars}, and \code{components}.
 #'
@@ -746,10 +747,8 @@ ExactParam <- function (deferred = FALSE, fold = Inf)
 #' BiocSingular (https://bioconductor.org/packages/release/bioc/html/BiocSingular.html)
 #'
 prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
-                      rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam())
+                      rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam(), in_workflow = FALSE)
 {
-  new("ExactParam", deferred = as.logical(FALSE),
-      fold = as.numeric(Inf))
   if (is.data.frame(mat)) {
     mat <- as.matrix(mat)
   }
@@ -774,7 +773,7 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
     vars <- vars[keep]
   }
   if (is.null(rank)) {
-    if (is(BSPARAM, "ExactParam")) {
+    if (in_workflow == TRUE || is(BSPARAM, "ExactParam")) {
       rank <- min(dim(mat))
     }
     else {

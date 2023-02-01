@@ -12,7 +12,8 @@ prot.pca(
   rank = NULL,
   removeVar = NULL,
   transposed = FALSE,
-  BSPARAM = ExactParam()
+  BSPARAM = ExactParam(),
+  in_workflow = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ prot.pca(
 \item{transposed}{A logical indicating whether the matrix is transposed.}
 
 \item{BSPARAM}{An object of class \code{ExactParam} or \code{ApproxParam}.}
+
+\item{in_workflow}{Indicated whether this function is called from within \code{prot.workflow}.}
 }
 \value{
 A list with components \code{rotated}, \code{loadings}, \code{variance}, \code{sdev}, \code{metadata}, \code{xvars}, \code{yvars}, and \code{components}.
