@@ -99,11 +99,11 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
+    bioc::release/siggenes,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA,
-    github::stephenslab/mixsqp,
-    bioc::release/siggenes
+    github::stephenslab/mixsqp
 biocViews:
 Encoding: UTF-8
 NeedsCompilation: yes
