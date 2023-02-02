@@ -83,6 +83,7 @@ Imports:
     rlang,
     rmarkdown,
     scales,
+    siggenes,
     stats,
     SummarizedExperiment,
     sva,
