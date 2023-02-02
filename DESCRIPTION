@@ -23,6 +23,7 @@ Depends:
     R (>= 4.0),
     stringr,
     tidyr
+biocViews:
 Imports: 
     apeglm,
     assertthat,
@@ -99,12 +100,10 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
-    bioc::release/siggenes=siggenes,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA,
     github::stephenslab/mixsqp
-biocViews:
 Encoding: UTF-8
 NeedsCompilation: yes
 Roxygen: list(markdown = TRUE)
