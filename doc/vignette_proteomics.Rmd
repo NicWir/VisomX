@@ -385,7 +385,8 @@ efficiency). Because values are missing because of low abundant nature
 of the respective proteins, this category of missing values is
 considered left-censored, i.e., the distribution of values (if present
 in the data) would fall on the left tail of the total observations in
-the dataset.
+the dataset.  A detailed treatise about missing values in the context of proteomics 
+data can be found here: [Missing value handling](http://www.bioconductor.org/packages/release/bioc/vignettes/DEP/inst/doc/MissingValues.html)
 
 ### Define Missing Value Type
 
