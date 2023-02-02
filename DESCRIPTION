@@ -23,7 +23,7 @@ Depends:
     R (>= 4.0),
     stringr,
     tidyr
-biocViews:
+biocViews: Software, ReportWriting
 Imports: 
     apeglm,
     assertthat,
