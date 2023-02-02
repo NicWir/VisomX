@@ -99,7 +99,7 @@ Suggests:
 VignetteBuilder: 
     knitr
 Remotes: 
-    bioc::release/siggenes,
+    bioc::release/siggenes=siggenes,
     github::NicWir/fluctuator,
     github::NicWir/MetaboAnalystR,
     github::NicWir/SSPA,
