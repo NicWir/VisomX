@@ -479,7 +479,351 @@ flux_to_map <- function (df = "dat_flux",
   invisible(df)
 }
 
+#' Title
+#'
+#' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
+#' @param protein_set Data frame containing a list of proteins to be plotted. The provided names in column \code{} must match the entries in the column provided as \code{col.id} as well as the IDs of objects in the map template.
+#' @param col.id (Character) Column name of the protein identifier in the SummarizedExperiment object.
+#' @param select.id Column name of the protein identifier in the \code{protein_set} data frame.
+#' @param pfx Prefix of the protein identifiers to be plotted. all protein objects in the template map should have a common prefix (e.g., 'prot_')
+#' @param imp_fun (Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{prot.impute}}) for details.
+#' @param q (Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.
+#' @param type (Character string) Type of analysis to perform. "contrast" (provide a specific contrast in the \code{contrast} argument to plot log2-fold change values) or "centered" (provide a single condition as \code{condition} to plot centered abundances in that condition).
+#' @param condition  Condition to be displayed if type = "centered".
+#' @param contrast Tested contrast if type = "contrast" in the format "A_vs_B".
+#' @param template Path to the SVG map template.
+#' @param RSD_threshRelative standard deviation threshold.
+#' @param p_thresh (adjusted) p-value threshold.
+#' @param result Name of the output files.
+#' @param pal Brewer color palette used for protein squares.
+#' @param legend_min Lower limit of the color legend.
+#' @param legend_max Upper limit of the color legend.
+#' @param title (Character string) Title shown above the map
+#' @param export (Logical) A logical value indicating whether to export the plot as a PNG and PDF file.
+#' @param inkscape_path The local path to the 'inkscape.exe' file. Required if \code{export = TRUE}.
+#' @param export_dpi The dpi of the exported PNG and PDF file.
+#' @param export_width The width of the exported PNG and PDF file. The width of the template SVG can be inspected after opening it in InkScape.
+#' @param export_height The height of the exported PNG and PDF file. The height of the template SVG can be inspected after opening it in InkScape.
+#'
+#' @return A metabolic map with protein objects colored according to their abundance or log2 fold changes in a given contrast.
+#' @export
+#'
+prot_to_map <- function (se,
+                         protein_set = NULL,
+                         col.id = 'ID',
+                         select.id = 'Accession',
+                         pfx = NULL,
+                         imp_fun = c("man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
+                                     "MinProb", "min", "zero", "mixed", "nbavg", "SampMin"),
+                         q = 0.01, # q value for imputing missing values with method "fun = 'MinProb'".
+                         type = c("contrast", "centered"),
+                         condition = NULL, # Condition to be displayed if type = "centered".
+                         contrast = NULL, # Tested contrast if type = "contrast" in the format "A_vs_B"
+                         template = NULL,
+                         RSD_thresh = 0.5,
+                         p_thresh = 1,
+                         indicate_nonsig = c("gray", "dashed"),
+                         result = NULL,
+                         pal = "RdYlBu",
+                         legend_min = NULL,
+                         legend_max = NULL,
+                         title = "",
+                         export = TRUE,
+                         inkscape_path = 'C:/Program Files/Inkscape/bin/inkscape.exe',
+                         export_dpi = 300,
+                         export_width = 2281,
+                         export_height = 2166)
+{
+  type <- match.arg(type)
+  imp_fun <- match.arg(imp_fun)
+  indicate_nonsig <- match.arg(indicate_nonsig)
+  dir.create(paste0(getwd(),"/Plots"), showWarnings = F)
+  # Define palettes for protein squares and legend
+  if (pal %in% rownames(RColorBrewer::brewer.pal.info)) {
+    pal_prot <- colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name =pal)))(201) # Spectral Palette
+  } else {
+    stop(
+      paste0(
+        "No valid color palette provided to indicate protein log2(fold change) values.\nPlease define any brewer palette as \"pal =\" argument:\n",
+        "'",
+        paste(rownames(RColorBrewer::brewer.pal.info), collapse = "', '"),
+        "'"
+      ),
+      call. = FALSE
+    )
+  }
+  valid_conditions <- se$condition %>% unique() %>% paste(., collapse=", ")
+  if (type == "contrast" & is.null(contrast)){
+    valid_contrasts <- se$condition %>% unique() %>% paste(., collapse=", ")
+    stop(paste0("Type 'contrast' was chosen without providing a valid contrast.\n Please provide a contrast in the format \"A_vs_B\" with two of the conditions: '", valid_conditions, "'"),
+         call. = FALSE)
+  }
+  # Define palette for Proteomics legend
+  legend_elements <- c(sprintf("rect_prot%s", seq(1:67)))
+  pal_legend_gradient <- colorRampPalette(pal_prot)(67)
+  df_protlegend <- data.frame(legend_elements,pal_legend_gradient)
 
+  # Variance stabilization
+  prot_norm <- suppressMessages(prot.normalize_vsn(se, plot = FALSE, export = FALSE))
+  # Impute missing values
+  prot_imp <- prot.impute(prot_norm, fun = imp_fun, q = q)
+
+  message("Reading map template...")
+
+  # read SVG map template
+  if (!is.null(template)) {
+    template.nm <- template %>% str_replace(".svg", "")
+    template_svg <- paste0(template.nm, ".svg")
+  } else {
+    stop( "No template SVG file provided. Templates can be addressed by specifying \"template =\".",
+          call. = FALSE )
+  }
+  if (!(file.exists(template_svg))){
+    stop( "The template file '", template_svg, "' does not exist.\n Please provide a valid template SVG file in the 'template = ' argument.",
+          call. = FALSE )
+  }
+
+  MAP <- fluctuator::read_svg(template_svg)
+
+  # Create list of proteins in the map based on matches with the defined prefix (pfx)
+  if (is.null(protein_set) && !is.null(pfx)){
+    assign("protein_set", stats::setNames(data.frame(MAP@summary$label[grep( paste(pfx, collapse="|"), MAP@summary$label)]), paste(select.id)))
+  }
+
+  # create a vector for the proteins that were not present in the data set
+  selected_ids <- protein_set[,select.id]
+  detected  <- SummarizedExperiment::rowData(prot_imp) %>% data.frame(check.names = F) %>% pull(col.id)
+  not_detected <- setdiff(selected_ids, detected)
+
+  if (type == "centered" && is.null(condition)){
+    stop(paste0( "Type 'centered' was chosen without providing a valid condition.\n Valid conditions are: '", valid_conditions, "'" ),
+         call. = FALSE)
+  }
+  if (type == "centered"){
+    if(!(condition %in% se$condition)){
+      stop(paste0( "The selected 'condition' is not present in the dataset.\n Valid conditions are: '", valid_conditions, "'" ),
+           call. = FALSE)
+    }
+    df <- data.frame(assay(prot_imp), check.names = F)
+    row_data <- data.frame(SummarizedExperiment::rowData(prot_imp), check.names = F)
+    df$ID <- row_data[[col.id]]
+
+    #Calculate the relative standard deviation for the chosen condition
+    SD <-  df %>% select(contains(condition)) %>% `^`(2, .) %>% as.matrix() %>% rowSds()
+    mean <- df %>% select(contains(condition)) %>% `^`(2, .) %>% rowMeans(na.rm = TRUE)
+    df$RSD <-  if_else( is.na(SD/mean), 0, (SD/mean) )
+    # Center the data
+    log2mean <- df %>% select(-(ID:RSD)) %>% rowMeans(na.rm = TRUE)
+    df <- df %>% select(-(ID:RSD)) %>% - log2mean %>% cbind(., ID = df$ID, RSD = df$RSD)
+    # Calculate the centered average of the chosen condition
+    df$avg <- df %>% select(contains(condition)) %>% rowMeans()
+    # filter dataframe for defined list of genes (in argument "protein_set")
+    df <- filter(df, str_detect(ID, paste(selected_ids, collapse="|")))
+    # Filter for proteins with a relative standard deviation below "RSD_thresh = "
+    df_sig <- df %>% filter(RSD < RSD_thresh)
+
+    filtered <- setdiff(df$ID, df_sig$ID)
+    if(length(filtered)>0){
+      cat(paste0("The following proteins exceeded the RSD threshold of 'RSD_thresh =",
+                 RSD_thresh,
+                 "' and/or the p-value threshold of 'p_thresh = ",
+                 p_thresh,
+                 ":\n",
+                 paste(filtered, collapse = ", "),"\n"))
+    }
+    df_filtered <- filter(df, str_detect(ID, paste(filtered, collapse="|"))) %>% select(ID, values = avg, RSD)
+
+    # Create data frame with protein IDs and plotted values
+    df_plot <- cbind(ID = df_sig$ID, values = df_sig$avg, RSD = df_sig$RSD) %>% as.data.frame(check.names = FALSE)
+  }
+
+  if (type == "contrast") {
+    # Test for differential expression by empirical Bayes moderation
+    # of a linear model and defined contrasts
+    prot_diff <- prot.test_diff(prot_imp, type = "manual", test = contrast)
+    row_data <- data.frame(SummarizedExperiment::rowData(prot_diff), check.names = F)
+    df <- data.frame(assay(prot_diff), check.names = F)
+    df$ID <- row_data[[col.id]]
+    #add log2(fold change) values from prot_diff
+    df$diff <- row_data[,grep("_diff", colnames(row_data))]
+    #add p-values values from prot_diff
+    df$p.val <- row_data[,grep("_p.adj", colnames(row_data))]
+    # Calculate the relative standard deviation for subject and reference conditions
+    subject <- str_replace(contrast, "_vs.+", "")
+    ref <- str_replace(contrast, ".+vs_", "")
+    SD_subject <-  df %>% select(contains(subject)) %>% `^`(2, .) %>% as.matrix() %>% rowSds()
+    mean_subject <- df %>% select(contains(subject)) %>% `^`(2, .) %>% rowMeans(na.rm = TRUE)
+    SD_ref <-  df %>% select(contains(ref)) %>% `^`(2, .) %>% as.matrix() %>% rowSds()
+    mean_ref <- df %>% select(contains(ref)) %>% `^`(2, .) %>% rowMeans(na.rm = TRUE)
+    df$RSD_subject <-  SD_subject/mean_subject
+    df$RSD_ref <-  if_else(is.na(SD_ref), 0 ,SD_ref)/mean_ref
+
+    # Filter dataframe for defined list of genes (argument "protein_set")
+    df <- filter(df, str_detect(ID, paste(selected_ids, collapse="|")))
+
+    # Filter for proteins with a relative standard deviation below "RSD_thresh = " or a p-value < 0.05
+    if(indicate_nonsig == "gray"){
+      df_sig <- df %>% filter( (RSD_subject <= RSD_thresh & RSD_ref <= RSD_thresh) & (p.val <= p_thresh) )
+    }
+    else{
+      df_sig <- df %>% filter( (RSD_subject <= RSD_thresh & RSD_ref <= RSD_thresh) )
+      df_sig_pval <- df %>% filter( (p.val <= p_thresh) )
+      filtered_pval <- setdiff(df$ID, df_sig_pval$ID)
+      df_filtered_pval <- filter(df, str_detect(ID, paste(filtered_pval, collapse="|"))) %>% select(ID, values = diff,
+                                                                                                    RSD_ref, RSD_subject, p.val)
+    }
+    filtered <- setdiff(df$ID, df_sig$ID)
+
+
+    if(length(filtered)>0){
+      cat(paste0("The following proteins exceeded the RSD threshold of 'RSD_thresh = ",
+                 RSD_thresh,
+                 "' and/or the p-value threshold of 'p_thresh = ",
+                 p_thresh,
+                 ":\n",
+                 paste(filtered, collapse = ", "), "\n"))
+
+      df_filtered <- filter(df, str_detect(ID, paste(filtered, collapse="|"))) %>% select(ID, values = diff,
+                                                                                          RSD_ref, RSD_subject, p.val)
+    } else {
+      df_filtered <- data.frame()
+    }
+
+    # Create data frame with protein IDs and plotted values
+    df_plot <- cbind(ID = df_sig$ID, values = as.numeric(df_sig$diff), RSD_ref = as.numeric(df_sig$RSD_ref),
+                     RSD_subject = as.numeric(df_sig$RSD_subject), p.val = as.numeric(df_sig$p.val)) %>% as.data.frame(check.names = FALSE)
+  }
+
+  # add three rows corresponding to log2(fold change) values "min", 0, and "max" to have a uniform color distribution and
+  # adjust the proteomics legend in the figure. min = -max, with their value corresponding to the highest abs(log2fc) observed
+  if (!is.null(legend_min)){
+    legend_min_value <- legend_min
+  } else {
+    legend_min_value <- -ceiling(max(abs(as.numeric(df_plot$values))))
+  }
+  if (!is.null(legend_max)){
+    legend_max_value <- legend_max
+  } else {
+    legend_max_value <- ceiling(max(abs(as.numeric(df_plot$values))))
+  }
+  prot_0_value <-   0
+  colref_min <- c("colref_min",     legend_min_value) # lower reference for color palette
+  colref_zero <-   c("colref_zero",    prot_0_value) # mid reference for color palette
+  colref_max <- c("colref_max",     legend_max_value)  # upper reference for color palette
+  # create dataframe with legend boundaries
+  prot_legend_names <- c(colref_min[1],colref_zero[1],colref_max[1])
+  prot_legend_values <- c(colref_min[2],colref_zero[2],colref_max[2])
+  prot_legend <- data.frame( prot_legend_names, prot_legend_values, check.names = FALSE )
+  # add legend boundaries as rows to the dataframe with proteomics data
+  if(type == "centered"){
+    df_colbound <- data.frame( ID = prot_legend_names, values = prot_legend_values,
+                               RSD = 0, check.names = FALSE)
+  } else if (type == "contrast"){
+    df_colbound <- data.frame( ID = prot_legend_names, values = prot_legend_values,
+                               RSD_ref = 0, RSD_subject = 0, p.val = 0, check.names = FALSE)
+  }
+  df_plot <- rbind.data.frame(df_plot, df_colbound)
+  df_plot$values <- as.numeric(df_plot$values)
+  # add columns for colors
+  df_plot_within_colbounds <-
+    df_plot[which(df_plot$values >= legend_min_value & df_plot$values <= legend_max_value), ] %>%
+    mutate(stroke_color = values %>%
+             scales::rescale(to = c(1, 201)) %>% round,
+           fill_color_rgb = pal_prot[stroke_color])
+
+  df_plot_outside_colbounds <-
+    df_plot[which(df_plot$values < legend_min_value | df_plot$values > legend_max_value), ] %>%
+    mutate(stroke_color = if_else(values < legend_min_value, 1, 201),
+           fill_color_rgb = pal_prot[stroke_color])
+
+  df_plot <- bind_rows(df_plot_within_colbounds, df_plot_outside_colbounds)
+  # remove rows for the legend to color protein boxes
+  df_plot <- df_plot[-(grep("colref", df_plot$ID)),]
+
+  if (title != ""){
+    message("Changing map title...")
+    MAP <- fluctuator::set_values(MAP,
+                                  node = paste0("Title"),
+                                  value = title)
+  }
+
+
+  message("Apply fill colors to protein boxes in the map...")
+  MAP <- fluctuator::set_attributes(MAP,
+                                    node = df_plot$ID, attr = "style",
+                                    pattern = "fill:#858585",
+                                    replacement = paste0("fill:", df_plot$fill_color_rgb))
+
+  if(indicate_nonsig == "dashed"){
+    message("Make borders of protein boxes dashed for nonsignificant changes...")
+    MAP <- fluctuator::set_attributes(MAP,
+                                      node = filtered_pval, attr = "style",
+                                      pattern = "stroke-dasharray:none",
+                                      replacement = "stroke-dasharray:0.568075,1.704225")
+  }
+
+
+  message("Apply min and max values to the proteomics legend...")
+  MAP <- fluctuator::set_values(MAP,
+                                node = prot_legend$prot_legend_names,
+                                value = prot_legend$prot_legend_values)
+
+  if (type == "centered"){
+    # Change legend to "Log2 centered intensity"
+    message("Change legend to 'Log2 (centered intensity)'...")
+    MAP <- fluctuator::set_values(MAP,
+                                  node = "prot_type",
+                                  value = "Log2(centered intensity)")
+  }
+
+  message("Apply color scheme to protein legend...")
+  MAP <- fluctuator::set_attributes(MAP,
+                                    node = df_protlegend$legend_elements, attr = "style",
+                                    pattern = "fill:#b3b3b3",
+                                    replacement = paste0("fill:", df_protlegend$pal_legend_gradient))
+
+  message("Make boxes for proteins not found in the dataset black...")
+  MAP <- fluctuator::set_attributes(MAP,
+                                    node = not_detected, attr = "style",
+                                    pattern = "fill:#858585",
+                                    replacement = "fill:#000000")
+
+  # Write modified SVG map
+  result.nm <- str_replace(template.nm, "template", "result")
+
+  if (!is.null(result)){
+    result.nm <- result %>% str_replace(".svg", "")
+    result_svg <- paste0("Plots/", result.nm, ".svg")
+    message(paste0("Writing results SVG file with defined name: \"",
+                   result_svg,"\" ...") )
+  } else {
+    message(paste0("Writing results SVG file: \n'Plots/",
+                   result.nm, "+P",".svg' ..."))
+    result_svg <- paste0("Plots/", result.nm,"+P",".svg")
+  }
+
+  fluctuator::write_svg(MAP, file = result_svg)
+  if ( export == TRUE ){
+    svg_to_png(svg = result_svg, width=export_width, inkscape_path = inkscape_path, height=export_height, dpi=export_dpi)
+    svg_to_pdf(svg = result_svg, width=export_width, inkscape_path = inkscape_path, height=export_height, dpi=export_dpi)
+  }
+  if(length(filtered)>0){
+    df_filtered$stroke_color <- ""
+    df_filtered$fill_color_rgb <- ""
+  }
+
+  if(type == "centered"){
+    df_plot <- rbind.data.frame(df_plot, df_filtered) %>% mutate(values = as.numeric(values),
+                                                                 RSD = as.numeric(RSD))
+  } else if (type == "contrast"){
+    df_plot <- rbind.data.frame(df_plot, df_filtered) %>% mutate(values = as.numeric(values),
+                                                                 RSD_ref = as.numeric(RSD_ref),
+                                                                 RSD_subject = as.numeric(RSD_subject),
+                                                                 p.val = as.numeric(p.val))
+  }
+  df_plot <- df_plot[(df_plot$stroke_color != ""),]
+  invisible(df_plot)
+}
 
 
 #' @title Convert SVG to PNG (requires Python and InkScape installed)
