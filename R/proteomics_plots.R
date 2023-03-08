@@ -701,7 +701,7 @@ prot.plot_pca <- function (dep,
     p <- p + geom_point(aes(col = .data[[indicate[1]]],
                             shape = .data[[indicate[2]]], fill=.data[[indicate[1]]]), size = point_size) +
       labs(col = indicate[1], shape = indicate[2]) +
-      scale_shape_manual(values=c(21, 22, 23, 24, 25, 0, 1, 2, 5, 6))
+      scale_shape_manual(values=c(21, 22, 23, 24, 25, 21, 22, 23, 24, 25, 21, 22, 23, 24, 25))
 
     if (length(unique(dep$condition)) <= 8) {
       p <- p + scale_fill_brewer(palette = "Dark2", guide = guide_legend(override.aes = list(shape = 21)))+
@@ -2161,8 +2161,9 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 #' @param dep A SummarizedExperiment object containing the data.
 #' @param proteins A vector of protein names or IDs.
 #' @param combine Logical value indicating whether to combine the data from different proteins in one plot.
-#' @param ref.prot ID or name of the reference protein for normalization when type is "reference".
-#' @param type Type of plot: "abundance", "reference", "centered" or "contrast".
+#' @param type Type of plot: "abundance", "ReferenceProt", "centered" or "contrast".
+#' @param ref.prot ID or name of the reference protein for normalization when type is "ReferenceProt".
+#' @param ref.condition Name of the reference condition by which all average abundance values are divided when type is "ReferenceCondition".
 #' @param contrast Name of the contrast for plotting when type is "contrast".
 #' @param col.id Name of the column with protein IDs in \code{dep}.
 #' @param name_table A data frame containing the mapping of protein names to reference names.
@@ -2190,8 +2191,9 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 prot.plot_bar <- function (dep,
                            proteins,
                            combine = FALSE,
+                           type = c("contrast", "centered", "ReferenceProt", "ReferenceCondition", "abundance"),
                            ref.prot = NULL,
-                           type = c("contrast", "centered", "reference", "abundance"),
+                           ref.condition = NULL,
                            contrast = NULL,
                            col.id = "ID",
                            name_table = NULL,
@@ -2201,7 +2203,7 @@ prot.plot_bar <- function (dep,
                            shape.size = 2.5,
                            y.lim = NULL,
                            plot = TRUE,
-                           export = TRUE,
+                           export = FALSE,
                            export.nm = NULL,
                            width = NULL,
                            height = NULL)
@@ -2317,8 +2319,8 @@ prot.plot_bar <- function (dep,
   }
 
   if(combine == FALSE && is.null(y.lim)){
-    if (type == "reference"){
-      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'reference'.")
+    if (type == "ReferenceProt"){
+      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'ReferenceProt'.")
       if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
         reference <- row_data[grep(ref.prot, row_data[,"ID"]), "ID"]
         col.ref <- "ID"
@@ -2328,12 +2330,54 @@ prot.plot_bar <- function (dep,
       }
       reference.nm <-  row_data[grep(reference, row_data[,col.ref]), "name"]
       if(length(row_data[grep(ref.prot, row_data[,col.ref]), "name"]) == 0){
-        stop(paste0("'", ref.prot, "' is not a valid protein name or ID in your dataset. Please provide an existing identifier for a reference protein for normalization when choosing type = 'reference'."))
+        stop(paste0("'", ref.prot, "' is not a valid protein name or ID in your dataset. Please provide an existing identifier for a reference protein for normalization when choosing type = 'ReferenceProt'."))
       }
 
       ref.mean <- mean(SummarizedExperiment::assay(dep)[grep(reference, row_data[[col.ref]]), ], na.rm = TRUE)
       df_reps <-
         data.frame(SummarizedExperiment::assay(dep[proteins]) - ref.mean, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
+                                                by = "ID")
+      if (convert_name == TRUE) {
+        df_reps$rowname <- transform(df_reps,
+                                     rowname = name_table[match(paste(df_reps$rowname),
+                                                                paste(unlist(str_split(
+                                                                  Reduce(c, name_table[match.id]), ", "
+                                                                )))),
+                                                          match.name]) %>%
+          select(all_of(rowname)) %>% unlist(., use.names = F)
+      }
+      df_reps$replicate <- as.factor(df_reps$replicate)
+
+      df <-
+        df_reps %>% group_by(condition, rowname) %>% summarize(
+          mean = mean(val,
+                      na.rm = TRUE),
+          sd = sd(val, na.rm = TRUE),
+          n = n()
+        ) %>%
+        mutate(
+          error = stats::qnorm(0.975) * sd / sqrt(n),
+          CI.L = mean -
+            error,
+          CI.R = mean + error
+        ) %>% data.frame(check.names = FALSE)
+      y.lim <- c(min(c(df$CI.L, df_reps$val)), max(c(df$CI.R, df_reps$val)))
+    }
+    if (type == "ReferenceCondition"){
+      if(is.null(ref.condition)) stop("Please provide the name of a reference condition for normalization when choosing type = 'ReferenceCondition'.")
+      if(!ref.condition %in% colData(dep)$condition) stop("Please provide a valid name of a reference condition for normalization when choosing type = 'ReferenceCondition'. See colData(dep)$condition")
+      ref.mean <-
+        mean(2^SummarizedExperiment::assay(dep)[
+          proteins,
+          which(gsub("_[[:digit:]]+",
+                     "",
+                     colnames(SummarizedExperiment::assay(dep))
+                     ) %in% ref.condition
+                )
+          ], na.rm = TRUE)
+      df_reps <-
+        data.frame(2^SummarizedExperiment::assay(dep[proteins]) / ref.mean, check.names = FALSE) %>% tibble::rownames_to_column() %>%
         gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
                                                 by = "ID")
       if (convert_name == TRUE) {
@@ -2413,8 +2457,8 @@ prot.plot_bar <- function (dep,
   # find maximum and minimum y axis values
 
   for(i in 1:length(subset_list)) {
-    if (type == "reference") {
-      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'reference'.")
+    if (type == "ReferenceProt") {
+      if(is.null(ref.prot)) stop("Please provide the id or name of a reference protein for normalization when choosing type = 'ReferenceProt'.")
       if(length(row_data[grep(ref.prot, row_data[,"name"]), "name"]) == 0){
         reference <- row_data[grep(ref.prot, row_data[,"ID"]), "ID"]
         col.ref <- "ID"
@@ -2484,8 +2528,18 @@ prot.plot_bar <- function (dep,
             position = position_dodge(width = 0.3)
           ) +
           scale_fill_manual(values = case_when(
-            as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
-            as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+            as.numeric(max(dep$replicate)) %in% c(1,2) ~ c("#dad9d9", "#878787"),
+            as.numeric(max(dep$replicate)) > 2 & as.numeric(max(dep$replicate)) <= 8 ~ {
+              n <- as.numeric(max(dep$replicate))
+              if (n <= 2) {
+                c("#dad9d9", "#878787")[n]
+              } else {
+                RColorBrewer::brewer.pal(n = n, name = "Greys")
+              }
+            },
+            as.numeric(max(dep$replicate))>8 ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))),
+            TRUE ~ NA
+          )
           ) +
           geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
           labs(
@@ -2521,6 +2575,129 @@ prot.plot_bar <- function (dep,
             x = "Baits",
             y = expr(log[2](intensity)-log[2](intensity[!!reference.nm])  ~
                        "(\u00B195% CI)"),
+            col = "Rep"
+          ) +
+          theme(basesize = 12) + theme_DEP2()
+
+      }
+      w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
+      h <- 10
+
+    }
+    if (type == "ReferenceCondition") {
+      ref.mean <-
+        mean(2^SummarizedExperiment::assay(dep)[
+          proteins,
+          which(gsub("_[[:digit:]]+",
+                     "",
+                     colnames(SummarizedExperiment::assay(dep))
+          ) %in% ref.condition
+          )
+        ], na.rm = TRUE)
+
+      df_reps <-
+        data.frame(2^SummarizedExperiment::assay(subset_list[[i]]) / ref.mean, check.names = FALSE) %>% tibble::rownames_to_column() %>%
+        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(dep[proteins]), check.names = FALSE),
+                                                by = "ID")
+
+
+      if (convert_name == TRUE) {
+        df_reps$rowname <- transform(df_reps,
+                                     rowname = name_table[match(paste(df_reps$rowname),
+                                                                paste(unlist(str_split(
+                                                                  Reduce(c, name_table[match.id]), ", "
+                                                                )))),
+                                                          match.name]) %>%
+          select(rowname) %>% unlist(., use.names = F)
+      }
+      df_reps$replicate <- as.factor(df_reps$replicate)
+
+      df <-
+        df_reps %>% group_by(condition, rowname) %>% summarize(
+          mean = mean(val,
+                      na.rm = TRUE),
+          sd = sd(val, na.rm = TRUE),
+          n = n()
+        ) %>%
+        mutate(
+          error = stats::qnorm(0.975) * sd / sqrt(n),
+          CI.L = mean -
+            error,
+          CI.R = mean + error
+        ) %>% data.frame(check.names = FALSE)
+      if(!combine){
+        p <-
+          ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
+          geom_col(aes(y = mean, fill = condition), colour = "black")
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                         "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                         "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                         "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                         "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          geom_point(
+            data = df_reps,
+            aes(condition, val, fill = replicate),
+            shape = 23,
+            size = shape.size,
+            color = "black",
+            position = position_dodge(width = 0.3)
+          ) +
+          scale_fill_manual(values = case_when(
+            as.numeric(max(dep$replicate)) %in% c(1,2) ~ c("#dad9d9", "#878787"),
+            as.numeric(max(dep$replicate)) > 2 & as.numeric(max(dep$replicate)) <= 8 ~ {
+              n <- as.numeric(max(dep$replicate))
+              if (n <= 2) {
+                c("#dad9d9", "#878787")[n]
+              } else {
+                RColorBrewer::brewer.pal(n = n, name = "Greys")
+              }
+            },
+            as.numeric(max(dep$replicate))>8 ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))),
+            TRUE ~ NA
+          )
+          ) +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+          labs(
+            x = "Baits",
+            y = "Normalized Abundance",
+            col = "Rep"
+          ) + facet_wrap( ~ rowname) +
+          theme(basesize = 12) + theme_DEP2()
+        w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
+        h <- 10
+      } else {
+        p <- ggplot(df, aes(x = rowname, mean, fill = condition)) + geom_hline(yintercept = 0) +
+          geom_col(colour = "black", position = position_dodge())
+
+        if (length(unique(dep$condition)) <= 8) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Dark2"))
+        } else if (length(unique(dep$condition)) <= 12) {
+          p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dep$condition)), name = "Set3"))
+        } else {
+          p <- p + scale_fill_manual(values = c(
+            "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+                         "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+                         "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+                         "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+                         "green1", "yellow4", "yellow3", "darkorange4", "brown"
+          ))
+        }
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3, position = position_dodge(width = 0.9)) +
+          labs(
+            x = "Baits",
+            y = "Normalized abundance",
             col = "Rep"
           ) +
           theme(basesize = 12) + theme_DEP2()
@@ -2596,8 +2773,18 @@ prot.plot_bar <- function (dep,
             position = position_dodge(width = 0.3)
           ) +
           scale_fill_manual(values = case_when(
-            as.numeric(max(dep$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dep$replicate)), name="Greys"),
-            as.numeric(max(dep$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))))
+            as.numeric(max(dep$replicate)) %in% c(1,2) ~ c("#dad9d9", "#878787"),
+            as.numeric(max(dep$replicate)) > 2 & as.numeric(max(dep$replicate)) <= 8 ~ {
+              n <- as.numeric(max(dep$replicate))
+              if (n <= 2) {
+                c("#dad9d9", "#878787")[n]
+              } else {
+                RColorBrewer::brewer.pal(n = n, name = "Greys")
+              }
+            },
+            as.numeric(max(dep$replicate))>8 ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dep$replicate))),
+            TRUE ~ NA
+            )
           ) +
           geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
           labs(
@@ -2801,7 +2988,7 @@ prot.plot_bar <- function (dep,
       w <- 8+log(max(str_count(df[,"contrast"]))-3, base = 1.6)
       h <- 10
     }
-    if(!is.null(y.lim)){
+    if(!is.null(y.lim) && !(max(df[,-(1:2)]) >y.lim[2])){
       p <- p + scale_y_continuous(limits = y.lim)
     }
     if (export == TRUE) {

@@ -153,15 +153,19 @@ read_flux <- function(file.data = dat_flux,
   df_data <- df_data[- grep("OAADC|PC|PPC|PPCK", df_data$reaction),]
 
   # Adjust sign of flux for 2-ketogluconate and gluconate exchange reactions based on their equation
+  if("GLCNtex" %in% df_data$reaction){
   df_data[match("GLCNtex", df_data$reaction), "flux"] <-
     if_else(df_data[match("GLCNtex", df_data$reaction), "equation"] == "Gluco.per (abcdef) -> Gluco.ext (abcdef)",
             df_data[match("GLCNtex", df_data$reaction), "flux"],
             -df_data[match("GLCNtex", df_data$reaction), "flux"])
+  }
 
+  if("2DHGLCNtex" %in% df_data$reaction){
   df_data[match("2DHGLCNtex", df_data$reaction), "flux"] <-
     if_else(df_data[match("2DHGLCNtex", df_data$reaction), "equation"] == "Kgluco.per (abcdef) -> Kgluco.ext (abcdef)",
             df_data[match("2DHGLCNtex", df_data$reaction), "flux"],
             -df_data[match("2DHGLCNtex", df_data$reaction), "flux"])
+  }
 
   return(df_data)
 }

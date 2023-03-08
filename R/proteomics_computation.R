@@ -256,10 +256,12 @@ prot.read_data <- function (data = "dat_prot.csv",
 
   # Generate a SummarizedExperiment object using an experimental design
   abundance_columns <- grep(pfx, colnames(prot_unique))  # get abundance column numbers
-  prot_unique[,abundance_columns] <- apply(prot_unique[,abundance_columns], 2, function(x) as.numeric(na_if(x, "NA"))) # replace "NA" with NA
-  prot_unique[, abundance_columns] <- # convert to numeric
-    sapply(1:length(abundance_columns), function (x)
-      as.numeric(prot_unique[, abundance_columns[x]]))
+  if(any(sapply(prot_unique[,abundance_columns], function(x) any(is.character(x))))){
+    prot_unique[,abundance_columns] <- apply(prot_unique[,abundance_columns], 2, function(x) as.numeric(na_if(x, "NA"))) # replace "NA" with NA
+    prot_unique[, abundance_columns] <- # convert to numeric
+      sapply(1:length(abundance_columns), function (x)
+        as.numeric(prot_unique[, abundance_columns[x]]))
+  }
   message("Generating SummarizedExperiment.")
   prot_se <- make_se(prot_unique, abundance_columns, experimental_design)
 
@@ -312,6 +314,7 @@ prot.read_data <- function (data = "dat_prot.csv",
 #' \code{prot.workflow} performs variance stabilization normalization (\code{\link{prot.normalize_vsn}}), missing value imputation (\code{\link{prot.impute}}), principal component analysis (\code{\link{prot.pca}}), differential enrichment test (\code{\link{prot.test_diff}}), and pathway enrichment analysis. If desired, standardized plots and a report are generated and exported as separate files.
 #'
 #' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
+#' @param normalize (Logical) Should the data be normalized via variance stabilization normalization?
 #' @param imp_fun (Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{prot.impute}}) for details.
 #' @param q (Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.
 #' @param knn.rowmax (Numeric) The maximum percent missing data allowed in any row for \code{imp_fun = 'knn'}. Default: 0.5.
@@ -344,6 +347,7 @@ prot.read_data <- function (data = "dat_prot.csv",
 #' @export
 #'
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
+                          normalize = TRUE,
                           imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
                                       "MinProb", "min", "zero", "mixed", "nbavg"),
                           q = 0.01, # q value for imputing missing values with method "fun = 'MinProb'".
@@ -396,7 +400,11 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
   }
   # Variance stabilization
-  prot_norm <- suppressMessages(prot.normalize_vsn(se, plot = plot, export = export))
+  if(normalize == TRUE){
+    prot_norm <- suppressMessages(prot.normalize_vsn(se, plot = plot, export = export))
+  } else {
+    prot_norm <- se
+  }
   # Impute missing values
   if (imp_fun == "MinProb"){
     prot_imp <- prot.impute(prot_norm, fun = imp_fun, q = q)
@@ -530,6 +538,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
 if(!is.null(out.dir)){
   out_dir <- out.dir
+  dir.create("out_dir", showWarnings = F)
 } else {
   out_dir <- getwd()
 }
