@@ -191,7 +191,7 @@ read_flux <- function(file.data = dat_flux,
 #' @importFrom scales rescale
 #' @importFrom stringr str_replace
 #'
-flux_to_map <- function (df = "dat_flux",
+flux_to_map <- function (df,
                          template = NULL,
                          result.nm = NULL,
                          pal = c("G", "R", "O", "B", "BYR", "BW", "YR", "PuRd"),
@@ -829,6 +829,391 @@ prot_to_map <- function (se,
   invisible(df_plot)
 }
 
+#' @param data A Table file or dataframe object containing two metadata columns on the left, followed by one column for each detected compound. Samples are stored in rows. The two metadata columns are in the following order:
+#'
+#' 1. Sample group name (e.g., experimental condition or organism)
+#' 2. Replicate number. If technical replicates were used in addition to biological replicates, assign identical replicate numbers to the technical replicates.
+#'
+#'
+
+#' Create a Metabolic Map from Metabolite Concentrations
+#'
+#' This function generates a metabolic map visualization based on provided metabolite concentrations. The map displays
+#' metabolite concentrations using circles with varying size and color, and calculates energy charges and reduction charges.
+#'
+#' @param data A Table file or dataframe object containing two metadata columns on the left, followed by one column for each detected compound. Samples are stored in rows. The two metadata columns are in the following order:
+#'
+#' 1. Sample group name (e.g., experimental condition or organism)
+#' 2. Replicate number. If technical replicates were used in addition to biological replicates, assign identical replicate numbers to the technical replicates.
+#'
+#' @param csvsep A character, the column separator for input CSV files (default is ";").
+#' @param dec A character, the decimal separator for input CSV, TXT, and TSV files (default is ".").
+#' @param sheet An integer, the sheet number to read for Excel files (default is 1).
+#' @param RSD A numeric value, the relative standard deviation (RSD) threshold (default is 1).
+#' @param groups A list of character vectors or NULL, the groups of samples to compare (default is NULL). The indicated groups must exist in the first column of \code{data}.
+#' @param titles A character vector, the titles for the output figures. If empty (the default), the titles will represent the respective group names.
+#' @param met_pfx A character, the prefix for metabolite circle objects in the SVG map (default is "met_").
+#' @param radius_root (numeric) The base used in root transformation of concentration values to control the size of circles in the map. Default is 3.
+#' @param legend_min A numeric value or NULL, the minimum value for the color and size scale in the legend. If NULL (the default), the legend minimum will be chosen based on the minimum concentration in the dataset.
+#' @param legend_max A numeric value or NULL, the maximum value for the color and size scale in the legend. If NULL (the default), the legend minimum will be chosen based on the maximum concentration in the dataset.
+#' @param map_template (character) The file path of the SVG template (created in InkScape) for the metabolic map.
+#'
+#' @return A metabolic map visualization in SVG and PNG format.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'  data <- data.frame(Compound = c("A", "B", "C"),
+#'  Concentration = c(10, 5, 20),
+#'  RSD = c(5, 3, 10))
+#'  map_template <- "path/to/template.svg"
+#'  suff <- "_example"
+#'  create_metabolic_map(data, map_template, suff)
+#' }
+met_to_map <- function(data,
+                       csvsep = ";",
+                       dec = ".",
+                       sheet = 1,
+                       RSD = 1,
+                       groups = NULL,
+                       titles = c(),
+                       met_pfx = "met_",
+                       radius_root = 3,
+                       legend_min = NULL,
+                       legend_max = NULL,
+                       map_template
+)
+{
+  # Read File or dataframe
+  if (any(is(data) %in% c("matrix", "list", "array")) || !is.character(data)) {
+    metab <- data
+  } else {
+    # Read table file
+    metab <- read_file(data, csvsep=csvsep, dec=dec, sheet=sheet)
+  }
+
+
+  df <- data.frame("Group" = metab[, 1],
+                   "Replicate" = metab[ , 2],
+                   metab[, 3:ncol(metab)]
+                   )
+  # convert first row to dolumn headers
+  colnames(df) <- df[1,]
+  df <- df[-1,]
+
+  group_selection <- groups
+
+  groups <- unique(df$Group)
+
+  if(length(group_selection) != 0){
+    if(!all(group_selection %in% groups)){
+      stop("Not all elements in 'groups' are present in your dataset. Please ensure that you use only group names in your data and check for spelling mistakes.")
+    }
+  }
+
+
+  if(length(titles) != 0){
+    if(length(titles) != length(group_selection)){
+      stop("'titles' and 'groups' have unequal length. Please provide vectors of equal lengths for both arguments.")
+    }
+  } else {
+    if(length(group_selection) != 0){
+      titles <- group_selection
+    } else {
+      titles <- groups
+    }
+  }
+
+  if(length(group_selection) == 0){
+    group_selection <- groups
+  }
+
+  RSD.thres <- RSD
+
+  # Ensure that replicate numbers and concentrations are numeric
+  df[ , -(1:2)] <- apply(df[ , -(1:2)], 2, as.numeric)
+
+  # combine technical replicates
+  df_mean <- aggregate(df[, -(1:2)], by = list(Group = df$Group, Replicate = df$Replicate), mean)
+
+  # Combine biological replicates by taking the mean and standard deviation
+  df_combined <- aggregate(df_mean[, -(1:2)], by = list(Group = df_mean$Group), function(x) c(mean = mean(x), sd = sd(x)))
+
+  df_combined.df <- df_combined
+  df_combined.df[, paste0(names(df_combined)[-1], ".mean")] <- lapply(1:ncol(df_combined[, -1]), function(x) df_combined[, x+1][, 1])  %>% as.data.frame()
+  df_combined.df[, paste0(names(df_combined)[-1], ".sd")] <- lapply(1:ncol(df_combined[, -1]), function(x) df_combined[, x+1][, 2])  %>% as.data.frame()
+  df_combined <- df_combined.df[, -(2:(ncol(df_combined)))]
+
+  # Create a list of dataframes, each representing one "Group"
+  df_list <- lapply(1:nrow(df_combined), function(x){
+    compounds <- unique(gsub("\\.(mean|sd)$", "", colnames(df_combined[,-1])))
+    df <- data.frame("Compound" = compounds,
+                     "Concentration" = as.numeric(df_combined[x, grep("mean", colnames(df_combined))]),
+                     "SD" = as.numeric(df_combined[x, grep("sd", colnames(df_combined))])
+    )
+    # Add an "RSD" column to each dataframe
+    df <- transform(df, RSD = SD / Concentration)
+
+    # apply a filter to the metabolites to have an RSD below the set threshold
+    df <- df  %>% filter(., (RSD<RSD.thres))
+    return(df)
+  })
+
+  names(df_list) <- groups
+
+  for(grp in group_selection){
+  #____________________ CREATE MAP
+  suff <- paste0("_", grp)
+  dat_met2 <- df_list[[grp]]
+
+  # add metabolite concentrations to map
+  # color palette for metabolite circles
+  # fill colors (the given values represent a palette that is accessible to people who are colorblind)
+  colmet_A   <- viridis::plasma(5)[5]
+  colmet_B <- viridis::plasma(5)[4]
+  colmet_C <- viridis::plasma(5)[3]
+  colmet_D <- viridis::plasma(5)[2]
+  colmet_E <- viridis::plasma(5)[1]
+
+  colors_met_fill <- c(colmet_A, colmet_B, colmet_C, colmet_D, colmet_E) # this vector is used to change the color gradient of the Metabolome legend
+
+  # contour colors (the given values represent a palette that is accessible to people who are colorblind)
+  colmet_cont_A <- '#9EA519'
+    colmet_cont_B <- '#D07A34'
+      colmet_cont_C <- '#A5375F'
+        colmet_cont_D <- '#630384'
+          colmet_cont_E <- '#090662'
+            colors_met_cont <- c(colmet_cont_A, colmet_cont_C, colmet_cont_D, colmet_cont_E) # this vector is used to change the color gradient of the Metabolome legend
+
+
+            # create color palette for metabolite circles (fill color)
+            pal_met_fill <- colorRampPalette(c(colmet_A, colmet_B, colmet_C, colmet_D, colmet_E))(201)
+
+            # create color palette for metabolite circles (contour color)
+            pal_met_cont <- colorRampPalette(c(colmet_cont_A, colmet_cont_B, colmet_cont_C, colmet_cont_D, colmet_cont_E))(201)
+
+            # extract metabolites in map based on defined prefix.
+            # define vector with component name.
+            svg <- xml2::read_xml(map_template)
+            objects <- xml_find_all(svg, ".//*") %>% xml_attr(attr = "label")
+            met_present <- objects[grep(met_pfx, objects)]
+            met_present <- gsub(met_pfx, "", met_present)
+
+            # filter data frame for defined Ensembl Gene IDs
+            dat_met2_select <- filter(dat_met2, str_detect(Compound, paste(met_present, collapse="|")))
+
+
+
+            # add rows with logaritgmic concentrations to adjust the legend for metabolites
+            # Find the minimum and maximum values
+            combined_df <- do.call(rbind, df_list) %>% filter(., str_detect(Compound, paste(met_present, collapse="|")))
+            if(is.null(legend_min)){
+              min_val <- as.numeric(min(combined_df$Concentration))
+            } else {
+              min_val <- legend_min
+            }
+
+            if(is.null(legend_max)){
+              max_val <- as.numeric(max(combined_df$Concentration))
+            } else {
+              max_val <- legend_max
+            }
+
+
+            # Create a vector of values on the log10 scale
+            log10_vals <- seq(from = floor(log10(min_val)),
+                              to = ceiling(log10(max_val)),
+                              by = 1)
+
+            # Convert the values to numeric and take the 10^ of each
+            vals <- 10^as.numeric(log10_vals)
+
+            for (val in vals) {
+              row <- c(paste0("met", as.character(val)), val, "", "")
+              dat_met2_select <- rbind(dat_met2_select, row)
+            }
+
+            for (val in vals) {
+              row <- c(paste0("met", as.character(val)), val, "", "")
+              dat_met2 <- rbind(dat_met2, row)
+            }
+
+            # create vector of defined metabolites that are not present in the metabolomics data or did not pass the RSD threshold
+            dat_met_absent <- setdiff(met_present, dat_met2$Compound)
+
+                # Calculate the adenylate energy charge as ( [ATP] + 0.5[ADP] ) / ( [ATP] + [ADP] + [AMP] )
+                conc_atp <- as.numeric(dat_met2[dat_met2$Compound == "atp", ]$Concentration) # the ATP concentration
+                SD_atp <- as.numeric(dat_met2[dat_met2$Compound == "atp", ]$SD) # the standard deviation for ATP
+                conc_adp <- as.numeric(dat_met2[dat_met2$Compound == "adp", ]$Concentration) # the ADP concentration
+                SD_adp <- as.numeric(dat_met2[dat_met2$Compound == "adp", ]$SD) # the standard deviation for ADP
+                conc_amp <- as.numeric(dat_met2[dat_met2$Compound == "amp", ]$Concentration) # the AMP concentration
+                SD_amp <- as.numeric(dat_met2[dat_met2$Compound == "amp", ]$SD) # the standard deviation for AMP
+
+                AEC <- round(
+                  ( conc_atp + 0.5 * conc_adp ) / ( conc_atp + conc_adp + conc_amp ), # formula for adenylate energy charge
+                  digits=2)
+
+                # Standard deviation of adenylate energy charge (calculated with Gaussian error propagation)
+                AEC_SD <- format(
+                  round(sqrt(
+                    ( ((0.5 * conc_adp + conc_amp) / (conc_atp + conc_adp + conc_amp )^2)  * SD_atp )^2   +
+                      ( ((0.5 * conc_amp - 0.5 * conc_atp) / (conc_atp + conc_adp + conc_amp )^2)  * SD_adp )^2   +
+                      ( ((conc_atp + 0.5 * conc_adp) / (conc_atp + conc_adp + conc_amp )^2)  * SD_amp )^2 )
+                    , digits=2), #this rounds the value to two decimal digits
+                  nsmall = 2)       #this causes zeros as decimal digits to be shown
+                # concatenate adenylate energy charge value and standard deviation
+                AEC.SD <- paste(AEC, "\u00B1", AEC_SD)
+                AEC.SD <- gsub(" ", "", paste(AEC.SD)) #this line removes the spaces before and after "+-"
+
+                # Calculate the guanylate energy charge as ( [GTP] + 0.5[GDP] ) / ( [GTP] + [GDP] + [GMP] )
+                conc_gtp <- as.numeric(dat_met2[dat_met2$Compound == "gtp", ]$Concentration) # the GTP concentration
+                SD_gtp <- as.numeric(dat_met2[dat_met2$Compound == "gtp", ]$SD) # the standard deviation for GTP
+                conc_gdp <- as.numeric(dat_met2[dat_met2$Compound == "gdp", ]$Concentration) # the GDP concentration
+                SD_gdp <- as.numeric(dat_met2[dat_met2$Compound == "gdp", ]$SD) # the standard deviation for GDP
+                conc_gmp <- as.numeric(dat_met2[dat_met2$Compound == "gmp", ]$Concentration) # the GMP concentration
+                SD_gmp <- as.numeric(dat_met2[dat_met2$Compound == "gmp", ]$SD) # the standard deviation for GMP
+
+                GEC <- format(round(
+                  ( conc_gtp + 0.5 * conc_gdp ) / ( conc_gtp + conc_gdp + conc_gmp ), # formula for adenylate energy charge
+                  digits=2), nsmall = 2)
+
+                # Standard deviation of adenylate energy charge (calculated with Gaussian error propagation)
+                GEC_SD <- format(
+                  round(sqrt(
+                    ( ((0.5 * conc_gdp + conc_gmp) / (conc_gtp + conc_gdp + conc_gmp )^2)  * SD_gtp )^2   +
+                      ( ((0.5 * conc_gmp - 0.5 * conc_gtp) / (conc_gtp + conc_gdp + conc_gmp )^2)  * SD_gdp )^2   +
+                      ( ((conc_gtp + 0.5 * conc_gdp) / (conc_gtp + conc_gdp + conc_gmp )^2)  * SD_gmp )^2 )
+                    , digits=2), #this rounds the value to two decimal digits
+                  nsmall = 2)       #this causes zeros as decimal digits to be shown
+                # concatenate adenylate energy charge value and standard deviation
+                GEC.SD <- paste(GEC, "\u00B1", GEC_SD)
+                GEC.SD <- gsub(" ", "", paste(GEC.SD)) #this line removes the spaces before and after "+-"
+
+                # Calculate the anabolic reduction charge (aRC), catabolic reduction charge (cRC), and GSH:GSSG ratio
+                conc_nad <- as.numeric(dat_met2[dat_met2$Compound == "nad", ]$Concentration) # the NAD+ concentration
+                SD_nad <- as.numeric(dat_met2[dat_met2$Compound == "nad", ]$SD) # the standard deviation for NAD+
+                conc_nadh <- as.numeric(dat_met2[dat_met2$Compound == "nadh", ]$Concentration) # the NADH concentration
+                SD_nadh <- as.numeric(dat_met2[dat_met2$Compound == "nadh", ]$SD) # the standard deviation for NADH
+                conc_nadp <- as.numeric(dat_met2[dat_met2$Compound == "nadp", ]$Concentration) # the NADP+ concentration
+                SD_nadp <- as.numeric(dat_met2[dat_met2$Compound == "nadp", ]$SD) # the standard deviation for NADP+
+                conc_nadph <- as.numeric(dat_met2[dat_met2$Compound == "nadph", ]$Concentration) # the NADPH concentration
+                SD_nadph <- as.numeric(dat_met2[dat_met2$Compound == "nadph", ]$SD) # the standard deviation for NADPH
+                conc_gsh <- as.numeric(dat_met2[dat_met2$Compound == "gthrd", ]$Concentration) # the reduced glutathione concentration
+                SD_gsh <- as.numeric(dat_met2[dat_met2$Compound == "gthrd", ]$SD) # the standard deviation for reduced glutathione
+                conc_gssg <- as.numeric(dat_met2[dat_met2$Compound == "gthox", ]$Concentration) # the oxidized glutathione concentration
+                SD_gssg <- as.numeric(dat_met2[dat_met2$Compound == "gthox", ]$SD) # the standard deviation for oxidized glutathione
+
+                aRC <- format( round( (conc_nadph / conc_nadp), digits=2), nsmall = 2)  # formula for anabolic reductive charge (aRC)
+                # Standard deviation of anabolic reductive charge (calculated with Gaussian error propagation):
+                aRC_SD <- format( round( sqrt( ( (1/conc_nadp) * SD_nadph )^2 + ( (-conc_nadph/(conc_nadp)^2) * SD_nadp )^2 )  ,
+                                         digits=2), nsmall = 2)
+
+                cRC <- format( round( (conc_nadh / conc_nad), digits=2), nsmall = 2)  # formula for catabolic reductive charge (cRC)
+                # Standard deviation of anabolic reductive charge (calculated with Gaussian error propagation):
+                cRC_SD <- format( round( sqrt( ( (1/conc_nad) * SD_nadh )^2 + ( (-conc_nadh/(conc_nad)^2) * SD_nad )^2 )  ,
+                                         digits=2), nsmall = 2)
+
+                GSH_GSSG <- format( round( (conc_gsh / conc_gssg), digits=2), nsmall = 2)  # formula for catabolic reductive charge (cRC)
+                # Standard deviation of GSH:GSSG ratio (calculated with Gaussian error propagation):
+                GSH_GSSG_SD <- format( round( sqrt( ( (1/conc_gssg) * SD_gsh )^2 + ( (-conc_gsh/(conc_gssg)^2) * SD_gssg )^2 )  ,
+                                              digits=2), nsmall = 2)
+
+                # concatenate aRC and cRC values and standard deviations
+                aRC.SD <- paste(aRC, "\u00B1", aRC_SD)
+                aRC.SD <- gsub(" ", "", paste(aRC.SD)) #this line removes the spaces before and after "+-"
+                cRC.SD <- paste(cRC, "\u00B1", cRC_SD)
+                cRC.SD <- gsub(" ", "", paste(cRC.SD)) #this line removes the spaces before and after "+-"
+                GSH_GSSG.SD <- paste(GSH_GSSG, "\u00B1", GSH_GSSG_SD)
+                GSH_GSSG.SD <- gsub(" ", "", paste(GSH_GSSG.SD)) #this line removes the spaces before and after "+-"
+
+                # create data frame with AEC, aRC, and cRC
+              index <- c("AEC","GEC", "aRC", "cRC", "GSH-GSSG")
+              value <- c(AEC.SD, GEC.SD, aRC.SD, cRC.SD, GSH_GSSG.SD)
+              met_values <- data.frame(index, value)
+
+            # As the metabolites concentrations can span several orders of magnitude,
+            # logarithmic transformation is applied  to the values so that the circle size is more balanced.
+            # add one column for circle radius
+            dat_met2 <- dat_met2_select %>%
+              mutate(
+                radius = 2 + 0.7*(abs(as.numeric(Concentration))^(1/radius_root)))
+
+            message("Reading template SVG file...")
+            MAP <- read_svg(file = map_template)
+
+            message("Applying circle radii according to concentrations...")
+            MAP2 <- fluctuator::set_attributes(MAP,
+                                               node = paste0(met_pfx, dat_met2$Compound),
+                                               attr = "r",
+                                               pattern = "4.9992886",
+                                               replacement = paste0(dat_met2$radius))
+
+
+            # As the metabolites concentrations can span several orders of magnitude,
+            # logarithmic transformation is applied  to the color palette so that smaller differences in
+            # metabolite concentrations can be distinguished.
+            # add columns for fill color
+            dat_met3 <- dat_met2 %>%
+              mutate(
+                fill_color = (abs(as.numeric(Concentration))^(1/3.5)) %>%
+                  scales::rescale(to = c(1, 200)) %>% round,
+                stroke_color_fill_rgb = pal_met_fill[fill_color])
+
+            # add columns for contour color
+            dat_met3 <- dat_met3 %>%
+              mutate(
+                color_contour = (abs(as.numeric(Concentration))^(1/3.5)) %>%
+                  scales::rescale(to = c(1, 200)) %>% round,
+                stroke_color_contour_rgb = pal_met_cont[color_contour])
+
+            # remove circles of metabolites not detected or with RSD exceeding the threshold by increasing transparency to 100%
+            message("Removing circles of metabolites not detected or with RSD exceeding the threshold...")
+            MAP2 <- fluctuator::set_attributes(MAP2,
+                                               node = paste0(met_pfx, dat_met_absent),
+                                               attr = "style",
+                                               pattern = "fill-opacity:1",
+                                               replacement = paste0("fill-opacity:0"))
+
+
+            MAP2 <- fluctuator::set_attributes(MAP2,
+                                               node = paste0(met_pfx, dat_met_absent),
+                                               attr = "style",
+                                               pattern = "stroke-width:0.3",
+                                               replacement = paste0("stroke-width:0"))
+
+            # remove text boxes of metabolites that were detected and have RSD values below the threshold by replacing their content with " "
+            message("Removing text boxes for identified compounds...")
+            MAP2 <- set_values(MAP2,
+                               node = paste0(dat_met2_select$Compound, "_text"),
+                               value = paste0(""))
+
+            # apply fill colors to metabolite circles in the map
+            message("Applying circle fill colors...")
+            MAP2 <- fluctuator::set_attributes(MAP2,
+                                               node = paste0(met_pfx, dat_met3$Compound),
+                                               attr = "style",
+                                               pattern = "fill:#e6e6e6",
+                                               replacement = paste0("fill:", dat_met3$stroke_color_fill_rgb))
+
+            # apply contour colors to metabolite circles in the map
+            message("Applying circle contour colors...")
+            MAP2 <- fluctuator::set_attributes(MAP2,
+                                               node = paste0(met_pfx, dat_met3$Compound),
+                                               attr = "style",
+                                               pattern = "stroke:#8f8f8f",
+                                               replacement = paste0("stroke:", dat_met3$stroke_color_contour_rgb))
+
+            # Change value for energy charge and reduction charges (aRC and cRC)
+            MAP2 <- set_values(MAP2,
+                               node = paste0("value_", met_values$index),
+                               value = met_values$value)
+
+            write_svg(MAP2, file = paste0("RESULT_Metabolomics_x3", suff, ".svg"))
+            svg_to_png(svg = paste0("RESULT_Metabolomics_x3", suff, ".svg"), width=2281, height=2166, dpi=300)
+  }
+}
+
 
 #' @title Convert SVG to PNG (requires Python and InkScape installed)
 #'
@@ -879,10 +1264,10 @@ svg_to_png <-
 
     width <- width/300*dpi
     height <- height/300*dpi
-    py_run_string(paste0('import subprocess
+    reticulate::py_run_string(paste0('import subprocess
 inkscape = ', '"', inkscape_path, '"'))
 
-    py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=png",
+    reticulate::py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=png",
   f"--export-filename={png}",
   f"--export-width={width}",
   f"--export-height={height}",
@@ -936,12 +1321,12 @@ svg_to_pdf <- function (svg = svg,
 
     width <- width/300*dpi
     height <- height/300*dpi
-    py_run_string(paste0('import subprocess
+    reticulate::py_run_string(paste0('import subprocess
 inkscape = ', '"', inkscape_path, '"'))
 
 
 
-    py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=pdf",
+    reticulate::py_run_string(stringr::str_glue('subprocess.run([inkscape, "--export-type=pdf",
   f"--export-filename={pdf}",
   f"--export-width={width}",
   f"--export-height={height}",

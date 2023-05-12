@@ -650,7 +650,7 @@ rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12,
                             msg = "input objects need to be of class 'matrix' or 'array'")
   })
   gather_join <- function(counts) {
-    counts %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(., data.frame(colData), by = "ID", check.names = FALSE)
+    counts %>% data.frame(check.names = FALSE) %>% gather(ID, val) %>% left_join(., data.frame(colData, check.names = FALSE), by = "ID")
   }
   df <- purrr::map_df(arglist, gather_join, .id = "var") %>%
     mutate(var = factor(var, levels = names(arglist)))
@@ -661,7 +661,7 @@ rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12,
     labs(x = expression(log[2] ~ "Intensity"), y = "Density") +
     theme_DEP1(basesize = basesize)
 
-  if (length(unique(se$condition)) <= 8) {
+  if (length(unique(df$condition)) <= 8) {
     p <- p + scale_color_brewer(palette = "Dark2")
   } else if (length(unique(se$condition)) <= 12) {
     p <- p + scale_color_brewer(palette = "Set3")
