@@ -39,7 +39,7 @@ With consideration for `R` novices, `VisomX` establishes a framework in which a 
 
 1.  *Read data* from one or several tabular inputs with gene counts, assign new names and apply feature filtering.
 
-2.  *Run workflow*, including missing value imputation, normalization, log2 transformation, statistical analysis, differential expression analysis, pathway enrichment analysis, and rendering of a report that summarizes the results.
+2.  *Run workflow*, including missing value imputation, normalization, log2 transformation, statistical analysis, differential expression analysis, log2 fold change shrinkage, pathway enrichment analysis, and rendering of a report that summarizes the results.
 
 All computational results of a workflow are stored in a data container (list) and can be visualized by passing them to a set of dedicated plotting functions.
 

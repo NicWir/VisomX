@@ -38,6 +38,7 @@ Imports:
     data.table,
     DESeq2,
     DOSE,
+    GO.db,
     edgeR,
     ellipse,
     fdrtool,
