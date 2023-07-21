@@ -570,61 +570,71 @@ AddErrMsg <- function (msg)
 
 #' Call the appropriate function required to read a table file and return the table as a dataframe object.
 #'
+#' \code{read_file} automatically detects the format of a file provided as \code{filename} and calls the appropriate function to read the table file.
+#'
 #' @param filename (Character) Name or path of the table file to read. Can be of type CSV, XLS, XLSX, TSV, or TXT.
 #' @param csvsep (Character) separator used in CSV file (ignored for other file types).
 #' @param dec (Character) decimal separator used in CSV, TSV and TXT files.
 #' @param sheet (Numeric or Character) Number or name of a sheet in XLS or XLSX files (_optional_). Default: \code{";"}
+#' @param na.strings (Character) If a table cell contains the indicated string, it will be converted to NA.
 #'
-#' @return A dataframe object
+#' @return A dataframe object with headers in the first row.
 #' @export
 #'
-read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1)
-  {
+read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1){
   if (file.exists(filename)) {
     if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "csv") {
+      ncols <- max(utils::count.fields(filename, sep = csvsep))
       dat <-
         utils::read.csv(
           filename,
           dec = dec,
           sep = csvsep,
-          header = T,
-          stringsAsFactors = F,
-          fill = T,
+          blank.lines.skip = FALSE,
+          header = FALSE,
+          stringsAsFactors = FALSE,
+          fill = TRUE,
           na.strings = na.strings,
           quote = "",
           comment.char = "",
-          check.names = F
+          check.names = FALSE,
+          col.names = paste0("V", seq_len(ncols))
         )
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "xls" |
                stringr::str_replace(filename, ".{1,}\\.", "") == "xlsx") {
-      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = T, sheet = sheet, .name_repair = "unique", na = na.strings)), check.names = F)
+      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = TRUE, sheet = sheet, progress = TRUE)))
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
+      ncols <- max(utils::count.fields(filename))
       dat <-
         utils::read.csv(
           filename,
           dec = dec,
+          blank.lines.skip = FALSE,
           sep = "\t",
-          header = T,
-          stringsAsFactors = F,
-          fill = T,
+          header = FALSE,
+          stringsAsFactors = FALSE,
+          fill = TRUE,
           na.strings = na.strings,
           quote = "",
           comment.char = "",
-          check.names = F
+          check.names = FALSE,
+          col.names = paste0("V", seq_len(ncols))
         )
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "txt") {
+      ncols <- max(utils::count.fields(filename))
       dat <-
         utils::read.table(
           filename,
           dec = dec,
           sep = "\t",
-          header = T,
-          stringsAsFactors = F,
-          fill = T,
+          header = FALSE,
+          stringsAsFactors = FALSE,
+          fill = TRUE,
           na.strings = na.strings,
           quote = "",
           comment.char = "",
-          check.names = F
+          check.names = FALSE,
+          col.names = paste0("V", seq_len(ncols))
         )
     } else {
       stop(
@@ -633,11 +643,8 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
       )
     }
   } else {
-    stop(paste0("File \"", filename, "\" does not exist."), call. = F)
+    stop(paste0("File \"", filename, "\" does not exist."), call. = FALSE)
   }
-  colnames <- gsub("\"", "", colnames(dat))
-  dat <- data.frame(sapply(1:ncol(dat), function(x) gsub("\"", "", dat[,x])))
-  colnames(dat) <- colnames
   return(dat)
 }
 

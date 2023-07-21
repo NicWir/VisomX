@@ -2178,7 +2178,7 @@ prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
 #' @param width Numeric value defining the width of the exported plot.
 #' @param height Numeric value defining the height of the exported plot.
 #'
-#' @return A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.
+#' @return (invisibly) a ggplot object as well as the plot in the [Plots] pane if \code{plot = TRUE}.
 #'
 #' @export
 #'
@@ -2988,7 +2988,7 @@ prot.plot_bar <- function (dep,
       w <- 8+log(max(str_count(df[,"contrast"]))-3, base = 1.6)
       h <- 10
     }
-    if(!is.null(y.lim) && !(max(df[,-(1:2)]) >y.lim[2])){
+    if(!is.null(y.lim) && !all(is.na(y.lim)) && !(max(df[,-(1:2)]) >y.lim[2])){
       p <- p + scale_y_continuous(limits = y.lim)
     }
     if (export == TRUE) {
@@ -3059,10 +3059,10 @@ prot.plot_bar <- function (dep,
                           "log2_fold_change", "CI.L", "CI.R")
       }
     }
-    if (length(proteins) <= 8) {
-      invisible(df)
-    }
   } #for(i in 1:length(subset_list))
+  if (length(proteins) <= 8) {
+    invisible(p)
+  }
 }
 
 #' Boxplot Intensity
