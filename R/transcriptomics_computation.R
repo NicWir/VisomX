@@ -881,8 +881,16 @@ rna.report <- function(results, report.dir = NULL, ...){
   dir.create(wd, showWarnings = F)
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
-  file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX/inst", "/Report_RNA.Rmd",
-                sep = "")
+  for (i in 1:length(.libPaths()))
+  {
+    VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
+    if (length(VisomX.ndx) >
+        0)
+    {
+      Report.wd <- paste0(.libPaths()[i], "/VisomX")
+    }
+  }
+  file <- paste0(Report.wd, "/Report_RNA.Rmd")
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)
