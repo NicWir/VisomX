@@ -2034,12 +2034,15 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
 #'
 #' @seealso
 #' \code{\link{pathway_enrich}}
-prot.plot_enrichment <- function(enrichset,
+prot.plot_enrichment <- rna.plot_enrichment <- function(enrichset,
                                  title = "Differentially enriched pathways",
                                  subtitle = "",
                                  plot = TRUE,
                                  export = FALSE,
                                  kegg = TRUE) {
+  if ( kegg == TRUE ) {
+    enrichset@result$Description <- gsub(" - .*", "", enrichset@result$Description)
+  }
 
   p <- ggplot(enrichset, showCategory = 30,
               aes(richFactor, fct_reorder(Description, richFactor))) +
@@ -2148,6 +2151,8 @@ prot.plot_enrichment <- function(enrichset,
 prot.plot_upset <- function(enrichset, order.by = "freq", point.size = 3,
                             line.size = 1, text.scale = c(2, 2, 2, 2, 2, 1.5), ...)
 {
+  enrichset@result$Description <- gsub(" - .*", "", enrichset@result$Description)
+
   upsetlist <- enrichset$geneID %>% str_replace_all(., "/", ", ") %>% strsplit(., ", ")
   names(upsetlist) <- enrichset$Description
   UpSetR::upset(UpSetR::fromList(upsetlist), order.by = order.by, nsets = length(upsetlist),

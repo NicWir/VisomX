@@ -45,9 +45,10 @@ Samples were grouped into _`r length(unique(data[['condition']]))`_ conditions:
 ```{r signif_conditions, echo=FALSE,  results="asis"}
 if (length(contrasts) > 1){
   for (i in 1:length(contrasts)) {
+    contrasts_safe <- gsub("_", "\\_", contrasts[i], fixed = TRUE)
     cat(paste0("* _",
                nrow(dds[SummarizedExperiment::rowData(dds)[[paste0("significant.", contrasts[i])]][!is.na(SummarizedExperiment::rowData(dds)[[paste0("significant.", contrasts[i])]])],]),
-               "_ genes for contrast ", contrasts[i], "\n"))
+               "_ genes for contrast ", contrasts_safe, "\n"))
   }
 }
 ```
@@ -277,7 +278,8 @@ if ("pora_kegg_up" %in% names(results)) {
         ),
         subtitle =  str_replace(contrasts[i], "_vs_", " vs. "),
         plot = T,
-        export = F
+        export = F,
+        kegg=T
       )
       if (nrow(as.data.frame(pora_kegg_up[[i]])) > 1) {
         cat("\n")
@@ -303,7 +305,8 @@ if ("pora_kegg_up" %in% names(results)) {
         ),
         subtitle = str_replace(contrasts[i], "_vs_", " vs. "),
         plot = T,
-        export = F
+        export = F,
+        kegg=T
       )
       if (nrow(as.data.frame(pora_kegg_dn[[i]])) > 1) {
         cat("\n")
@@ -338,7 +341,8 @@ if("pora_custom_up" %in% names(results)) {
         ),
         subtitle =  str_replace(contrasts[i], "_vs_", " vs. "),
         plot = T,
-        export = F
+        export = F,
+        kegg=F
       )
       if (nrow(as.data.frame(pora_custom_up[[i]])) > 1) {
         cat("\n")
@@ -364,7 +368,8 @@ if("pora_custom_up" %in% names(results)) {
         ),
         subtitle = str_replace(contrasts[i], "_vs_", " vs. "),
         plot = T,
-        export = F
+        export = F,
+        kegg=F
       )
       if (nrow(as.data.frame(pora_custom_dn[[i]])) > 1) {
         cat("\n")

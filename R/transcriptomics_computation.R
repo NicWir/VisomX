@@ -98,6 +98,7 @@ rna.read_data <- function (data = NULL,
     colnames(dat) <- new_colnames
     dat <- dat[-1,]
   }
+  dat <- dat[, !is.na(colnames(dat))]
   if (is.character(id2name.table)) {
     # Read table file
     id2name <- read_file(id2name.table, csvsep=csvsep)
@@ -128,8 +129,6 @@ rna.read_data <- function (data = NULL,
         )
       )
     }
-
-
     if (length(row.rm) > 1) {
       rna_unique <- prot.make_unique(proteins = dat.rm, names = name, ids = id, delim = ";")
     } else {
@@ -350,7 +349,7 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
 #' @param control Control condition; required if type = "control".
 #' @param contrast (String or vector of strings) Defined test(s) for differential analysis in the form "A_vs_B"; required if type = "manual".
 #' @param controlGenes Specifying those genes to use for size factor estimation (e.g. housekeeping or spike-in genes).
-#' @param pAdjustMethod Method for adjusting p values. Available options are "IHW","BH".
+#' @param pAdjustMethod Method for adjusting p values. Available options are "IHW" (Independent Hypothesis Weighting),"BH" (Benjamini-Hochberg).
 #' @param alpha Significance threshold for adjusted p values.
 #' @param alpha.independent Adjusted p value threshold for independent filtering or NULL. If the adjusted p-value cutoff (FDR) will be a value other than 0.1, alpha should be set to that value.
 #' @param alpha_pathways Significance threshold for pathway analysis.
@@ -634,7 +633,6 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                      " genes for contrast ", cntrst[i], "\n"))
     }
   }
-
   # Perform pathway enrichment analysis
   if (pathway_enrichment) {
     if(!quiet) message("performing pathway enrichment analysis")
@@ -774,6 +772,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                             plot = plot, export = export, lfc = lfc, alpha = alpha)
         ) )
     }
+
     if (pathway_kegg) {
       for (i in 1:length(cntrst)) {
         if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_up[[i]])) == 0)){
@@ -824,6 +823,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                k = k,
                report.dir = report.dir)
   }
+  message("Done!")
   return(res)
 }
 
@@ -875,7 +875,7 @@ rna.report <- function(results, report.dir = NULL, ...){
   if(!is.null(report.dir)){
     wd <- paste0(getwd(), "/", report.dir)
   } else {
-    wd <- paste(getwd(), "/Report.prot_", format(Sys.time(),
+    wd <- paste(getwd(), "/Report.rna_", format(Sys.time(),
                                                  "%Y%m%d_%H%M%S"), sep = "")
   }
   dir.create(wd, showWarnings = F)
@@ -884,13 +884,13 @@ rna.report <- function(results, report.dir = NULL, ...){
   for (i in 1:length(.libPaths()))
   {
     VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
-    if (length(VisomX.ndx) >
-        0)
+    if (length(VisomX.ndx) > 0)
     {
       Report.wd <- paste0(.libPaths()[i], "/VisomX")
     }
   }
   file <- paste0(Report.wd, "/Report_RNA.Rmd")
+  file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)

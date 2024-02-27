@@ -824,11 +824,11 @@ rna.plot_volcano <-
     ) %>%
       filter(!is.na(significant)) %>% arrange(significant)
 
-    quant99.5 <-  quantile(df$y[df$y!=0], probs = 0.995, na.rm = TRUE)
+    quant99.5 <-  quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.995, na.rm = TRUE)
 
     # create new columns for shapes "circle" and "triangle" if genes lie within or outside (for genes with very small adj.p value < 3.162278e-05) of the y bounds, respectively.
     if (adjusted) {
-      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE)) {
+      if (quant99.5 > 1.5*quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.985, na.rm = TRUE)) {
         df$shape <- ifelse(df$y > 0.98 * quant99.5, "triangle", "circle")
       }
       else{
@@ -840,7 +840,7 @@ rna.plot_volcano <-
     }
     # change the -Log10(q value) of genes exceeding the y plot bound so that they are displayed at the axis border
     if (adjusted) {
-      if (quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE)) {
+      if (quant99.5 > 1.5*quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.985, na.rm = TRUE)) {
         df$y[df$y > 0.98 * quant99.5] <- 0.98 * quant99.5
       }
     }
@@ -898,13 +898,13 @@ rna.plot_volcano <-
           xlim = c(-max(abs(df$x)) - 0.3,  # Lower x bound [defined dynamically based on the largest absolute log2(fc) value]
                    max(abs(df$x)) + 0.3),
           # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
-          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
+          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y[(df$y!=0)&!is.infinite(df$y)])*1.02)),
           expand = FALSE
         )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
       } else {
         plot_volcano <- plot_volcano + coord_cartesian(
           # Upper x bound [defined dynamically based on the largest absolute log2(fc) value]
-          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[df$y!=0], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y)*1.02)),
+          ylim = c((min(df$y) - 0.1), ifelse(quant99.5 > 1.5*quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.985, na.rm = TRUE), quant99.5, max(df$y[(df$y!=0)&!is.infinite(df$y)])*1.02)),
           expand = FALSE
         )     # Plot y bounds (the bottom axis is defined dynamically based on the smallest q value)
       }

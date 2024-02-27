@@ -43,7 +43,6 @@ enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_ke
   ls.significant_df <- list()
   ls.significant_up <- list()
   ls.significant_dn <- list()
-
   for (i in 1:length(contrasts)) {
     ndx.signif <-
       grep(ifelse(
@@ -595,7 +594,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          quote = "",
+          #quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -615,7 +614,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          quote = "",
+          #quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -631,7 +630,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          quote = "",
+          #quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
