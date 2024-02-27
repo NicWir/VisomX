@@ -765,7 +765,7 @@ ExactParam <- function (deferred = FALSE, fold = Inf)
 #' BiocSingular (https://bioconductor.org/packages/release/bioc/html/BiocSingular.html)
 #'
 prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
-                      rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = ExactParam(), in_workflow = FALSE)
+                      rank = NULL, removeVar = NULL, transposed = FALSE, BSPARAM = BiocSingular::ExactParam(), in_workflow = FALSE)
 {
   if (is.data.frame(mat)) {
     mat <- as.matrix(mat)
