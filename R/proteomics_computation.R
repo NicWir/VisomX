@@ -559,7 +559,7 @@ if(!is.null(out.dir)){
 
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
-    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "'pora_kegg_contrast...txt'"))
+    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "pora_kegg_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_kegg_up)){
       if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
         utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(out_dir, paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
@@ -1203,7 +1203,7 @@ prot.report <- function(results, report.dir = NULL, ...)
   file <- paste0(Report.wd, "/Report_Prot.Rmd")
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    quiet = TRUE)
+                    quiet = TRUE, intermediates_dir = tempdir())
 
   message(paste0("Files saved in: '", wd, "'"))
 }

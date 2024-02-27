@@ -47,6 +47,7 @@ rna.read_data <- function (data = NULL,
                           is.character(id),
                           length(id) == 1)
   # Read data
+  browser()
   if(!is.null(data)){
     if (is.character(data)) {
     # Read table file
@@ -91,7 +92,12 @@ rna.read_data <- function (data = NULL,
         "Please run 'rna.read_data' with an R dataframe object or a table file containing read data for all samples in the 'data' argument, or prefixes of several files in the 'file.pfx' argument."
       )
     }
-
+  }
+  # Check if column headers exist. If not, take first row as column headers
+  if (all(grepl("^V\\d", colnames(dat)))){
+    new_colnames <- gsub('["\']', '', dat[1,])
+    colnames(dat) <- new_colnames
+    dat <- dat[-1,]
   }
   if (is.character(id2name.table)) {
     # Read table file

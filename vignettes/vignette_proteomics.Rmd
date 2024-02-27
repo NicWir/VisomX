@@ -68,10 +68,9 @@ plotting functions.
 Install the most current version with package `devtools`:
 
 ``` r
-install.packages("devtools")
-library(devtools)
+install.packages("BiocManager")
 
-install_github("NicWir/VisomX", dependencies = TRUE)
+BiocManager::install("NicWir/VisomX")
 ```
 
 Load the package:
