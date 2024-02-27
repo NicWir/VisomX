@@ -1,366 +1,372 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://nicwir.github.io/VisomX/404.html</loc>
   </url>
   <url>
-    <loc>/articles/index.html</loc>
+    <loc>https://nicwir.github.io/VisomX/LICENSE.html</loc>
   </url>
   <url>
-    <loc>/articles/vignette_proteomics.html</loc>
+    <loc>https://nicwir.github.io/VisomX/articles/index.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://nicwir.github.io/VisomX/articles/vignette_proteomics.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://nicwir.github.io/VisomX/articles/vignette_transcriptomics.html</loc>
   </url>
   <url>
-    <loc>/LICENSE.html</loc>
+    <loc>https://nicwir.github.io/VisomX/authors.html</loc>
   </url>
   <url>
-    <loc>/reference/colFmt.html</loc>
+    <loc>https://nicwir.github.io/VisomX/index.html</loc>
   </url>
   <url>
-    <loc>/reference/delete_prefix.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Get.bwss.html</loc>
   </url>
   <url>
-    <loc>/reference/dot-onAttach.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Intersect.html</loc>
   </url>
   <url>
-    <loc>/reference/fast.write.csv.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Perform.permutation.html</loc>
   </url>
   <url>
-    <loc>/reference/filter_missval.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Setdiff.html</loc>
   </url>
   <url>
-    <loc>/reference/flux_to_map.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Union.html</loc>
   </url>
   <url>
-    <loc>/reference/Get.bwss.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/colFmt.html</loc>
   </url>
   <url>
-    <loc>/reference/get_prefix.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/delete_prefix.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/dot-onAttach.html</loc>
   </url>
   <url>
-    <loc>/reference/Intersect.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/fast.write.csv.html</loc>
   </url>
   <url>
-    <loc>/reference/make_se.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/filter_missval.html</loc>
   </url>
   <url>
-    <loc>/reference/manual_impute.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/flux_to_map.html</loc>
   </url>
   <url>
-    <loc>/reference/meanSdPlot.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/get_prefix.html</loc>
   </url>
   <url>
-    <loc>/reference/met.ANOVA.Anal.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/index.html</loc>
   </url>
   <url>
-    <loc>/reference/met.FC.Anal.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/make_se.html</loc>
   </url>
   <url>
-    <loc>/reference/met.FilterVariable.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/manual_impute.html</loc>
   </url>
   <url>
-    <loc>/reference/met.GetFC.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/meanSdPlot.html</loc>
   </url>
   <url>
-    <loc>/reference/met.GetTtestRes.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.ANOVA.Anal.html</loc>
   </url>
   <url>
-    <loc>/reference/met.impute.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.FC.Anal.html</loc>
   </url>
   <url>
-    <loc>/reference/met.initialize.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.FilterVariable.html</loc>
   </url>
   <url>
-    <loc>/reference/met.normalize.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.GetFC.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PCA.Anal.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.GetTtestRes.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PerformFeatureFilter.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PCA.Anal.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_ANOVA.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.CV.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_CorrHeatMap_Features.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.Permut.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_CorrHeatMap_Samples.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSR.Anal.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_detect.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PerformFeatureFilter.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_FeatureNormSummary.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PreparePrenormData.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_heatmap.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.SanityCheck.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_ImpVar.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.Ttests.Anal.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_missval.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.UpdateData.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PCA2DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.impute.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PCA2DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.initialize.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PCA3DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.normalize.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PCA3DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_ANOVA.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PCAScree.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_CorrHeatMap_Features.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS.Crossvalidation.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_CorrHeatMap_Samples.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS.Permutation.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_FeatureNormSummary.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS2DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_ImpVar.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS2DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCA2DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS3DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCA2DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS3DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCA3DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLSImpScatter.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCA3DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_PLS_Imp.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCAScree.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_SampleNormSummary.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS.Crossvalidation.html</loc>
   </url>
   <url>
-    <loc>/reference/met.plot_volcano.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS.Permutation.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PLSDA.CV.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS2DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PLSDA.Permut.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS2DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PLSR.Anal.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS3DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.PreparePrenormData.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS3DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.print_PCA3DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLSImpScatter.html</loc>
   </url>
   <url>
-    <loc>/reference/met.print_PCA3DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_PLS_Imp.html</loc>
   </url>
   <url>
-    <loc>/reference/met.print_PLS3DLoading.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_SampleNormSummary.html</loc>
   </url>
   <url>
-    <loc>/reference/met.print_PLS3DScore.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_detect.html</loc>
   </url>
   <url>
-    <loc>/reference/met.read_data.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_heatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/met.report.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_missval.html</loc>
   </url>
   <url>
-    <loc>/reference/met.report_test_normalization.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_volcano.html</loc>
   </url>
   <url>
-    <loc>/reference/met.SanityCheck.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.print_PCA3DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.test_normalization.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.print_PCA3DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.Ttests.Anal.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.print_PLS3DLoading.html</loc>
   </url>
   <url>
-    <loc>/reference/met.UpdateData.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.print_PLS3DScore.html</loc>
   </url>
   <url>
-    <loc>/reference/met.workflow.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.read_data.html</loc>
   </url>
   <url>
-    <loc>/reference/pathway_enrich.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.report.html</loc>
   </url>
   <url>
-    <loc>/reference/Perform.permutation.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.report_test_normalization.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_coverage.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.test_normalization.html</loc>
   </url>
   <url>
-    <loc>/reference/png_to_gif.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/met.workflow.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.add_rejections.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/pathway_enrich.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.boxplot_intensity.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/plot_coverage.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.filter_missing.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/png_to_gif.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.get_kegg_pathways.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.add_rejections.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.get_results.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.boxplot_intensity.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.impute.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.filter_missing.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.make_unique.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.get_kegg_pathways.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.normalize_vsn.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.get_results.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.pca.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.impute.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_bar.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.make_unique.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_corrheatmap.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.normalize_vsn.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_density.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.pca.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_detect.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_bar.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_enrichment.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_corrheatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_heatmap.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_density.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_heatmap_all.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_detect.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_imputation.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_enrichment.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_loadings.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_heatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_missval.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_heatmap_all.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_numbers.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_imputation.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_pca.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_loadings.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_screeplot.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_missval.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_upset.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_numbers.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.plot_volcano.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_pca.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.read_data.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_screeplot.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.report.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_upset.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.test_diff.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.plot_volcano.html</loc>
   </url>
   <url>
-    <loc>/reference/prot.workflow.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.read_data.html</loc>
   </url>
   <url>
-    <loc>/reference/read_file.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.report.html</loc>
   </url>
   <url>
-    <loc>/reference/read_flux.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.test_diff.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.filter_missing.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot.workflow.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.impute.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/prot_to_map.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.make_se.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/read_file.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_bar.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/read_flux.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_corrheatmap.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.filter_missing.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_heatmap.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.impute.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_imputation.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.make_se.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_numbers.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_bar.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_pca.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_corrheatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.plot_volcano.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_heatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.read_data.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_imputation.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.report.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_numbers.html</loc>
   </url>
   <url>
-    <loc>/reference/rna.workflow.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_pca.html</loc>
   </url>
   <url>
-    <loc>/reference/Setdiff.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.plot_volcano.html</loc>
   </url>
   <url>
-    <loc>/reference/svg_to_pdf.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.read_data.html</loc>
   </url>
   <url>
-    <loc>/reference/svg_to_png.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.report.html</loc>
   </url>
   <url>
-    <loc>/reference/theme_DEP1.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/rna.workflow.html</loc>
   </url>
   <url>
-    <loc>/reference/theme_DEP2.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/svg_to_pdf.html</loc>
   </url>
   <url>
-    <loc>/reference/Union.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/svg_to_png.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/theme_DEP1.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/theme_DEP2.html</loc>
   </url>
 </urlset>

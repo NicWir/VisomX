@@ -135,7 +135,12 @@ prot.read_data <- function (data = "dat_prot.csv",
   } else {
     stop("Please provide proteomics data as either an R dataframe object or a CSV/TXT/XLS/XLSX/TSV table file.")
   }
-
+  # Check if column headers exist. If not, take first row as column headers
+  if (all(grepl("^V\\d", colnames(prot)))){
+    new_colnames <- gsub('["\']', '', prot[1,])
+    colnames(prot) <- new_colnames
+    prot <- prot[-1,]
+  }
   # Test for occurence of prefix for abundance columns.
   if (!(any(grepl(pfx, colnames(prot))))) {
     stop(paste0("The prefix '", pfx, "' does not exist in any column of '",
@@ -559,7 +564,7 @@ if(!is.null(out.dir)){
 
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
-    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "pora_kegg_contrast...txt'"))
+    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "/pora_kegg_contrast...txt'"))
     for(i in 1:length(res.pathway$ls.pora_kegg_up)){
       if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
         utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(out_dir, paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
@@ -575,7 +580,7 @@ if(!is.null(out.dir)){
   }
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
     results <- c(results, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
-    message(paste0("Writing results of custom pathway enrichment analysis to: ", out_dir, "'pora_custom_contrast...txt'"))
+    message(paste0("Writing results of custom pathway enrichment analysis to: ", out_dir, "/pora_custom_contrast...txt"))
     for(i in 1:length(res.pathway$ls.pora_custom_up)){
       if(!is.null(res.pathway$ls.pora_custom_up[[i]])){
         utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(out_dir, paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),

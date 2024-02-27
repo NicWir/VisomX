@@ -594,7 +594,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          #quote = "",
+          quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -614,7 +614,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          #quote = "",
+          quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -630,7 +630,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = na.strings,
-          #quote = "",
+          quote = "",
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -644,6 +644,16 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
   } else {
     stop(paste0("File \"", filename, "\" does not exist."), call. = FALSE)
   }
+  # Strip string values of quotes
+  dat[] <- lapply(dat, function(x) {
+    # Check if the column is character type
+    if(is.character(x)) {
+      # Remove quotes at the start and end of the string
+      x <- gsub("^\"|\"$|^'|'$", "", x)
+    }
+    return(x)
+  })
+
   return(dat)
 }
 

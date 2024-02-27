@@ -812,7 +812,7 @@ h_pora <- 9
   ## Lollipop chart
   prot.plot_enrichment(
     results$pora_custom_up[["Glc_vs_Ac"]],
-    title = "Upregulated pathways - KEGG",
+    title = "Upregulated pathways - BioCyc",
     subtitle =  "Glc_vs_Ac",
     plot = T,
     export = F
@@ -834,7 +834,7 @@ h_pora <- 6
   ## Lollipop chart
   prot.plot_enrichment(
     results$pora_custom_dn[["Glc_vs_Ac"]],
-    title = "Upregulated pathways - KEGG",
+    title = "Upregulated pathways - BioCyc",
     subtitle =  "Glc_vs_Ac",
     plot = T,
     export = F
@@ -860,7 +860,7 @@ library(SummarizedExperiment)
 kegg_pathways <- prot.get_kegg_pathways("ppu")
 
 # Extract genes constituting the TCA cycle
-TCA_genes <- kegg_pathways[["Citrate cycle (TCA cycle)"]]
+TCA_genes <- kegg_pathways[["Citrate cycle (TCA cycle) - Pseudomonas putida KT2440"]]
 
 # Get the names instead of IDs for the genes
 TCA_names <- rowData(results$dep)[rowData(results$dep)$ID %in% TCA_genes, "name"]
