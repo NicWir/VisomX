@@ -890,7 +890,7 @@ rna.report <- function(results, report.dir = NULL, ...){
     }
   }
   file <- paste0(Report.wd, "/Report_RNA.Rmd")
-  file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
+  #file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)
