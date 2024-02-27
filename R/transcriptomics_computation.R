@@ -47,7 +47,6 @@ rna.read_data <- function (data = NULL,
                           is.character(id),
                           length(id) == 1)
   # Read data
-  browser()
   if(!is.null(data)){
     if (is.character(data)) {
     # Read table file
