@@ -1127,15 +1127,14 @@ rna.plot_bar <- function (dds,
   rownames(dds) <- row_data[, GeneID]
   rownames(dds)[is.na(rownames(dds))] <- 0
   row_data <- SummarizedExperiment::rowData(dds, use.names = FALSE)
-
   if (any(!c("label", "condition", "replicate") %in%
           colnames(SummarizedExperiment::colData(dds)))) {
     stop("'label', 'condition' and/or 'replicate' columns are not present in '",
          deparse(substitute(dds)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
          call. = FALSE)
   }
-  if (length(grep("padj\\.|diff\\.", colnames(row_data))) < 1 && type == "contrast") {
-    stop("'diff.[contrast]' and 'padj.[contrast]' columns are not present in '",
+  if (length(grep(paste0("padj\\.|", gsub("\\.", "\\\\.", lfc.pfx)), colnames(row_data))) < 2 && type == "contrast") {
+    stop(paste0("'", lfc.pfx, "[contrast]' and 'padj.[contrast]' columns are not present in '"),
          deparse(substitute(dds)), "'\nRun rna.workflow() to obtain the required columns",
          call. = FALSE)
   }
@@ -1299,8 +1298,8 @@ rna.plot_bar <- function (dds,
     }
     if (type == "contrast") {
       if(is.null(contrast)){
-        contrast <- SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(starts_with("lfc."))  %>%
-          colnames(.) %>% gsub("lfc.", "", .)
+        contrast <- SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(starts_with(lfc.pfx))  %>%
+          colnames(.) %>% gsub(lfc.pfx, "", .)
       }
       if (convert_name == TRUE) {
           df <-SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE)
@@ -1437,9 +1436,9 @@ rna.plot_bar <- function (dds,
       print(p)
       grDevices::dev.off()
     }
-    if(length(genes)>8){
-      plot = FALSE
-    }
+    #if(length(genes)>8){
+    #  plot = FALSE
+    #}
     if(plot){
       print(p)
     } else {
@@ -1450,7 +1449,7 @@ rna.plot_bar <- function (dds,
                           "log2_intensity", "CI.L", "CI.R")
       }
       if (type == "contrast") {
-        df <- df %>% select(name, contrast, diff, CI.L, CI.R) %>%
+        df <- df %>% select(name, contrast, gsub("\\.", "", lfc.pfx), CI_L, CI_R) %>%
           mutate(contrast = paste0(contrast))
         colnames(df) <- c("gene", "contrast",
                           "log2_fold_change", "CI.L", "CI.R")
