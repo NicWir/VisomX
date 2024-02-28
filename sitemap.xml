@@ -4,6 +4,9 @@
     <loc>https://nicwir.github.io/VisomX/404.html</loc>
   </url>
   <url>
+    <loc>https://nicwir.github.io/VisomX/LICENSE.html</loc>
+  </url>
+  <url>
     <loc>https://nicwir.github.io/VisomX/articles/index.html</loc>
   </url>
   <url>
@@ -19,7 +22,19 @@
     <loc>https://nicwir.github.io/VisomX/index.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/LICENSE.html</loc>
+    <loc>https://nicwir.github.io/VisomX/reference/Get.bwss.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/Intersect.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/Perform.permutation.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/Setdiff.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/Union.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/colFmt.html</loc>
@@ -40,16 +55,10 @@
     <loc>https://nicwir.github.io/VisomX/reference/flux_to_map.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/reference/Get.bwss.html</loc>
-  </url>
-  <url>
     <loc>https://nicwir.github.io/VisomX/reference/get_prefix.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/Intersect.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/make_se.html</loc>
@@ -76,6 +85,33 @@
     <loc>https://nicwir.github.io/VisomX/reference/met.GetTtestRes.html</loc>
   </url>
   <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PCA.Anal.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.CV.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.Permut.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PLSR.Anal.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PerformFeatureFilter.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.PreparePrenormData.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.SanityCheck.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.Ttests.Anal.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.UpdateData.html</loc>
+  </url>
+  <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.impute.html</loc>
   </url>
   <url>
@@ -83,12 +119,6 @@
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.normalize.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PCA.Anal.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PerformFeatureFilter.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_ANOVA.html</loc>
@@ -100,19 +130,10 @@
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_CorrHeatMap_Samples.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.plot_detect.html</loc>
-  </url>
-  <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_FeatureNormSummary.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.plot_heatmap.html</loc>
-  </url>
-  <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_ImpVar.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.plot_missval.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_PCA2DLoading.html</loc>
@@ -157,19 +178,16 @@
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_SampleNormSummary.html</loc>
   </url>
   <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_detect.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_heatmap.html</loc>
+  </url>
+  <url>
+    <loc>https://nicwir.github.io/VisomX/reference/met.plot_missval.html</loc>
+  </url>
+  <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.plot_volcano.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.CV.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PLSDA.Permut.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PLSR.Anal.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.PreparePrenormData.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.print_PCA3DLoading.html</loc>
@@ -193,25 +211,13 @@
     <loc>https://nicwir.github.io/VisomX/reference/met.report_test_normalization.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.SanityCheck.html</loc>
-  </url>
-  <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.test_normalization.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.Ttests.Anal.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/met.UpdateData.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/met.workflow.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/pathway_enrich.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/Perform.permutation.html</loc>
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/plot_coverage.html</loc>
@@ -304,6 +310,9 @@
     <loc>https://nicwir.github.io/VisomX/reference/prot.workflow.html</loc>
   </url>
   <url>
+    <loc>https://nicwir.github.io/VisomX/reference/prot_to_map.html</loc>
+  </url>
+  <url>
     <loc>https://nicwir.github.io/VisomX/reference/read_file.html</loc>
   </url>
   <url>
@@ -349,9 +358,6 @@
     <loc>https://nicwir.github.io/VisomX/reference/rna.workflow.html</loc>
   </url>
   <url>
-    <loc>https://nicwir.github.io/VisomX/reference/Setdiff.html</loc>
-  </url>
-  <url>
     <loc>https://nicwir.github.io/VisomX/reference/svg_to_pdf.html</loc>
   </url>
   <url>
@@ -362,8 +368,5 @@
   </url>
   <url>
     <loc>https://nicwir.github.io/VisomX/reference/theme_DEP2.html</loc>
-  </url>
-  <url>
-    <loc>https://nicwir.github.io/VisomX/reference/Union.html</loc>
   </url>
 </urlset>
