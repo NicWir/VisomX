@@ -97,7 +97,10 @@ Suggests:
     DelayedArray,
     jsonlite,
     MetaboAnalystR,
-    multtest
+    multtest,
+    prettydoc,
+    Cairo,
+    bookdown
 VignetteBuilder: 
     knitr
 Remotes: 
