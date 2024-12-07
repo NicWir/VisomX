@@ -47,8 +47,9 @@
 <span>  <span class="va">dep</span>,</span>
 <span>  <span class="va">proteins</span>,</span>
 <span>  combine <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"contrast"</span>, <span class="st">"centered"</span>, <span class="st">"ReferenceProt"</span>, <span class="st">"ReferenceCondition"</span>, <span class="st">"abundance"</span><span class="op">)</span>,</span>
 <span>  ref.prot <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"contrast"</span>, <span class="st">"centered"</span>, <span class="st">"reference"</span>, <span class="st">"abundance"</span><span class="op">)</span>,</span>
+<span>  ref.condition <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  contrast <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col.id <span class="op">=</span> <span class="st">"ID"</span>,</span>
 <span>  name_table <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -58,7 +59,7 @@
 <span>  shape.size <span class="op">=</span> <span class="fl">2.5</span>,</span>
 <span>  y.lim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  export <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  export <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  export.nm <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  height <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -81,12 +82,16 @@
 <dd><p>Logical value indicating whether to combine the data from different proteins in one plot.</p></dd>
 
 
-<dt id="arg-ref-prot">ref.prot<a class="anchor" aria-label="anchor" href="#arg-ref-prot"></a></dt>
-<dd><p>ID or name of the reference protein for normalization when type is "reference".</p></dd>
-
-
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p>Type of plot: "abundance", "reference", "centered" or "contrast".</p></dd>
+<dd><p>Type of plot: "abundance", "ReferenceProt", "centered" or "contrast".</p></dd>
+
+
+<dt id="arg-ref-prot">ref.prot<a class="anchor" aria-label="anchor" href="#arg-ref-prot"></a></dt>
+<dd><p>ID or name of the reference protein for normalization when type is "ReferenceProt".</p></dd>
+
+
+<dt id="arg-ref-condition">ref.condition<a class="anchor" aria-label="anchor" href="#arg-ref-condition"></a></dt>
+<dd><p>Name of the reference condition by which all average abundance values are divided when type is "ReferenceCondition".</p></dd>
 
 
 <dt id="arg-contrast">contrast<a class="anchor" aria-label="anchor" href="#arg-contrast"></a></dt>
@@ -143,7 +148,7 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.</p>
+    <p>(invisibly) a ggplot object as well as the plot in the Plots pane if <code>plot = TRUE</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
