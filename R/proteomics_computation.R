@@ -311,6 +311,27 @@ prot.read_data <- function (data = "dat_prot.csv",
 
   cat(paste0("Identified conditions:\n ", paste(str_c(unique(prot_se$condition), collapse = ", ")), "\n"))
 
+  ## Drop samples were all abundance values are NA
+  assay_data <- SummarizedExperiment::assay(prot_se)
+  na_cols <- which(colSums(!is.na(assay_data)) == 0)
+  na_sample_names <- colnames(assay_data)[na_cols]
+  if (length(na_sample_names) > 0) {
+    cat("Samples with all proteins as NA:\n")
+    print(na_sample_names)
+  } else {
+    cat("No samples have all proteins as NA.\n")
+  }
+
+  if (length(na_cols) > 0) {
+    # Remove columns with all NA values
+    prot_se_clean <- prot_se[, -na_cols]
+
+    cat("Removed", length(na_cols), "samples with all NA values.\n")
+  } else {
+    prot_se_clean <- prot_se
+    cat("No samples to remove.\n")
+  }
+
   return(prot_se)
 }
 
