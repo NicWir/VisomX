@@ -332,7 +332,7 @@ prot.read_data <- function (data = "dat_prot.csv",
     cat("No samples to remove.\n")
   }
 
-  return(prot_se)
+  return(prot_se_clean)
 }
 
 #' Run a complete proteomics analysis workflow.
