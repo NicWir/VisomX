@@ -13,11 +13,13 @@ read_file(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1)
 
 \item{dec}{(Character) decimal separator used in CSV, TSV and TXT files.}
 
+\item{na.strings}{(Character) If a table cell contains the indicated string, it will be converted to NA.}
+
 \item{sheet}{(Numeric or Character) Number or name of a sheet in XLS or XLSX files (\emph{optional}). Default: \code{";"}}
 }
 \value{
-A dataframe object
+A dataframe object with headers in the first row.
 }
 \description{
-Call the appropriate function required to read a table file and return the table as a dataframe object.
+\code{read_file} automatically detects the format of a file provided as \code{filename} and calls the appropriate function to read the table file.
 }

@@ -67,7 +67,7 @@ rna.workflow(
 
 \item{controlGenes}{Specifying those genes to use for size factor estimation (e.g. housekeeping or spike-in genes).}
 
-\item{pAdjustMethod}{Method for adjusting p values. Available options are "IHW","BH".}
+\item{pAdjustMethod}{Method for adjusting p values. Available options are "IHW" (Independent Hypothesis Weighting),"BH" (Benjamini-Hochberg).}
 
 \item{alpha}{Significance threshold for adjusted p values.}
 

@@ -4,7 +4,7 @@
 \alias{make_se}
 \title{Create a SummarizedExperiment object from a data frame}
 \usage{
-make_se(proteins_unique, columns, expdesign)
+make_se(proteins_unique, columns, expdesign, log2_transform = TRUE)
 }
 \arguments{
 \item{proteins_unique}{A data frame containing the protein expression data}
@@ -12,6 +12,8 @@ make_se(proteins_unique, columns, expdesign)
 \item{columns}{A vector of column numbers containing the numeric expression data}
 
 \item{expdesign}{A data frame containing the experimental design}
+
+\item{log2_transform}{A logical value. Whether to log2 transform the data. Default is TRUE.}
 }
 \value{
 A SummarizedExperiment object

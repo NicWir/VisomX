@@ -18,7 +18,8 @@ prot.read_data(
   pfx = "abundances.",
   filt_type = c("condition", "complete", "fraction", NULL),
   filt_thr = 3,
-  filt_min = NULL
+  filt_min = NULL,
+  log2_transform = TRUE
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ The table must contain:
 \item{filt_thr}{(Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{filt_type = "condition"}. In other words: "keep proteins that have a maximum of 'filt_thr' missing values in at least one condition."}
 
 \item{filt_min}{(Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{filt_type = "fraction"}.}
+
+\item{log2_transform}{(Logical) Should the data be log2 transformed?}
 }
 \value{
 A filtered SummarizedExperiment object.

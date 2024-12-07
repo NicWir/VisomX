@@ -601,7 +601,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
         )
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "xls" |
                stringr::str_replace(filename, ".{1,}\\.", "") == "xlsx") {
-      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = TRUE, sheet = sheet, progress = TRUE)))
+      dat <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = TRUE, sheet = sheet)))
     } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
       ncols <- max(utils::count.fields(filename))
       dat <-

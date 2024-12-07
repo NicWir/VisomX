@@ -6,6 +6,7 @@
 \usage{
 prot.workflow(
   se,
+  normalize = TRUE,
   imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb",
     "min", "zero", "mixed", "nbavg"),
   q = 0.01,
@@ -38,6 +39,8 @@ prot.workflow(
 }
 \arguments{
 \item{se}{\code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.}
+
+\item{normalize}{(Logical) Should the data be normalized via variance stabilization normalization?}
 
 \item{imp_fun}{(Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{prot.impute}}) for details.}
 

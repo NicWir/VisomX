@@ -8,8 +8,9 @@ prot.plot_bar(
   dep,
   proteins,
   combine = FALSE,
+  type = c("contrast", "centered", "ReferenceProt", "ReferenceCondition", "abundance"),
   ref.prot = NULL,
-  type = c("contrast", "centered", "reference", "abundance"),
+  ref.condition = NULL,
   contrast = NULL,
   col.id = "ID",
   name_table = NULL,
@@ -19,7 +20,7 @@ prot.plot_bar(
   shape.size = 2.5,
   y.lim = NULL,
   plot = TRUE,
-  export = TRUE,
+  export = FALSE,
   export.nm = NULL,
   width = NULL,
   height = NULL
@@ -32,9 +33,11 @@ prot.plot_bar(
 
 \item{combine}{Logical value indicating whether to combine the data from different proteins in one plot.}
 
-\item{ref.prot}{ID or name of the reference protein for normalization when type is "reference".}
+\item{type}{Type of plot: "abundance", "ReferenceProt", "centered" or "contrast".}
 
-\item{type}{Type of plot: "abundance", "reference", "centered" or "contrast".}
+\item{ref.prot}{ID or name of the reference protein for normalization when type is "ReferenceProt".}
+
+\item{ref.condition}{Name of the reference condition by which all average abundance values are divided when type is "ReferenceCondition".}
 
 \item{contrast}{Name of the contrast for plotting when type is "contrast".}
 
@@ -63,7 +66,7 @@ prot.plot_bar(
 \item{height}{Numeric value defining the height of the exported plot.}
 }
 \value{
-A ggplot object as well as (invisibly) a dataframe with the data used for creating the plot.
+(invisibly) a ggplot object as well as the plot in the \link{Plots} pane if \code{plot = TRUE}.
 }
 \description{
 This function generates bar plots for protein abundance or fold change, normalized by either a reference protein or centered to the mean. The user can also plot the contrast of two conditions.

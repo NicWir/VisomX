@@ -97,6 +97,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @param filt_type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep proteins with valid values in all samples. "condition" will keep proteins that have a maximum of \code{filt_thr} missing values in at least one condition. "fraction" will keep proteins that have a \code{filt_min} fraction of valid values in all samples.
 #' @param filt_thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{filt_type = "condition"}. In other words: "keep proteins that have a maximum of 'filt_thr' missing values in at least one condition."
 #' @param filt_min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{filt_type = "fraction"}.
+#' @param log2_transform (Logical) Should the data be log2 transformed?
 #'
 #' @return A filtered SummarizedExperiment object.
 #' @export
@@ -115,7 +116,8 @@ prot.read_data <- function (data = "dat_prot.csv",
                             pfx = "abundances.",
                             filt_type = c("condition", "complete", "fraction", NULL),
                             filt_thr = 3,
-                            filt_min = NULL
+                            filt_min = NULL,
+                            log2_transform = TRUE
 ) {
   assertthat::assert_that(is.character(name),
                           length(name) == 1,
@@ -268,7 +270,8 @@ prot.read_data <- function (data = "dat_prot.csv",
         as.numeric(prot_unique[, abundance_columns[x]]))
   }
   message("Generating SummarizedExperiment.")
-  prot_se <- make_se(prot_unique, abundance_columns, experimental_design)
+  
+  prot_se <- make_se(prot_unique, abundance_columns, experimental_design, log2_transform = log2_transform)
 
   # Apply RSD threshold
   if(!is.null(rsd_thresh)){
@@ -1446,12 +1449,13 @@ enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe 
 #' @param proteins_unique A data frame containing the protein expression data
 #' @param columns A vector of column numbers containing the numeric expression data
 #' @param expdesign A data frame containing the experimental design
+#' @param log2_transform A logical value. Whether to log2 transform the data. Default is TRUE.
 #'
 #' @return A SummarizedExperiment object
 #'
 #' @export
 #'
-make_se <- function (proteins_unique, columns, expdesign)
+make_se <- function (proteins_unique, columns, expdesign, log2_transform = TRUE)
 {
   assertthat::assert_that(is.data.frame(proteins_unique), is.integer(columns),
                           is.data.frame(expdesign))
@@ -1475,7 +1479,8 @@ make_se <- function (proteins_unique, columns, expdesign)
   rownames(proteins_unique) <- proteins_unique$name
   raw <- proteins_unique[, columns]
   raw[raw == 0] <- NA
-  raw <- log2(raw)
+  if (log2_transform)
+    raw <- log2(raw)
   expdesign <- dplyr::mutate(expdesign, condition = make.names(condition)) %>%
     tidyr::unite(ID, condition, replicate, remove = FALSE)
   rownames(expdesign) <- expdesign$ID

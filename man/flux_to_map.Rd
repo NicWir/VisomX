@@ -5,7 +5,7 @@
 \title{Create a metabolic map with fluxes and export as SVG file}
 \usage{
 flux_to_map(
-  df = "dat_flux",
+  df,
   template = NULL,
   result.nm = NULL,
   pal = c("G", "R", "O", "B", "BYR", "BW", "YR", "PuRd"),

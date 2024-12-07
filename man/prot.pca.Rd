@@ -12,7 +12,7 @@ prot.pca(
   rank = NULL,
   removeVar = NULL,
   transposed = FALSE,
-  BSPARAM = ExactParam(),
+  BSPARAM = BiocSingular::ExactParam(),
   in_workflow = FALSE
 )
 }
