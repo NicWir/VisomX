@@ -21,6 +21,14 @@ Depends:
     R (>= 4.0)
 biocViews: 
 Imports:
+    ggplot2,
+    ComplexHeatmap,
+    caret,
+    ggrepel,
+    gridExtra,
+    pls,
+    plyr, 
+    reticulate,
     dplyr,
     magrittr,
     stringr,
@@ -83,21 +91,15 @@ Imports:
     UpSetR,
     vsn
 Suggests:
-    caret,
     DelayedArray,
     jsonlite,
     multtest,
     prettydoc,
     Cairo,
     bookdown,
-    ggplot2,
-    ComplexHeatmap,
     pheatmap,
     plotly,
     ggpubr,
-    ggrepel,
-    gridExtra,
-    reticulate,
     rgl
 VignetteBuilder: 
     knitr
