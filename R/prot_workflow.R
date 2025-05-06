@@ -36,6 +36,7 @@
 #' @export
 #' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment assay rowData colData
+#' @importFrom dplyr select filter
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           normalize = TRUE,
                           imp_fun = c("SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", # Method for imputing of missing values
@@ -132,7 +133,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     colnames() %>% str_replace_all("_diff", "")
   # Generate a results table
   results <- prot.get_results(prot_dep)
-  n_significant <- results %>% filter(significant) %>% nrow()
+  n_significant <- results %>% dplyr::filter(significant) %>% nrow()
 
   message(paste0(n_significant,
                  " proteins were found to be differentially expressed with ",
