@@ -745,7 +745,7 @@ prot.test_diff <- function (se, type = c("control", "all", "manual"),
                                                                                         "_vs_", comparison)) %>% gather(variable, value,
                                                                                                                         -c(rowname, comparison)) %>% dplyr::mutate(variable = recode(variable,
                                                                                                                                                                               logFC = "diff", P.Value = "p.val", qval = "p.adj")) %>%
-    unite(temp, comparison, variable) %>% tidyr::spread(temp, value)
+    tidyr::unite(temp, comparison, variable) %>% tidyr::spread(temp, value)
   SummarizedExperiment::rowData(se) <- merge(SummarizedExperiment::rowData(se, use.names = FALSE), table,
                        by.x = "name", by.y = "rowname", all.x = TRUE,
                        sort = FALSE)

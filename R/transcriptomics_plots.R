@@ -20,9 +20,11 @@
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom assertthat assert_that
 #' @importFrom circlize colorRamp2
-#' @importFrom grid gpar
+#' @importFrom grid gpar unit
 #' @importFrom tibble rownames_to_column
 #' @importFrom SummarizedExperiment assay colData rowData
+#' @importFrom magrittr %>%
+#' @importFrom dplyr filter
 #'
 rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
                                    pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE,
@@ -121,6 +123,16 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
 #' @param export Export the heatmap as pdf and png. Default is TRUE
 #' @param ... Other parameters passed to the ComplexHeatmap::Heatmap function
 #' @return (Invisibly) returns a data frame with the genes and the normalized abundances
+#' @importFrom SummarizedExperiment assay colData rowData
+#' @importFrom tibble column_to_rownames
+#' @importFrom dplyr filter select group_by summarize mutate arrange pull
+#' @importFrom stringr str_split str_detect
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom circlize colorRamp2
+#' @importFrom grid gpar unit
+#' @importFrom plyr round_any
+#' @importFrom cluster daisy
+#' @importFrom magrittr %>%
 #' @export
 rna.plot_heatmap <- function (dds,
                               type = c("centered", "contrast"),
@@ -410,6 +422,12 @@ rna.plot_heatmap <- function (dds,
 #'
 #' @importFrom DESeq2 rlog
 #' @importFrom SummarizedExperiment assay colData
+#' @importFrom tibble rownames_to_column
+#' @importFrom dplyr left_join
+#' @importFrom ggplot2 ggplot aes geom_point geom_text geom_vline geom_hline
+#'   facet_wrap labs coord_fixed theme scale_fill_brewer scale_fill_manual
+#'   scale_color_manual scale_shape_manual guide_legend
+#' @importFrom magrittr %>%
 #'
 #' @export
 rna.plot_pca <- function (dds,
@@ -629,11 +647,13 @@ rna.plot_pca <- function (dds,
 #'
 #' @export
 #'
-#' @importFrom ggplot2 ggplot aes geom_density stat_density facet_wrap labs theme scale_color_brewer scale_color_manual
 #' @importFrom assertthat assert_that
 #' @importFrom purrr map_df
 #' @importFrom tidyr gather
 #' @importFrom dplyr left_join mutate
+#' @importFrom ggplot2 ggplot aes geom_density stat_density facet_wrap labs scale_color_brewer scale_color_manual
+#' @importFrom grDevices png pdf dev.off
+#' @importFrom magrittr %>%
 #'
 rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12, export = TRUE)
 {
@@ -714,11 +734,14 @@ rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12,
 #'
 #' @importFrom SummarizedExperiment rowData
 #' @importFrom assertthat assert_that
-#' @importFrom ggplot2 geom_point geom_vline geom_hline labs xlab ylab scale_colour_manual theme_bw theme coord_cartesian
-#' @importFrom ggh4x force_panelsizes
-#' @importFrom scales pretty_breaks
+#' @importFrom dplyr filter arrange case_when select
 #' @importFrom stringr str_replace
-#' @importFrom grDevices pdf png dev.off
+#' @importFrom scales pretty_breaks
+#' @importFrom ggplot2 geom_point geom_vline geom_hline labs xlab ylab scale_shape scale_colour_manual theme_bw theme coord_cartesian scale_x_continuous guides guide_legend
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom ggh4x force_panelsizes
+#' @importFrom grDevices png pdf dev.off
+#' @importFrom grid unit
 rna.plot_volcano <-
   function (dds,
             contrast,
@@ -1008,10 +1031,13 @@ rna.plot_volcano <-
 #' @export
 #'
 #' @importFrom assertthat assert_that
-#' @importFrom SummarizedExperiment colData assay
+#' @importFrom SummarizedExperiment assay colData
 #' @importFrom tibble rownames_to_column
-#' @importFrom ggplot2 geom_col geom_hline labs scale_fill_brewer scale_fill_manual
-#' @importFrom grDevices png pdf
+#' @importFrom tidyr gather
+#' @importFrom dplyr mutate group_by summarize left_join
+#' @importFrom ggplot2 ggplot aes geom_col geom_hline labs scale_fill_brewer scale_fill_manual
+#' @importFrom grDevices png pdf dev.off
+#' @importFrom magrittr %>%
 #'
 rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
 {
@@ -1091,10 +1117,17 @@ rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
 #' @export
 #'
 #' @importFrom SummarizedExperiment assay rowData colData
-#' @importFrom tidyr gather spread
+#' @importFrom assertthat assert_that
 #' @importFrom stats qnorm
+#' @importFrom stringr str_split str_count
+#' @importFrom tibble rownames_to_column
+#' @importFrom tidyr gather spread
+#' @importFrom dplyr mutate group_by summarize left_join case_when
 #' @importFrom RColorBrewer brewer.pal
-#' @importFrom stringr str_split
+#' @importFrom ggplot2 ggplot aes geom_hline geom_col geom_point geom_errorbar facet_wrap labs scale_fill_manual position_dodge theme
+#' @importFrom ggnewscale new_scale_fill
+#' @importFrom grDevices png pdf dev.off
+#' @importFrom magrittr %>%
 #'
 rna.plot_bar <- function (dds,
                           genes,

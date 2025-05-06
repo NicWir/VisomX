@@ -1,4 +1,3 @@
-##'
 #' @title Pathway Enrichment Analysis
 #' @description Performs over‐representation testing via DOSE/clusterProfiler against KEGG or custom gene sets.
 #' @param gene Character vector of gene or protein IDs to test for enrichment.
@@ -22,6 +21,7 @@
 #' @importFrom tibble deframe
 #' @importFrom dplyr group_by summarise mutate rename
 #' @importFrom magrittr %>%
+#' @importFrom stringr str_replace_all
 pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                             pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                             minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
@@ -101,6 +101,9 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
 #'
 #' @noRd
 #' @keywords internal
+#' @importFrom qvalue qvalue
+#' @importFrom stats p.adjust phyper
+#'
 enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe = NULL,
                              minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, USER_DATA)
 {

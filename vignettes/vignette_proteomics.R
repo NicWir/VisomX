@@ -5,6 +5,7 @@
 ## ----libraryCode, echo = F, eval = T, include = F, results = "hide"-----------
 # Load the VisomX package
 suppressPackageStartupMessages(library(VisomX))
+suppressPackageStartupMessages(library(dplyr))
 
 ## ----SamplePath, echo = T, eval = T, include = T, results = "asis"------------
 system.file("prot_KT2440_glc_ac_LB.txt", package = "VisomX")

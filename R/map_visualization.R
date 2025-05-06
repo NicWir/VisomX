@@ -829,13 +829,6 @@ prot_to_map <- function (se,
   invisible(df_plot)
 }
 
-#' @param data A Table file or dataframe object containing two metadata columns on the left, followed by one column for each detected compound. Samples are stored in rows. The two metadata columns are in the following order:
-#'
-#' 1. Sample group name (e.g., experimental condition or organism)
-#' 2. Replicate number. If technical replicates were used in addition to biological replicates, assign identical replicate numbers to the technical replicates.
-#'
-#'
-
 #' Create a Metabolic Map from Metabolite Concentrations
 #'
 #' This function generates a metabolic map visualization based on provided metabolite concentrations. The map displays

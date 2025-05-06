@@ -6,13 +6,13 @@ mcols <- getFromNamespace(x = "mcols", "S4Vectors")
 #'
 #' @param libname library name
 #' @param pkgname package name
-#' importFrom grDevices col2rgb colorRampPalette
-#' importFrom graphics boxplot par
-#' importFrom stats as.formula cor density dist filter
-#' importFrom stats kruskal.test median model.matrix p.adjust
-#' importFrom stats quantile relevel runif sd t.test var
-#' importFrom stats wilcox.test
-#' importFrom utils write.csv
+#' @importFrom grDevices col2rgb colorRampPalette
+#' @importFrom graphics boxplot par
+#' @importFrom stats as.formula cor density dist filter
+#' @importFrom stats kruskal.test median model.matrix p.adjust
+#' @importFrom stats quantile relevel runif sd t.test var wilcox.test
+#' @importFrom utils write.csv packageVersion
+#' @importFrom tinytex is_tinytex
 .onAttach <- function (libname, pkgname){
   options(rgl.debug = TRUE)
   k1 <- paste("VisomX",utils::packageVersion( "VisomX"),"initialized Successfully !")
@@ -27,6 +27,20 @@ mcols <- getFromNamespace(x = "mcols", "S4Vectors")
 
 ####____enriched_pathways____####
 # internal function
+#' @title Enrichment analysis of pathways
+#' @description Performs over‐representation testing via DOSE/clusterProfiler against KEGG or custom gene sets.
+#'
+#' @param object A DESeqDataSet or SummarizedExperiment object.
+#' @param contrasts A character vector of contrasts to test. Example: `c("A_vs_B", "C_vs_D")`.
+#' @param alpha_pathways Numeric; p‐value cutoff (default `0.1`).
+#' @param pathway_kegg Logical; use KEGG pathways if `TRUE`.
+#' @param kegg_organism KEGG organism code (e.g. `"ppu"`).
+#' @param custom_pathways Data frame with columns `"Pathway"` and `"Accession"`, or a GMT file path.
+#' @return A list of pathway enrichment results for each contrast.
+#' @importFrom SummarizedExperiment rowData colData
+#' @importFrom dplyr filter
+#' @importFrom magrittr %>%
+#' @importFrom clusterProfiler download_KEGG
 enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_kegg=TRUE, kegg_organism, custom_pathways = NULL)
   {
   if (class(object) == "DESeqDataSet") {
@@ -176,6 +190,7 @@ enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_ke
 #'
 #' @param x A character string. The text to be colored.
 #' @param color (Character) A color.
+#' @importFrom knitr opts_knit
 colFmt <- function(x, color) {
   outputFormat <- knitr::opts_knit$get("rmarkdown.pandoc.to")
 
@@ -194,6 +209,8 @@ colFmt <- function(x, color) {
 #' @param dat An R data object (e.g., list, data frame)
 #' @param file (Character) The name of the CSV file.
 #' @param row.names (Logical) Add row names as column (\code{TRUE}) or not (\code{FALSE}).
+#' @importFrom data.table fwrite
+#' @importFrom utils write.csv
 fast.write.csv <- function(dat, file, row.names = TRUE) {
   tryCatch(
     {
@@ -234,7 +251,7 @@ GetShapeSchema <- function(mSetObj=NA, show.name, grey.scale){
   return(shapes);
 }
 
-#' Multiple set version of intersect
+#' @title Multiple set version of intersect
 #'
 #' @param x A list
 #' @export
@@ -248,7 +265,7 @@ Intersect <- function (x) {
   }
 }
 
-#' Remove the union of the y's from the common x's.
+#' @title Remove the union of the y's from the common x's.
 #'
 #' @param x A list of characters
 #' @param y A list of characters
@@ -279,9 +296,11 @@ move.file <- function(from, to) {
   file.rename(from = from,  to = to)
 }
 
-#' Multiple set version of union
+#' @title Multiple set version of union
 #'
 #' @param x A list
+#' @importFrom clusterProfiler download_KEGG
+#' @importFrom assertthat assert_that
 #' @export
 prot.get_kegg_pathways <- function(organism){
   assertthat::assert_that(is.character(organism))
@@ -297,6 +316,17 @@ prot.get_kegg_pathways <- function(organism){
 }
 
 ####____prot.get_pathway_genes____####
+#' @title Get genes from pathway table
+#' @description Get genes from pathway table
+#' @param pathway_name (Character) Name of the pathway
+#' @param pathway_table (Data frame) Pathway table
+#' @param colid_pathways (Character) Column name of pathways
+#' @param colid_genes (Character) Column name of genes
+#' @param gene_sep (Character) Separator for genes
+#' @return (Character) Genes in the pathway
+#' @importFrom dplyr filter pull
+#' @importFrom stringr str_detect str_split
+#' @importFrom magrittr %>%
 prot.get_pathway_genes <- function(pathway_name, pathway_table, colid_pathways, colid_genes, gene_sep = ", "){
   # genes <- unlist(str_split(pathway_table[match(pathway_name, pathway_table[[colid_pathways]]),
   #                                         colid_genes], gene_sep))
@@ -338,6 +368,10 @@ GetDefaultPLSCVComp <- function(mSetObj = NA){
   return(t(res))
 }
 
+#' @title Replace missing values with lower detection limit
+#' @description Replace missing values with lower detection limit
+#' @param int.mat (Matrix) Input matrix
+#' @return (Matrix) Matrix with missing values replaced
 ReplaceMissingByLoD <- function (int.mat){
   int.mat <- as.matrix(int.mat)
   rowNms <- rownames(int.mat)
@@ -558,7 +592,7 @@ Get.bwss <- function (x, cl)
   (TSS - WSS)/WSS
 }
 
- #' @export
+#' @export
 sum.na <- function(x,...){
   res <- NA
   tmp <- !(is.na(x) | is.infinite(x))
@@ -596,8 +630,10 @@ AddErrMsg <- function (msg)
 #' @param na.strings (Character) If a table cell contains the indicated string, it will be converted to NA.
 #'
 #' @return A dataframe object with headers in the first row.
+#' @importFrom stringr str_replace_all
+#' @importFrom utils count.fields read.csv read.table
+#' @importFrom readxl read_excel
 #' @export
-#'
 read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet = 1){
   if (file.exists(filename)) {
     if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "csv") {
@@ -675,7 +711,19 @@ read_file <- function(filename, csvsep = ";", dec = ".", na.strings = "", sheet 
   return(dat)
 }
 
-
+#' Subset and annotate a DESeqDataSet for contrast-specific heatmaps
+#'
+#' @param dds A \code{DESeqDataSet} or \code{SummarizedExperiment}.
+#' @param indicate Character vector of column names in \code{colData(dds)} to use for annotation.
+#' @param contrast Character vector of condition patterns to retain in the annotation.
+#'
+#' @return A \code{ComplexHeatmap::HeatmapAnnotation} object.
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment colData
+#' @importFrom dplyr select filter
+#' @importFrom stringr str_detect
+#' @importFrom ComplexHeatmap HeatmapAnnotation
+#' @export
 get_annotation_contrast <- function (dds, indicate, contrast = contrast_samples)
 {
   assertthat::assert_that(inherits(dds, "SummarizedExperiment"),
