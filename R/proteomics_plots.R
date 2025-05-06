@@ -1082,6 +1082,8 @@ prot.plot_volcano <-
 #' @importFrom circlize colorRamp2
 #' @importFrom grid gpar
 #' @importFrom SummarizedExperiment assay colData rowData
+#' @importFrom dplyr filter
+#' @importFrom tibble rownames_to_column
 #'
 prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1, pal = "PRGn",
                                    pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE,
@@ -1098,7 +1100,7 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
          call. = FALSE)
   }
   pals <- RColorBrewer::brewer.pal.info %>% tibble::rownames_to_column() %>%
-    filter(category != "qual")
+    dplyr::filter(category != "qual")
   if (!pal %in% pals$rowname) {
     stop("'", pal, "' is not a valid color panel",
          " (qualitative panels also not allowed)\n",
@@ -1188,6 +1190,9 @@ prot.plot_corrheatmap <- function (dep, significant = TRUE, lower = 0, upper = 1
 #' @param export Export the heatmap as pdf and png. Default is TRUE
 #' @param ... Other parameters passed to the ComplexHeatmap::Heatmap function
 #' @return (Invisibly) returns a data frame with the proteins and the normalized abundances
+#' @importFrom assertthat assert_that
+#' @importFrom dplyr select filter
+#' @importFrom stringr str_detect
 #' @export
 prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
                                contrast = NULL, # Analyze only significant proteins contained in the specified contrast(s)
@@ -1223,8 +1228,8 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
       warning("Only used the following indicate column(s): '",
               paste0(indicate, collapse = "', '"), "'")
     }
-    anno <- select(col_data, all_of(indicate))
-    anno <- filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
+    anno <- dplyr::select(col_data, all_of(indicate))
+    anno <- dplyr::filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
     names <- colnames(anno)
     anno_col <- vector(mode = "list", length = length(names))
     names(anno_col) <- names
@@ -1521,6 +1526,9 @@ prot.plot_heatmap <- function (dep, type = c("centered", "contrast"),
 #' @return A data frame with protein abundances
 #'
 #' @export
+#' @importFrom assertthat assert_that
+#' @importFrom dplyr select filter
+#' @importFrom stringr str_detect
 prot.plot_heatmap_all <- function (se,
                                    show_all = TRUE, # Show protein abundances of all conditions or only of those in the specified constrast(s)
                                    pal = "RdBu",

@@ -190,3 +190,6 @@ prot.plot_pca(
   title = "PC Scores - PC3 vs. PC1"
 )
 
+## ----loadingsPlot, echo=FALSE, fig.width = 7, fig.height= 8, warning=F, message=F, fig.align='center'----
+prot.plot_loadings(results$pca,labSize = 3, plot = T, export = F)
+
