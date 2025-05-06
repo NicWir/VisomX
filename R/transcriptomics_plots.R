@@ -41,7 +41,7 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
          call. = FALSE)
   }
   pals <- RColorBrewer::brewer.pal.info %>% tibble::rownames_to_column() %>%
-    filter(category != "qual")
+    dplyr::filter(category != "qual")
   if (!pal %in% pals$rowname) {
     stop("'", pal, "' is not a valid color panel",
          " (qualitative panels also not allowed)\n",
@@ -846,7 +846,7 @@ rna.plot_volcano <-
       na = seq(1:length(row_data[, signif])) %in% na.ndx,
       check.names = FALSE
     ) %>%
-      filter(!is.na(significant)) %>% arrange(significant)
+      dplyr::filter(!is.na(significant)) %>% arrange(significant)
 
     quant99.5 <-  quantile(df$y[(df$y!=0)&!is.infinite(df$y)], probs = 0.995, na.rm = TRUE)
 
@@ -959,7 +959,7 @@ rna.plot_volcano <-
     }
     if (add_names) {
       plot_volcano <- plot_volcano + ggrepel::geom_text_repel(
-        data = filter(df_volcano, significant|na),
+        data = dplyr::filter(df_volcano, significant|na),
         aes(label = name),
         size = label_size,
         box.padding = unit(0.25,

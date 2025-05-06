@@ -888,7 +888,7 @@ prot.plot_bar(
   type = "contrast",
   contrast = "Glc_vs_Ac",
   combine = T,
-  convert_name = T,
+  convert_name = F,
   proteins = TCA_names,
   col.id = "name",
   export = F,

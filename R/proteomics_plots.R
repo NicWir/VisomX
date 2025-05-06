@@ -820,6 +820,7 @@ prot.plot_pca <- function (dep,
 #' @importFrom scales pretty_breaks
 #' @importFrom stringr str_replace
 #' @importFrom grDevices pdf png dev.off
+#' @importFrom dplyr filter arrange mutate select
 prot.plot_volcano <-
   function (dep,
             contrast,
@@ -914,7 +915,7 @@ prot.plot_volcano <-
       name = row_data$name,
       check.names = FALSE
     ) %>%
-      filter(!is.na(significant)) %>% arrange(significant)
+      dplyr::filter(!is.na(significant)) %>% arrange(significant)
 
     # create new columns for shapes "circle" and "triangle" if proteins lie within or outside (for proteins with very small adj.p value < 3.162278e-05) of the y bounds, respectively.
     if (adjusted) {
@@ -995,7 +996,7 @@ prot.plot_volcano <-
     }
     if (add_names) {
       plot_volcano <- plot_volcano + ggrepel::geom_text_repel(
-        data = filter(df_volcano, significant),
+        data = dplyr::filter(df_volcano, significant),
         aes(label = name),
         size = label_size,
         box.padding = unit(0.25,
@@ -2062,7 +2063,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
 #'
 #' @importFrom forcats fct_reorder
 #' @importFrom ggplot2 ggplot aes geom_segment geom_point
-#'   scale_color_viridis_c scale_size_area theme_bw xlab ylab ggtitle
+#'   scale_color_viridis_c scale_size_area theme_bw xlab ylab ggtitle guide_colorbar
 #' @importFrom grDevices pdf png
 #'
 #' @seealso

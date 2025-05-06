@@ -331,8 +331,8 @@ prot.get_pathway_genes <- function(pathway_name, pathway_table, colid_pathways, 
   # genes <- unlist(str_split(pathway_table[match(pathway_name, pathway_table[[colid_pathways]]),
   #                                         colid_genes], gene_sep))
   genes <- pathway_table %>%
-    filter(str_detect(!!sym(colid_pathways), pathway_name)) %>%
-    pull(!!sym(colid_genes)) %>%
+    dplyr::filter(str_detect(!!sym(colid_pathways), pathway_name)) %>%
+    dplyr::pull(!!sym(colid_genes)) %>%
     str_split(gene_sep) %>%
     unlist()
 
@@ -741,8 +741,8 @@ get_annotation_contrast <- function (dds, indicate, contrast = contrast_samples)
     warning("Only used the following indicate column(s): '",
             paste0(indicate, collapse = "', '"), "'")
   }
-  anno <- select(col_data, indicate)
-  anno <- filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
+  anno <- dplyr::select(col_data, indicate)
+  anno <- dplyr::filter(anno, str_detect(condition, paste(contrast, collapse = "|")))
   names <- colnames(anno)
   anno_col <- vector(mode = "list", length = length(names))
   names(anno_col) <- names
