@@ -1,4 +1,3 @@
-##'
 #' @title Read transcriptomics data
 #' @description Imports count tables (CSV/TSV/XLS/XLSX) or data frames and returns a `SummarizedExperiment`, with optional RSD and missing-value filtering.
 #' @param data Data frame or file path for a count table.
