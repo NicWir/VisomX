@@ -179,11 +179,29 @@ prot.read_data <- function (data = "dat_prot.csv",
 
   # ---(5) Rename duplicate column names by appending "_1", "_2", etc)----
   #       Only for columns that contain the abundance prefix (pfx).
+  ### suffix_all_duplicates <- function(x, sep = "_") {
+  ###   # For each group of identical elements, seq_along(x) → 1,2,3...
+  ###   counts <- ave(seq_along(x), x, FUN = seq_along)
+  ###   paste0(x, sep, counts)
+  ### }
   suffix_all_duplicates <- function(x, sep = "_") {
-    # For each group of identical elements, seq_along(x) → 1,2,3...
-    counts <- ave(seq_along(x), x, FUN = seq_along)
-    paste0(x, sep, counts)
+    # 1) mark which names already end in "_<digits>"
+    has_repl <- grepl(paste0(sep, "[[:digit:]]+$"), x)
+
+    # 2) among the ones without a suffix, compute per-name counts
+    x_no_repl <- x[!has_repl]
+    counts   <- ave(seq_along(x_no_repl), x_no_repl, FUN = seq_along)
+
+    # 3) only the duplicates get a "_n" appended; uniques stay as-is
+    new_no_repl <- ifelse(counts > 1,
+                          +                          paste0(x_no_repl, sep, counts),
+                          +                          x_no_repl)
+
+    # 4) stitch back: leave suffixed names untouched, swap in new_no_repl
+    x[!has_repl] <- new_no_repl
+    x
   }
+
 
   # Identify the columns containing pfx
   abundance_idx <- grep(paste0("^", pfx), colnames(prot))
@@ -191,7 +209,8 @@ prot.read_data <- function (data = "dat_prot.csv",
     # Extract just those names
     ab_names <- colnames(prot)[abundance_idx]
     # Suffix duplicates
-    ab_names_unique <- suffix_all_duplicates(ab_names)
+    #ab_names_unique <- suffix_all_duplicates(ab_names)
+    ab_names_unique <- suffix_all_duplicates(ab_names, sep = "_")
     # Assign back
     colnames(prot)[abundance_idx] <- ab_names_unique
   }
