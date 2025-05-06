@@ -1897,7 +1897,7 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
 #' @importFrom ggplot2 ggplot aes geom_point geom_text geom_hline geom_vline
 #'   theme_bw theme labs guides guide_legend scale_size
 #'   scale_fill_continuous scale_fill_gradient2 xlim ylim
-#'   element_rect element_line element_text element_blank
+#'   element_rect element_line element_text element_blank arrow
 #' @importFrom ggrepel geom_text_repel
 #' @export
 prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pcaobj, seq_len(5)),
@@ -2004,7 +2004,7 @@ prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pca
                                                                          "left", -0.75, ifelse(positionConnectors ==
                                                                                                  "right", 0.75, 0)), direction = "y",
                                       segment.color = colConnectors, segment.size = widthConnectors,
-                                      arrow = arrow(length = lengthConnectors, type = typeConnectors,
+                                      arrow = ggplot2::arrow(length = lengthConnectors, type = typeConnectors,
                                                     ends = endsConnectors), show.legend = FALSE,
                                       hjust = labhjust, vjust = labvjust, max.overlaps = 25)
   }
