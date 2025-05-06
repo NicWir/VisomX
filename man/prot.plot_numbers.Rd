@@ -4,10 +4,12 @@
 \alias{prot.plot_numbers}
 \title{Plot the number of proteins identified in a SummarizedExperiment object}
 \usage{
-prot.plot_numbers(se, plot = TRUE, export = FALSE)
+prot.plot_numbers(se, basesize = 12, plot = TRUE, export = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object}
+
+\item{basesize}{Numeric. Base font size for the plot}
 
 \item{plot}{Logical, if TRUE a plot is returned}
 

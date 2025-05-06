@@ -1112,7 +1112,8 @@ met.normalize <- function (mSetObj = NA, rowNorm = NULL, transNorm = NULL, scale
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-#' @import pls
+#' @importFrom pls plsr R2
+#' @importFrom caret trainControl train varImp
 met.PLSDA.CV <- function (mSetObj = NA, methodName = "LOOCV", k = 5,compNum = GetDefaultPLSCVComp(mSetObj),
           choice = "Q2", data = "all")
 {
@@ -1659,8 +1660,6 @@ met.read_data <- function (data,
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-#' @import rgl
-#' @import knitr
 met.report <- function(mSetObj, report.dir = NULL, ...)
   {
   args <- list(...)
@@ -1682,6 +1681,16 @@ met.report <- function(mSetObj, report.dir = NULL, ...)
     }
   }
   file <- paste0(Report.wd, "/Report_Met.Rmd")
+  # Load package "rgl" to avoid error message
+  if(!requireNamespace("rgl", quietly = TRUE)){
+    stop("Package \"rgl\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  # load package knitr to avoid error message
+  if(!requireNamespace("knitr", quietly = TRUE)){
+    stop("Package \"knitr\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
   rmarkdown::render(file, output_format = "all", output_dir = wd,
                     quiet = TRUE)
   message("Save RData object...")
@@ -1702,9 +1711,6 @@ met.report <- function(mSetObj, report.dir = NULL, ...)
 #' Technical University of Denmark
 #' License: GNU GPL (>= 2)
 #' @export
-#' @import kableExtra
-#' @import knitr
-#' @import rgl
 met.report_test_normalization <- function(mSet_list, report.dir = NULL, ...)
   {
   assertthat::assert_that(is.list(mSet_list))
@@ -1719,6 +1725,22 @@ met.report_test_normalization <- function(mSet_list, report.dir = NULL, ...)
     wd <- paste(getwd(), "/met.Test_Normalization/Report_", format(Sys.time(),
                                                                    "%Y%m%d_%H%M%S"), sep = "")
   }
+  # Load package "rgl" to avoid error message
+  if(!requireNamespace("rgl", quietly = TRUE)){
+    stop("Package \"rgl\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  # load package knitr to avoid error message
+  if(!requireNamespace("knitr", quietly = TRUE)){
+    stop("Package \"knitr\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  # load package kableExtra to avoid error message
+  if(!requireNamespace("kableExtra", quietly = TRUE)){
+    stop("Package \"kableExtra\" needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+
   dir.create(wd, showWarnings = F)
   file <- paste("C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/fluctuator/220111/R_package/VisomX", "/Reports/Report_Met_TestNorm.Rmd",
                 sep = "")
@@ -2709,9 +2731,9 @@ met.test_normalization <- function(mSetObj,
 #' @param scaleNorm (Character) Select option for scaling the data (see \code{\link[VisomX]{met.normalize}} for options).
 #' @param ref (Character) Enter the name of the reference sample or the reference feature (if \code{rowNorm = "GroupPQN"}, \code{"SamplePQN"}, or \code{"CompNorm"}.
 #' @param norm.vec (Numeric vector) Vector with sample-specific scaling factors. Only applicable for \code{rowNorm = "SpecNorm"}.
-#' @param contrast.type
-#' @param control
-#' @param contrast
+#' @param contrast.type (Character) Enter the type of contrast to be used for ANOVA analysis. Options are \code{"all"} (default), \code{"control"}, or \code{"manual"}.
+#' @param control (If \code{contrast.type = "control"}) Enter the name of the control group (e.g. "Control") to be used for ANOVA analysis.
+#' @param contrast (If \code{contrast.type = "manual"}) Enter a contrast or vector of contrasts to be used for ANOVA analysis. E.g.: "ConditionA_vs_ConditionB" or c("ConditionA_vs_ConditionB", "ConditionC_vs_ConditionD").
 #' @param class_order (Logical, \code{TRUE} or \code{FALSE}) Class order matters (i.e. implying time points, disease severity, etc.).
 #' @param alpha (Numeric) Enter significance threshold for adjusted p values (false discovery rate - FDR; for ANOVA with post-hoc analyses).
 #' @param lfc (Numeric) Enter relevance threshold for log2 fold changes in pair-wise comparisons (for ANOVA with post-hoc analyses).

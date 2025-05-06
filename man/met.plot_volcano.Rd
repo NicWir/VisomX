@@ -81,6 +81,4 @@ adapted from \code{\link[DEP]{plot_volcano}} (\url{https://bioconductor.org/pack
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

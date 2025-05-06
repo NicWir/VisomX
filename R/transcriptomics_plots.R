@@ -629,10 +629,11 @@ rna.plot_pca <- function (dds,
 #'
 #' @export
 #'
-#' @import ggplot2
+#' @importFrom ggplot2 ggplot aes geom_density stat_density facet_wrap labs theme scale_color_brewer scale_color_manual
 #' @importFrom assertthat assert_that
 #' @importFrom purrr map_df
 #' @importFrom tidyr gather
+#' @importFrom dplyr left_join mutate
 #'
 rna.plot_imputation <- function(assay, ..., colData, plot = TRUE, basesize = 12, export = TRUE)
 {

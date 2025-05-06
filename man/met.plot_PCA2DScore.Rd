@@ -59,6 +59,4 @@ adapted from \code{\link[MetaboAnalystR]{PlotPCA2DScore}} (\url{https://github.c
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

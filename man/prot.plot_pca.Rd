@@ -24,7 +24,7 @@ prot.plot_pca(
   vlineWidth = 0.4,
   basesize = 15,
   plot = TRUE,
-  export = TRUE
+  export = FALSE
 )
 }
 \arguments{

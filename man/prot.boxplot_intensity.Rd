@@ -4,7 +4,7 @@
 \alias{prot.boxplot_intensity}
 \title{Boxplot Intensity}
 \usage{
-prot.boxplot_intensity(se, ..., plot = TRUE, export = TRUE)
+prot.boxplot_intensity(se, ..., plot = TRUE, export = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object.}

@@ -38,6 +38,4 @@ adapted from \code{\link[MetaboAnalystR]{PlotImpVar}} (\url{https://github.com/x
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

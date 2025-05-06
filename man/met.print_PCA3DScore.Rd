@@ -18,6 +18,4 @@ A 3D scatter plot. To close the graphics device, execute \code{rgl::close3d()}.
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

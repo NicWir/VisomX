@@ -511,6 +511,7 @@ my.col2rgba <- function (cols, alpha)
   })))
 }
 
+ #' @export
 all.numeric <- function (x, what = c("test", "vector"), extras = c(".", "NA")) {
   what <- match.arg(what)
   old <- options(warn = -1)
@@ -557,6 +558,7 @@ Get.bwss <- function (x, cl)
   (TSS - WSS)/WSS
 }
 
+ #' @export
 sum.na <- function(x,...){
   res <- NA
   tmp <- !(is.na(x) | is.infinite(x))

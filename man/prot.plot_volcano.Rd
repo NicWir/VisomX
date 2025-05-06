@@ -13,7 +13,7 @@ prot.plot_volcano(
   add_names = TRUE,
   adjusted = FALSE,
   plot = TRUE,
-  export = TRUE
+  export = FALSE
 )
 }
 \arguments{

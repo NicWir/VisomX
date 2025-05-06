@@ -53,6 +53,4 @@ The input mSet object with added scatter plot. The plot can be retrieved from wi
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

@@ -14,9 +14,7 @@ prot.impute(
 \arguments{
 \item{se}{A SummarizedExperiment object}
 
-\item{fun}{A character string specifying the imputation method to use.
-The available methods are "bpca", "knn", "QRILC", "MLE", "MinDet",
-"MinProb", "man", "min", "zero", "mixed", "nbavg", and "SampMin".}
+\item{fun}{Character; imputation method, one of \code{"bpca"}, \code{"knn"}, \code{"QRILC"}, \code{"MLE"}, \code{"MinDet"}, \code{"MinProb"}, \code{"man"}, \code{"min"}, \code{"zero"}, \code{"mixed"}, \code{"nbavg"}, or \code{"SampMin"}.}
 
 \item{...}{Additional arguments passed to the imputation function.}
 }

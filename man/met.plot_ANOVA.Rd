@@ -45,6 +45,4 @@ adapted from \code{\link[MetaboAnalystR]{PlotANOVA}} (\url{https://github.com/xi
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

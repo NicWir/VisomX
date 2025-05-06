@@ -38,6 +38,4 @@ The input mSet object with added 3D scatter plot. The plot can be retrieved from
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

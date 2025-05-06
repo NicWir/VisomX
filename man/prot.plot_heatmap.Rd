@@ -20,7 +20,7 @@ prot.plot_heatmap(
   row_font_size = 6,
   col_font_size = 10,
   plot = TRUE,
-  export = TRUE,
+  export = FALSE,
   ...
 )
 }

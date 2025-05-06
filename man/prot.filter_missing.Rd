@@ -2,7 +2,7 @@
 % Please edit documentation in R/proteomics_computation.R
 \name{prot.filter_missing}
 \alias{prot.filter_missing}
-\title{Filter proteins based on missing values}
+\title{Filter proteins by missing value criteria}
 \usage{
 prot.filter_missing(
   se,
@@ -12,17 +12,22 @@ prot.filter_missing(
 )
 }
 \arguments{
-\item{se}{\code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.}
+\item{se}{A \code{SummarizedExperiment} object containing proteomics data.}
 
-\item{type}{(Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep proteins with valid values in all samples. "condition" will keep proteins that have a maximum of \code{thr} missing values in at least one condition. "fraction" will keep proteins that have a \code{min} fraction of valid values in all samples.}
+\item{type}{Character; one of \code{"complete"}, \code{"condition"}, or \code{"fraction"}.}
 
-\item{thr}{(Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{type = "condition"}. In other words: "keep proteins that have a maximum of 'thr' missing values in at least one condition."}
+\item{thr}{Numeric; maximum allowed missing values per condition (used when \code{type = "condition"}).}
 
-\item{min}{(Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{type = "fraction"}.}
+\item{min}{Numeric; minimum fraction of valid (non-\code{NA}) values required (used when \code{type = "fraction"}).}
 }
 \value{
-A filtered SummarizedExperiment object.
+A filtered \code{SummarizedExperiment} object.
 }
 \description{
-\code{prot.filter_missing} filters a proteomics dataset based on missing values. Different types of filtering can be applied, which range from only keeping proteins without missing values to keeping proteins with a certain percent valid values in all samples or keeping proteins that are complete in at least one condition.
+Filters a SummarizedExperiment proteomics dataset based on three strategies:
+\itemize{
+\item \code{"complete"}: keep only proteins with no missing values across all samples,
+\item \code{"condition"}: keep proteins with at most \code{thr} missing values in at least one condition,
+\item \code{"fraction"}: keep proteins with at least \code{min} fraction of valid values overall.
+}
 }

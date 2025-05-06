@@ -44,6 +44,4 @@ adapted from \code{\link[MetaboAnalystR]{PlotPLS.Permutation}} (\url{https://git
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

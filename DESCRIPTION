@@ -17,24 +17,22 @@ URL: https://github.com/NicWir/VisomX,
     https://nicwir.github.io/VisomX/
 BugReports: https://github.com/NicWir/VisomX/issues
 Depends:
+    methods,
+    R (>= 4.0)
+biocViews: 
+Imports:
     dplyr,
     magrittr,
-    methods,
-    R (>= 4.0),
     stringr,
-    tidyr
-biocViews: 
-Imports: 
+    tidyr,
     apeglm,
     assertthat,
     Biobase,
     BiocParallel,
     BiocSingular,
-    caret,
     circlize,
     cluster,
     clusterProfiler,
-    ComplexHeatmap,
     data.table,
     DESeq2,
     DOSE,
@@ -47,14 +45,10 @@ Imports:
     genefilter,
     ggh4x,
     ggnewscale,
-    ggplot2,
-    ggpubr,
-    ggrepel,
     ggVennDiagram,
     GlobalAncova,
     globaltest,
     grid,
-    gridExtra,
     IHW,
     impute,
     kableExtra,
@@ -68,9 +62,6 @@ Imports:
     MSnbase,
     pcaMethods,
     PCAtools,
-    pheatmap,
-    plotly,
-    pls,
     preprocessCore,
     pROC,
     progress,
@@ -80,8 +71,6 @@ Imports:
     RColorBrewer,
     readxl,
     reshape,
-    reticulate,
-    rgl,
     rlang,
     rmarkdown,
     scales,
@@ -93,14 +82,24 @@ Imports:
     tinytex,
     UpSetR,
     vsn
-Suggests: 
+Suggests:
+    caret,
     DelayedArray,
     jsonlite,
     MetaboAnalystR,
     multtest,
     prettydoc,
     Cairo,
-    bookdown
+    bookdown,
+    ggplot2,
+    ComplexHeatmap,
+    pheatmap,
+    plotly,
+    ggpubr,
+    ggrepel,
+    gridExtra,
+    reticulate,
+    rgl
 VignetteBuilder: 
     knitr
 Remotes: 

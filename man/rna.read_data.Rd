@@ -2,7 +2,7 @@
 % Please edit documentation in R/transcriptomics_computation.R
 \name{rna.read_data}
 \alias{rna.read_data}
-\title{Read Transcriptomics Data}
+\title{Read transcriptomics data}
 \usage{
 rna.read_data(
   data = NULL,
@@ -25,43 +25,43 @@ rna.read_data(
 )
 }
 \arguments{
-\item{data}{File or dataframe containing transcriptomics data, if \code{files.ind} is not used.}
+\item{data}{Data frame or file path for a count table.}
 
-\item{files.ind}{Prefixes of several files in the working directory containing transcriptomics data, if \code{data} is not used.}
+\item{files.ind}{Character; prefix for matching multiple files in the working directory.}
 
-\item{expdesign}{Experimental design as file path or data frame, if made previously.}
+\item{expdesign}{Experimental design as data frame or file path.}
 
-\item{csvsep}{Delimiter if reading CSV file(s).}
+\item{csvsep}{Field separator for CSV files (default \code{";"}).}
 
-\item{dec}{Decimal separator if reading CSV, TSV, or TXT files.}
+\item{dec}{Decimal separator for CSV/TSV/TXT files (default \code{"."}).}
 
-\item{sheet}{Sheet of an Excel file to be read.}
+\item{sheet}{Sheet number or name for Excel files.}
 
-\item{name}{Header of column containing primary gene IDs (e.g., gene names).}
+\item{name}{Column name for primary gene IDs.}
 
-\item{id}{Header of column containing alternative gene IDs (e.g., locus IDs).}
+\item{id}{Column name for alternative gene IDs.}
 
-\item{values}{Name of the column containing the values (if \code{files.ind != NULL}).}
+\item{values}{Column name for count values when using \code{files.ind}.}
 
-\item{id2name.table}{File containing a table with ID to name mappings.}
+\item{id2name.table}{Optional ID→name mapping table or file path.}
 
-\item{id2name.id}{Header of column containing alternative gene IDs in \code{id2name.table}.}
+\item{id2name.id}{Column name of alternative IDs in mapping table.}
 
-\item{id2name.name}{Header of column containing primary gene IDs in \code{id2name.table}.}
+\item{id2name.name}{Column name of primary IDs in mapping table.}
 
-\item{pfx.counts}{Prefix in headers of columns containing gene abundances (if \code{data != NULL}).}
+\item{pfx.counts}{Prefix for abundance column names.}
 
-\item{rsd_thresh}{Provide a relative standard deviation (RSD) threshold \strong{in \%} for genes. The RSD is calculated for each condition and if the maximum RSD value determined for a given protein exceeds \code{rsd_thresh}, the gene is discarded. The RSD filter is applied \strong{before} further missing value filters based on the three \code{filt_} arguments.}
+\item{rsd_thresh}{Numeric; RSD threshold (\%) for filtering genes.}
 
-\item{filt_type}{(Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep genes with valid values in all samples. "condition" will keep genes that have a maximum of \code{filt_thr} missing values in at least one condition. "fraction" will keep genes that have a \code{filt_min} fraction of valid values in all samples.}
+\item{filt_type}{Character; one of \code{"complete"}, \code{"condition"}, or \code{"fraction"} for missing-value filtering.}
 
-\item{filt_thr}{(Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{filt_type = "condition"}. In other words: "keep genes that have a maximum of 'filt_thr' missing values in at least one condition."}
+\item{filt_thr}{Numeric; threshold for missing-value count per condition.}
 
-\item{filt_min}{(Numeric) Sets the threshold for the minimum fraction of valid values allowed for any genes if \code{filt_type = "fraction"}.}
+\item{filt_min}{Numeric; minimum fraction of valid values required.}
 }
 \value{
-Returns a \code{SummarizedExperiment} object.
+A \code{SummarizedExperiment} object with filtered and processed counts.
 }
 \description{
-Reads transcriptomics data from one/several file(s) or dataframe and creates a \code{SummarizedExperiment} object.
+Imports count tables (CSV/TSV/XLS/XLSX) or data frames and returns a \code{SummarizedExperiment}, with optional RSD and missing-value filtering.
 }

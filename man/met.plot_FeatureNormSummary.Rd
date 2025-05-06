@@ -49,6 +49,4 @@ adapted from \code{\link[MetaboAnalystR]{PlotFeatureNormSummary}} (\url{https://
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

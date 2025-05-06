@@ -4,7 +4,7 @@
 \alias{prot.plot_imputation}
 \title{Plot imputation results}
 \usage{
-prot.plot_imputation(se, ..., plot = TRUE, basesize = 12, export = TRUE)
+prot.plot_imputation(se, ..., plot = TRUE, basesize = 12, export = FALSE)
 }
 \arguments{
 \item{se}{SummarizedExperiment object}

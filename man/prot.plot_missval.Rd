@@ -4,7 +4,7 @@
 \alias{prot.plot_missval}
 \title{Plot missing values in SummarizedExperiment}
 \usage{
-prot.plot_missval(se, plot = TRUE, export = TRUE, fontsize = 12)
+prot.plot_missval(se, plot = TRUE, export = FALSE, fontsize = 12)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object}

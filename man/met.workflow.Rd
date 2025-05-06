@@ -50,6 +50,12 @@ met.workflow(
 
 \item{norm.vec}{(Numeric vector) Vector with sample-specific scaling factors. Only applicable for \code{rowNorm = "SpecNorm"}.}
 
+\item{contrast.type}{(Character) Enter the type of contrast to be used for ANOVA analysis. Options are \code{"all"} (default), \code{"control"}, or \code{"manual"}.}
+
+\item{control}{(If \code{contrast.type = "control"}) Enter the name of the control group (e.g. "Control") to be used for ANOVA analysis.}
+
+\item{contrast}{(If \code{contrast.type = "manual"}) Enter a contrast or vector of contrasts to be used for ANOVA analysis. E.g.: "ConditionA_vs_ConditionB" or c("ConditionA_vs_ConditionB", "ConditionC_vs_ConditionD").}
+
 \item{class_order}{(Logical, \code{TRUE} or \code{FALSE}) Class order matters (i.e. implying time points, disease severity, etc.).}
 
 \item{alpha}{(Numeric) Enter significance threshold for adjusted p values (false discovery rate - FDR; for ANOVA with post-hoc analyses).}

@@ -4,7 +4,7 @@
 \alias{prot.plot_detect}
 \title{Plot detectability for a SummarizedExperiment}
 \usage{
-prot.plot_detect(se, basesize = 10, plot = TRUE, export = TRUE)
+prot.plot_detect(se, basesize = 10, plot = TRUE, export = FALSE)
 }
 \arguments{
 \item{se}{A SummarizedExperiment object}

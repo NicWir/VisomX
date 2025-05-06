@@ -56,7 +56,7 @@ prot.plot_loadings(
   borderWidth = 0.8,
   borderColour = "black",
   plot = TRUE,
-  export = TRUE
+  export = FALSE
 )
 }
 \arguments{

@@ -25,7 +25,7 @@ Data container with missing values.}
 
 \item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?}
 
-\item{basesize}{(Numeric) Font sized used in the plot.}
+\item{basesize}{(Numeric) Font size used in the plot.}
 }
 \value{
 Density and CumSum plots of intensities of proteins with and without missing values. The plot can be retrieved from within R via \code{print(mSetObj$imgSet$missval_density.plot)}.
@@ -40,6 +40,4 @@ adapted from package DEP (\url{https://bioconductor.org/packages/DEP/}).
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

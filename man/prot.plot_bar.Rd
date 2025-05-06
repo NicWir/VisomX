@@ -19,6 +19,7 @@ prot.plot_bar(
   convert_name = FALSE,
   shape.size = 2.5,
   y.lim = NULL,
+  basesize = 12,
   plot = TRUE,
   export = FALSE,
   export.nm = NULL,
@@ -33,41 +34,55 @@ prot.plot_bar(
 
 \item{combine}{Logical value indicating whether to combine the data from different proteins in one plot.}
 
-\item{type}{Type of plot: "abundance", "ReferenceProt", "centered" or "contrast".}
+\item{type}{Type of plot: "abundance", "ReferenceProt", "ReferenceCondition",
+"centered", or "contrast".}
 
-\item{ref.prot}{ID or name of the reference protein for normalization when type is "ReferenceProt".}
+\item{ref.prot}{ID or name of the reference protein for normalization
+when type is "ReferenceProt".}
 
-\item{ref.condition}{Name of the reference condition by which all average abundance values are divided when type is "ReferenceCondition".}
+\item{ref.condition}{Name of the reference condition by which all average
+abundance values are divided when type is "ReferenceCondition".}
 
 \item{contrast}{Name of the contrast for plotting when type is "contrast".}
 
 \item{col.id}{Name of the column with protein IDs in \code{dep}.}
 
-\item{name_table}{A data frame containing the mapping of protein names to reference names.}
+\item{name_table}{A data frame containing the mapping of protein names
+to reference names.}
 
-\item{match.id}{The name of a column in \code{name_table} to find matches with \code{col.id}.}
+\item{match.id}{The name of a column in \code{name_table} to find matches
+with \code{col.id}.}
 
-\item{match.name}{The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.}
+\item{match.name}{The name of a column in \code{name_table} to assign new
+names based on matches of \code{col.id} and \code{match.id}.}
 
-\item{convert_name}{Logical value indicating whether to convert the protein names to reference names based on \code{name_table} (e.g., gene names).}
+\item{convert_name}{Logical value indicating whether to convert the protein
+names to reference names based on \code{name_table} (e.g., gene names).}
 
-\item{shape.size}{Numeric value defining the (replicate) symbol size in the plot}
+\item{shape.size}{Numeric value defining the (replicate) symbol size in the plot.}
 
-\item{y.lim}{Limits of the y axis.}
+\item{y.lim}{Limits of the y axis (numeric vector of length 2). If NULL,
+will be inferred from data (unless \code{combine=TRUE}, then each chunk is
+plotted without that inference).}
 
-\item{plot}{wether to return the plot or not.}
+\item{basesize}{Base font size for the plot theme.}
 
-\item{export}{Logical; whether to export the plot as PDF an PNG files}
+\item{plot}{Whether to immediately print/return the plot(s).}
+
+\item{export}{Logical; whether to export the plot(s) as PDF and PNG files.}
 
 \item{export.nm}{Name of the output PDF and PNG files if \code{export = TRUE}.}
 
-\item{width}{Numeric value defining the width of the exported plot.}
+\item{width}{Numeric value defining the width of the exported plot (inches).}
 
-\item{height}{Numeric value defining the height of the exported plot.}
+\item{height}{Numeric value defining the height of the exported plot (inches).}
 }
 \value{
-(invisibly) a ggplot object as well as the plot in the \link{Plots} pane if \code{plot = TRUE}.
+(Invisibly) A ggplot object (or list of ggplot objects, if multiple chunks).
+If \code{plot=TRUE}, the plot(s) are also shown in the Plots pane.
 }
 \description{
-This function generates bar plots for protein abundance or fold change, normalized by either a reference protein or centered to the mean. The user can also plot the contrast of two conditions.
+This function generates bar plots for protein abundance or fold change,
+normalized by either a reference protein or centered to the mean.
+The user can also plot the contrast of two conditions.
 }

@@ -17,7 +17,7 @@ prot.plot_heatmap_all(
   row_font_size = 6,
   col_font_size = 10,
   plot = TRUE,
-  export = TRUE,
+  export = FALSE,
   scale = TRUE,
   show_row_dend = FALSE,
   ...

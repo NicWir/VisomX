@@ -25,7 +25,7 @@ Data container with missing values.}
 
 \item{export}{(Logical, \code{TRUE} or \code{FALSE}) Shall the plot be exported as PDF and PNG file?}
 
-\item{fontsize}{(Numeric) Font sized used in the plot.}
+\item{fontsize}{(Numeric) Font size used in the plot.}
 }
 \value{
 The input mSet object with added heatmap indicating whether values are missing (0) or not (1). The plot can be retrieved from within R via \code{ComplexHeatmap::draw(mSetObj$imgSet$missval_heatmap.plot)}
@@ -37,6 +37,4 @@ with missing values to discover whether values are missing at random or not.
 }
 \author{
 Nicolas T. Wirth \email{mail.nicowirth@gmail.com}
-Technical University of Denmark
-License: GNU GPL (>= 2)
 }

@@ -1,14 +1,17 @@
-#' Filter proteins based on missing values
-#'
-#' \code{prot.filter_missing} filters a proteomics dataset based on missing values. Different types of filtering can be applied, which range from only keeping proteins without missing values to keeping proteins with a certain percent valid values in all samples or keeping proteins that are complete in at least one condition.
-#'
-#' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
-#' @param type (Character string) "complete", "condition" or "fraction", Sets the type of filtering applied. "complete" will only keep proteins with valid values in all samples. "condition" will keep proteins that have a maximum of \code{thr} missing values in at least one condition. "fraction" will keep proteins that have a \code{min} fraction of valid values in all samples.
-#' @param thr (Integer) Sets the threshold for the allowed number of missing values in at least one condition if \code{type = "condition"}. In other words: "keep proteins that have a maximum of 'thr' missing values in at least one condition."
-#' @param min (Numeric) Sets the threshold for the minimum fraction of valid values allowed for any protein if \code{type = "fraction"}.
-#'
-#' @return A filtered SummarizedExperiment object.
+##'
+#' @title Filter proteins by missing value criteria
+#' @description Filters a SummarizedExperiment proteomics dataset based on three strategies:
+#' * `"complete"`: keep only proteins with no missing values across all samples,
+#' * `"condition"`: keep proteins with at most `thr` missing values in at least one condition,
+#' * `"fraction"`: keep proteins with at least `min` fraction of valid values overall.
+#' @param se A `SummarizedExperiment` object containing proteomics data.
+#' @param type Character; one of `"complete"`, `"condition"`, or `"fraction"`.
+#' @param thr Numeric; maximum allowed missing values per condition (used when `type = "condition"`).
+#' @param min Numeric; minimum fraction of valid (non-`NA`) values required (used when `type = "fraction"`).
+#' @return A filtered `SummarizedExperiment` object.
 #' @export
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment assay rowData colData
 prot.filter_missing <- function (se, type = c("complete", "condition", "fraction", NULL),
                                  thr = NULL, min = NULL)
 {
@@ -42,22 +45,33 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
       }
       filtered <- filter_missval(se, thr = thr)
     }
+    # if (type == "fraction") {
+    #   assertthat::assert_that(is.numeric(min), length(min) ==
+    #                             1)
+    #   if (min < 0 | min > 1) {
+    #     stop("invalid filter threshold 'min' applied",
+    #          "\nRun filter() with a percent ranging from 0 to 1")
+    #   }
+    #   bin_data <- SummarizedExperiment::assay(se)
+    #   idx <- is.na(SummarizedExperiment::assay(se))
+    #   bin_data[!idx] <- 1
+    #   bin_data[idx] <- 0
+    #   keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
+    #     gather(ID, value, -rowname) %>% group_by(rowname) %>%
+    #     dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
+    #     filter(frac >= min)
+    #   filtered <- se[keep$rowname, ]
+    # }
     if (type == "fraction") {
-      assertthat::assert_that(is.numeric(min), length(min) ==
-                                1)
-      if (min < 0 | min > 1) {
+      assertthat::assert_that(is.numeric(min), length(min) == 1)
+      if (min < 0 || min > 1) {
         stop("invalid filter threshold 'min' applied",
              "\nRun filter() with a percent ranging from 0 to 1")
       }
-      bin_data <- SummarizedExperiment::assay(se)
-      idx <- is.na(SummarizedExperiment::assay(se))
-      bin_data[!idx] <- 1
-      bin_data[idx] <- 0
-      keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
-        gather(ID, value, -rowname) %>% group_by(rowname) %>%
-        dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
-        filter(frac >= min)
-      filtered <- se[keep$rowname, ]
+      mat     <- SummarizedExperiment::assay(se)
+      frac_vec<- rowSums(!is.na(mat)) / ncol(mat)
+      keep    <- frac_vec >= min
+      filtered<- se[keep, ]
     }
   } else {
     filtered <- se
@@ -73,9 +87,9 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
   return(filtered)
 }
 
-#' Read proteomics data in table format and create SummarizedExperiment
+#' @title Read proteomics data in table format and create SummarizedExperiment
 #'
-#' \code{prot.read_data} takes a table file containing proteomics data and filters proteins based on missing values (see \code{\link{prot.filter_missing}}) or a given relative standard deviation threshold, and creates a \code{SummarizedExperiment} object.
+#' @description \code{prot.read_data} takes a table file containing proteomics data and filters proteins based on missing values (see \code{\link{prot.filter_missing}}) or a given relative standard deviation threshold, and creates a \code{SummarizedExperiment} object.
 #'
 #' @param data An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing proteomics data.
 #' The table must contain:
@@ -102,6 +116,7 @@ prot.filter_missing <- function (se, type = c("complete", "condition", "fraction
 #' @return A filtered SummarizedExperiment object.
 #' @export
 #'
+#' @importFrom assertthat assert_that
 #' @importFrom SummarizedExperiment assay rowData colData
 prot.read_data <- function (data = "dat_prot.csv",
                             expdesign = NULL,
@@ -360,9 +375,9 @@ prot.read_data <- function (data = "dat_prot.csv",
   return(prot_se_clean)
 }
 
-#' Run a complete proteomics analysis workflow.
+#' @title Run a complete proteomics analysis workflow.
 #'
-#' \code{prot.workflow} performs variance stabilization normalization (\code{\link{prot.normalize_vsn}}), missing value imputation (\code{\link{prot.impute}}), principal component analysis (\code{\link{prot.pca}}), differential enrichment test (\code{\link{prot.test_diff}}), and pathway enrichment analysis. If desired, standardized plots and a report are generated and exported as separate files.
+#' @description \code{prot.workflow} performs variance stabilization normalization (\code{\link{prot.normalize_vsn}}), missing value imputation (\code{\link{prot.impute}}), principal component analysis (\code{\link{prot.pca}}), differential enrichment test (\code{\link{prot.test_diff}}), and pathway enrichment analysis. If desired, standardized plots and a report are generated and exported as separate files.
 #'
 #' @param se \code{SummarizedExperiment} object, proteomics data parsed with \code{\link{prot.read_data}}.
 #' @param normalize (Logical) Should the data be normalized via variance stabilization normalization?
@@ -397,6 +412,8 @@ prot.read_data <- function (data = "dat_prot.csv",
 #'
 #' @return A list containing `SummarizedExperiment` object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
 #' @export
+#' @importFrom assertthat assert_that
+#' @importFrom SummarizedExperiment assay rowData colData
 #'
 prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           normalize = TRUE,
@@ -668,14 +685,12 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   return(results)
 }
 
-#' Impute missing values in a SummarizedExperiment object
+#' @title Impute missing values in a SummarizedExperiment object
 #'
-#' Imputes missing values in a SummarizedExperiment object.
+#' @description Imputes missing values in a SummarizedExperiment object.
 #'
 #' @param se A SummarizedExperiment object
-#' @param fun A character string specifying the imputation method to use.
-#'   The available methods are "bpca", "knn", "QRILC", "MLE", "MinDet",
-#'   "MinProb", "man", "min", "zero", "mixed", "nbavg", and "SampMin".
+#' @param fun Character; imputation method, one of `"bpca"`, `"knn"`, `"QRILC"`, `"MLE"`, `"MinDet"`, `"MinProb"`, `"man"`, `"min"`, `"zero"`, `"mixed"`, `"nbavg"`, or `"SampMin"`.
 #' @param ... Additional arguments passed to the imputation function.
 #'
 #' @return A SummarizedExperiment object with imputed values
@@ -690,8 +705,9 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 #' se <- prot.impute(se, fun = "knn")
 #'
 #' @importFrom assertthat assert_that
-#' @importFrom SummarizedExperiment rowData assay
-#' @importFrom MSnbase exprs impute
+#' @importFrom SummarizedExperiment assay rowData
+#' @importFrom dplyr mutate_if
+#' @importFrom magrittr %>%
 #'
 #' @seealso \code{\link{prot.make_unique}}, \code{\link{prot.make_se}}
 #'
@@ -733,7 +749,7 @@ prot.impute <- function (se, fun = c("bpca", "knn", "QRILC",
   return(se)
 }
 
-#' Normalize the data via variance stabilization normalization
+#' @title Normalize the data via variance stabilization normalization
 #'
 #' @param se A SummarizedExperiment object
 #' @param plot Logical. If TRUE, plots the meanSdPlot
@@ -785,7 +801,7 @@ prot.normalize_vsn <- function (se, plot = TRUE, export = TRUE)
   return(se_vsn)
 }
 
-#' Constructor for ExactParam objects
+#' @title Constructor for ExactParam objects
 #'
 #' @param deferred Logical indicating whether to use deferred evaluations
 #' @param fold Numeric indicating the fold value
@@ -805,8 +821,7 @@ ExactParam <- function (deferred = FALSE, fold = Inf)
 
 #' @title PCA Analysis
 #'
-#' @description
-#' This function performs principal component analysis (PCA) on a given matrix.
+#' @description This function performs principal component analysis (PCA) on a given matrix.
 #'
 #' @param mat A numeric matrix.
 #' @param metadata An optional data frame with rownames matching 'colnames(mat)'.
@@ -883,9 +898,9 @@ prot.pca <- function (mat, metadata = NULL, center = TRUE, scale = FALSE,
 }
 
 
-#' Test Differential Expression
+#' @title Test Differential Expression
 #'
-#' This function tests for differential expression between conditions
+#' @description This function tests for differential expression between conditions
 #'
 #' @param se A SummarizedExperiment object
 #' @param type Character vector indicating which type of contrast to use. Options are: "control", "all" or "manual".
@@ -1157,7 +1172,7 @@ prot.get_results <- function (dep)
 
 
 
-#' Constructor Method for HeatmapAnnotation class using ComplexHeatmap::HeatmapAnnotation
+#' @title Constructor Method for HeatmapAnnotation class using ComplexHeatmap::HeatmapAnnotation
 #'
 #' @param dep SummarizedExperiment object
 #' @param indicate Character vector indicating the column names of the annotation
