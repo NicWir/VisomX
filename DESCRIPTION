@@ -86,7 +86,6 @@ Suggests:
     caret,
     DelayedArray,
     jsonlite,
-    MetaboAnalystR,
     multtest,
     prettydoc,
     Cairo,
