@@ -11,7 +11,7 @@ several options for plotting, exporting plots, and creating a report."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">VisomX</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.93</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.94</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@ several options for plotting, exporting plots, and creating a report."></head><b
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>RNA sequencing workflow</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NicWir/VisomX/blob/master/R/transcriptomics_computation.R" class="external-link"><code>R/transcriptomics_computation.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NicWir/VisomX/blob/master/R/rna_workflow.R" class="external-link"><code>R/rna_workflow.R</code></a></small>
       <div class="d-none name"><code>rna.workflow.Rd</code></div>
     </div>
 
@@ -56,7 +56,7 @@ several options for plotting, exporting plots, and creating a report.</p>
 <span>  q <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  knn.rowmax <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"control"</span>, <span class="st">"manual"</span><span class="op">)</span>,</span>
-<span>  design <span class="op">=</span> <span class="st">"~ condition"</span>,</span>
+<span>  design <span class="op">=</span> <span class="st">"~ 0 + condition"</span>,</span>
 <span>  size.factors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  altHypothesis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"greaterAbs"</span>, <span class="st">"lessAbs"</span>, <span class="st">"greater"</span>, <span class="st">"less"</span><span class="op">)</span>,</span>
 <span>  control <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -256,7 +256,7 @@ Additionally, the function generates various plots and a report (if specified).<
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

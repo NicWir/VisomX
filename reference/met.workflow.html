@@ -11,7 +11,7 @@ report with various graphical results."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">VisomX</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.93</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.94</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,6 +109,18 @@ report with various graphical results.</p>
 
 <dt id="arg-norm-vec">norm.vec<a class="anchor" aria-label="anchor" href="#arg-norm-vec"></a></dt>
 <dd><p>(Numeric vector) Vector with sample-specific scaling factors. Only applicable for <code>rowNorm = "SpecNorm"</code>.</p></dd>
+
+
+<dt id="arg-contrast-type">contrast.type<a class="anchor" aria-label="anchor" href="#arg-contrast-type"></a></dt>
+<dd><p>(Character) Enter the type of contrast to be used for ANOVA analysis. Options are <code>"all"</code> (default), <code>"control"</code>, or <code>"manual"</code>.</p></dd>
+
+
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>(If <code>contrast.type = "control"</code>) Enter the name of the control group (e.g. "Control") to be used for ANOVA analysis.</p></dd>
+
+
+<dt id="arg-contrast">contrast<a class="anchor" aria-label="anchor" href="#arg-contrast"></a></dt>
+<dd><p>(If <code>contrast.type = "manual"</code>) Enter a contrast or vector of contrasts to be used for ANOVA analysis. E.g.: "ConditionA_vs_ConditionB" or c("ConditionA_vs_ConditionB", "ConditionC_vs_ConditionD").</p></dd>
 
 
 <dt id="arg-class-order">class_order<a class="anchor" aria-label="anchor" href="#arg-class-order"></a></dt>
@@ -213,7 +225,7 @@ License: GNU GPL (&gt;= 2)</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

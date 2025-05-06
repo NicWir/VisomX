@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">VisomX</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.93</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.94</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,7 +33,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Run a complete proteomics analysis workflow.</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NicWir/VisomX/blob/master/R/proteomics_computation.R" class="external-link"><code>R/proteomics_computation.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NicWir/VisomX/blob/master/R/prot_workflow.R" class="external-link"><code>R/prot_workflow.R</code></a></small>
       <div class="d-none name"><code>prot.workflow.Rd</code></div>
     </div>
 
@@ -66,6 +66,7 @@
 <span>  volcano.label_size <span class="op">=</span> <span class="fl">2.5</span>,</span>
 <span>  volcano.adjusted <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  <span class="va">plot_volcano</span>,</span>
 <span>  export <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  report <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  report.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -165,6 +166,10 @@
 <dd><p>(Logical) Show the generated plots in the <code>Plots</code> pane of RStudio (<code>TRUE</code>) or not <code>FALSE</code>).</p></dd>
 
 
+<dt id="arg-plot-volcano">plot_volcano<a class="anchor" aria-label="anchor" href="#arg-plot-volcano"></a></dt>
+<dd><p>(Logical) Show the volcano plot in the <code>Plots</code> pane of RStudio (<code>TRUE</code>) or not <code>FALSE</code>).</p></dd>
+
+
 <dt id="arg-export">export<a class="anchor" aria-label="anchor" href="#arg-export"></a></dt>
 <dd><p>(Logical) Exported the generated plots as PNG and PDF files (<code>TRUE</code>) or not <code>FALSE</code>).</p></dd>
 
@@ -211,7 +216,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.2.</p>
 </div>
 
     </footer></div>

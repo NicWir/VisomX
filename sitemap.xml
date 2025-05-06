@@ -9,14 +9,17 @@
 <url><loc>https://nicwir.github.io/VisomX/reference/Get.bwss.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/Intersect.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/Perform.permutation.html</loc></url>
+<url><loc>https://nicwir.github.io/VisomX/reference/ReplaceMissingByLoD.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/Setdiff.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/Union.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/colFmt.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/delete_prefix.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/dot-onAttach.html</loc></url>
+<url><loc>https://nicwir.github.io/VisomX/reference/enrich_pathways.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/fast.write.csv.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/filter_missval.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/flux_to_map.html</loc></url>
+<url><loc>https://nicwir.github.io/VisomX/reference/get_annotation_contrast.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/get_prefix.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/index.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/make_se.html</loc></url>
@@ -71,6 +74,7 @@
 <url><loc>https://nicwir.github.io/VisomX/reference/met.report_test_normalization.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/met.test_normalization.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/met.workflow.html</loc></url>
+<url><loc>https://nicwir.github.io/VisomX/reference/met_to_map.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/pathway_enrich.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/plot_coverage.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/png_to_gif.html</loc></url>
@@ -78,6 +82,7 @@
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.boxplot_intensity.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.filter_missing.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.get_kegg_pathways.html</loc></url>
+<url><loc>https://nicwir.github.io/VisomX/reference/prot.get_pathway_genes.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.get_results.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.impute.html</loc></url>
 <url><loc>https://nicwir.github.io/VisomX/reference/prot.make_unique.html</loc></url>
