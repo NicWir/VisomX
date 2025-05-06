@@ -125,33 +125,33 @@ prot.read_data <- function (data = "dat_prot.csv",
                           length(id) == 1)
   if(is.character(filt_type)) filt_type <- match.arg(filt_type)
   data.object <- data
-  # Read data file
+  # ---(1) Read data file)-------------------------------------------
+
   if(!is.null(data)){
     if (is.character(data)) {
-      # Read table file
       prot <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
-    } #if (is.character(data))
-    else if(exists(paste(quote(data)))){
+    } else if(exists(paste(quote(data)))){
       prot <- data
     }
   } else {
     stop("Please provide proteomics data as either an R dataframe object or a CSV/TXT/XLS/XLSX/TSV table file.")
   }
-  # Check if column headers exist. If not, take first row as column headers
+  # ---(2) Ensure first row is used as column headers if needed)------
+
   if (all(grepl("^V\\d", colnames(prot)))){
     new_colnames <- gsub('["\']', '', prot[1,])
     colnames(prot) <- new_colnames
     prot <- prot[-1,]
   }
-  # Test for occurence of prefix for abundance columns.
+
+  # ---(3) Check that abundance prefix exists)------------------------
   if (!(any(grepl(pfx, colnames(prot))))) {
     stop(paste0("The prefix '", pfx, "' does not exist in any column of '",
-                paste(quote(data.object)), "'. Please provide a valid prefix to identify columns with protein abundances."), call. = F)
+                paste(quote(data.object)), "'. Please provide a valid prefix."))
   }
 
-  # Filter out the positive proteins (indicated by '+')
-  # in the pre-defined "filter" columns
-  cols_filt <- grep(paste("^", filter, "$", sep = "", collapse = "|"),  # The columns to filter on
+  # ---(4) Filter out "Reverse"/"Potential contaminant" if needed)----
+  cols_filt <- grep(paste("^", filter, "$", sep = "", collapse = "|"),
                     colnames(prot))
   if (!is.null(cols_filt)) {
     if (length(cols_filt) == 1) {
@@ -163,6 +163,26 @@ prot.read_data <- function (data = "dat_prot.csv",
     }
   }
 
+  # ---(5) Rename duplicate column names by appending "_1", "_2", etc)----
+  #       Only for columns that contain the abundance prefix (pfx).
+  suffix_all_duplicates <- function(x, sep = "_") {
+    # For each group of identical elements, seq_along(x) → 1,2,3...
+    counts <- ave(seq_along(x), x, FUN = seq_along)
+    paste0(x, sep, counts)
+  }
+
+  # Identify the columns containing pfx
+  abundance_idx <- grep(paste0("^", pfx), colnames(prot))
+  if (length(abundance_idx) > 0) {
+    # Extract just those names
+    ab_names <- colnames(prot)[abundance_idx]
+    # Suffix duplicates
+    ab_names_unique <- suffix_all_duplicates(ab_names)
+    # Assign back
+    colnames(prot)[abundance_idx] <- ab_names_unique
+  }
+
+  # ---(6) Make row-wise protein names unique)------------------------
   # Make unique names using the annotations in the as name and id defined columns as primary and
   # secondary names, respectively.
   if (any(colnames(prot) %in% name) && any(colnames(prot) %in% id)) {
@@ -202,6 +222,8 @@ prot.read_data <- function (data = "dat_prot.csv",
   }
 
 
+
+  # ---(7) Build experimental design if none is provided)------------
   if (is.null(expdesign)) {
     # Create experimental design based on column names if neither file nor data frame is provided
     label <- prot_unique %>%
@@ -261,7 +283,7 @@ prot.read_data <- function (data = "dat_prot.csv",
     stop(paste0("File \"", expdesign, "\" does not exist."), call. = F)
   }
 
-  # Generate a SummarizedExperiment object using an experimental design
+  # ---(8) Create SummarizedExperiment------------------------------
   abundance_columns <- grep(pfx, colnames(prot_unique))  # get abundance column numbers
   if(any(sapply(prot_unique[,abundance_columns], function(x) any(is.character(x))))){
     prot_unique[,abundance_columns] <- apply(prot_unique[,abundance_columns], 2, function(x) as.numeric(na_if(x, "NA"))) # replace "NA" with NA
@@ -270,10 +292,10 @@ prot.read_data <- function (data = "dat_prot.csv",
         as.numeric(prot_unique[, abundance_columns[x]]))
   }
   message("Generating SummarizedExperiment.")
-  
+
   prot_se <- make_se(prot_unique, abundance_columns, experimental_design, log2_transform = log2_transform)
 
-  # Apply RSD threshold
+  # ---(9) Apply RSD threshold, if any)------------------------------
   if(!is.null(rsd_thresh)){
     rsd_thresh <- rsd_thresh/100
 
@@ -309,12 +331,12 @@ prot.read_data <- function (data = "dat_prot.csv",
     filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
   }
   filtered_rsd@metadata$rsd.thresh <- rsd_thresh
-  ## Drop proteins with missing values based on defined type filter "filt_thr"
+  # ---(10) Filter missing------------------------------------------
   prot_se <- prot.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
 
   cat(paste0("Identified conditions:\n ", paste(str_c(unique(prot_se$condition), collapse = ", ")), "\n"))
 
-  ## Drop samples were all abundance values are NA
+  # ---(11) Drop samples with all NA, if any)------------------------
   assay_data <- SummarizedExperiment::assay(prot_se)
   na_cols <- which(colSums(!is.na(assay_data)) == 0)
   na_sample_names <- colnames(assay_data)[na_cols]
@@ -363,6 +385,7 @@ prot.read_data <- function (data = "dat_prot.csv",
 #' @param volcano.label_size (Numeric) Font size of protein names in volcano plots if \code{volcano.add_names = TRUE}.
 #' @param volcano.adjusted (Logical) Shall adjusted p values be shown on the y axis of volcano plots (\code{TRUE}) or raw p values (\code{FALSE})?.
 #' @param plot (Logical) Show the generated plots in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).
+#' @param plot_volcano (Logical) Show the volcano plot in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).
 #' @param export (Logical) Exported the generated plots as PNG and PDF files (\code{TRUE}) or not \code{FALSE}).
 #' @param report (Logical) Render and export a report in PDF and HTML format that summarizes the results (\code{TRUE}) or not \code{FALSE}).
 #' @param report.dir (Character string) Provide the name of or path to a folder into which the report will be saved.
@@ -399,6 +422,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           volcano.label_size = 2.5, # Size of labels in volcano plot if
                           volcano.adjusted = TRUE, # Display adjusted p-values on y axis of volcano plot?
                           plot = FALSE, # Shall plots be returned in the Plots pane?
+                          plot_volcano,
                           export = FALSE, # Shall plots be exported as PDF and PNG files?
                           report = TRUE, # Shall a report (HTML and PDF) be created?
                           report.dir = NULL, # Folder name for created report (if report = TRUE)
@@ -419,6 +443,21 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           length(lfc) == 1)
 
   imp_fun <- match.arg(imp_fun)
+  out_dir <- out.dir
+
+  # If out.dir is defined, create the directory and set it as the working directory
+  old_wd = getwd()
+  if (!is.null(out.dir)) {
+    dir.create(out.dir, showWarnings = F)
+    setwd(out.dir)
+    message("Running proteomics workflow in the directory:", as.character(getwd()))
+  }
+
+  # if contrast is defined, set type to "manual"
+  if (!is.null(contrast)) {
+    type <- "manual"
+  }
+
   # Show error if inputs are not valid
   if (!type %in% c("all", "control", "manual")) {
     stop("run workflow_proteomics() with a valid type",
@@ -518,13 +557,18 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                         show_row_names = heatmap.show_row_names, row_font_size = heatmap.row_font_size,
                         plot = plot, export = export)
     )
-
+    # Define variable 'volcano_plotting' if plot is TRUE and plot_volcano is TRUE
+    if (plot == TRUE && plot_volcano == TRUE) {
+      volcano_plotting <- TRUE
+    } else {
+      volcano_plotting <- FALSE
+    }
     for (i in 1:length(contrasts)){
       suppressMessages(
         suppressWarnings(
           prot.plot_volcano(prot_dep, contrast = contrasts[i],
                             add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
-                            plot = plot, export = export, lfc = lfc, alpha = alpha)
+                            plot = volcano_plotting, export = export, lfc = lfc, alpha = alpha)
         ) )
     }
     if (pathway_kegg) {
@@ -564,15 +608,6 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
       }
     }
   }
-
-if(!is.null(out.dir)){
-  out_dir <- out.dir
-  dir.create("out_dir", showWarnings = F)
-} else {
-  out_dir <- getwd()
-}
-
-
 
   param <- data.frame(type, alpha, lfc, check.names = FALSE)
   results <- list(data = SummarizedExperiment::rowData(se), se = se, norm = prot_norm,
@@ -629,6 +664,7 @@ if(!is.null(out.dir)){
                 k = k,
                 report.dir = report.dir)
   }
+  setwd(old_wd)
   return(results)
 }
 
@@ -1270,7 +1306,8 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
 {
   if (custom_gene_sets) {
     custom_pathways$Accession <-
-      custom_pathways$Accession %>% str_replace_all(., " // ", ", ")
+      custom_pathways$Accession %>% str_replace_all(., " // ", ", ") %>%
+      str_replace_all(., ", ", ",") %>% str_replace_all(., ",", ", ")
     custom_vec <-
       custom_pathways[, match(c("Pathway", "Accession"), colnames(custom_pathways))] %>% tibble::deframe()
     NAME2EXTID <- strsplit(as.character(custom_vec), ", ")

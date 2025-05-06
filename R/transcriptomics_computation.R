@@ -46,89 +46,102 @@ rna.read_data <- function (data = NULL,
                           length(name) == 1,
                           is.character(id),
                           length(id) == 1)
-  # Read data
+  ## --- (1) Read data -----------------------------------------------------------
   if(!is.null(data)){
     if (is.character(data)) {
-    # Read table file
-    dat <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
-    } #if (is.character(data))
-    else if(exists(paste(quote(data)))){
+      dat <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
+    } else if(exists(paste(quote(data)))){
       dat <- data
     }
   } else {
     # Combine separate data files into a single dataframe
     if(!is.null(files.ind)){
       if(!is.character(files.ind)){
-        stop(
-          "files.ind needs to be a string or vector of several strings."
-        )
+        stop("files.ind needs to be a string or vector of several strings.")
       } else {
         pfx.counts <- values
-        # Read data files and collect them into a list
         dfs <- list()
         files <- list.files()[grep(files.ind, list.files())]
-        for(i in 1:length(files)){
+        for(i in seq_along(files)){
           dfs[[i]] <- read_file(files[i], csvsep = csvsep)
           names(dfs)[i] <- gsub(files.ind, "", files[i])
         }
-        #join dataframes in list
+        # Join dataframes in list
         df_joined <- data.frame(id = NA,
                                 name = NA,
                                 "Values" = NA)
         names(df_joined)[1] <- paste0(id)
         names(df_joined)[2] <- paste0(name)
         names(df_joined)[3] <- paste0(values)
-        for(i in 1:length(dfs)){
-          df_joined <- merge(df_joined, dfs[[i]], by = c(names(df_joined)[1], names(df_joined)[2]), all.x = TRUE, all.y = TRUE)
-          colnames(df_joined) <- gsub(pattern = paste0(values, ".y"), paste0(pfx.counts,names(dfs)[i]), colnames(df_joined))
-          colnames(df_joined) <- gsub(pattern = paste0(values, "$"), paste0(pfx.counts,names(dfs)[i]), colnames(df_joined))
-          df_joined <- df_joined %>% select(grep(paste(values,id,name, sep = "|"), colnames(df_joined)))
+        for(i in seq_along(dfs)){
+          df_joined <- merge(df_joined, dfs[[i]],
+                             by = c(names(df_joined)[1], names(df_joined)[2]),
+                             all.x = TRUE, all.y = TRUE)
+          colnames(df_joined) <- gsub(pattern = paste0(values, ".y"),
+                                      replacement = paste0(pfx.counts, names(dfs)[i]),
+                                      colnames(df_joined))
+          colnames(df_joined) <- gsub(pattern = paste0(values, "$"),
+                                      replacement = paste0(pfx.counts, names(dfs)[i]),
+                                      colnames(df_joined))
+          df_joined <- df_joined %>% select(grep(paste(values, id, name, sep = "|"), colnames(df_joined)))
         }
-        dat <- df_joined[, -grep(paste0(values,".x"), colnames(df_joined))]
-      } # else of if(!is.character(files.ind))
-    } else { # of if(!is.null(files.ind))
-      stop(
-        "Please run 'rna.read_data' with an R dataframe object or a table file containing read data for all samples in the 'data' argument, or prefixes of several files in the 'file.pfx' argument."
-      )
+        dat <- df_joined[, -grep(paste0(values, ".x"), colnames(df_joined))]
+      }
+    } else {
+      stop("Please run 'rna.read_data' with an R dataframe object or a table file containing read data for all samples in the 'data' argument, or prefixes of several files in the 'files.ind' argument.")
     }
   }
-  # Check if column headers exist. If not, take first row as column headers
+
+  ## --- (2) Fix column headers if needed --------------------------------------
+  # if (all(grepl("^V\\d", colnames(dat)))){
+  #   new_colnames <- gsub('["\']', '', dat[1,])
+  #   colnames(dat) <- new_colnames
+  #   dat <- dat[-1,]
+  # }
+  # dat <- dat[, !is.na(colnames(dat))]
+
+  # ---(2) Ensure first row is used as column headers if needed)------
+
   if (all(grepl("^V\\d", colnames(dat)))){
     new_colnames <- gsub('["\']', '', dat[1,])
     colnames(dat) <- new_colnames
     dat <- dat[-1,]
   }
-  dat <- dat[, !is.na(colnames(dat))]
+
+  ## --- (3) Optionally read id2name table --------------------------------------
   if (is.character(id2name.table)) {
-    # Read table file
-    id2name <- read_file(id2name.table, csvsep=csvsep)
+    id2name <- read_file(id2name.table, csvsep = csvsep)
   }
 
-  # Test for occurence of prefix for abundance columns.
+  ## --- (4) Check that the abundance prefix exists -----------------------------
   if (!(any(grepl(pfx.counts, colnames(dat))))) {
     stop(paste0("The prefix '", pfx.counts, "' does not exist in any column of '",
                 data, "'. Please provide a valid prefix to identify columns with gene abundances."), call. = F)
   }
 
-  # Make unique names using the annotations in the as name and id defined columns as primary and
-  # secondary names, respectively.
+  ## --- (5) Rename duplicate abundance columns -------------------------------
+  suffix_all_duplicates <- function(x, sep = "_") {
+    counts <- ave(seq_along(x), x, FUN = seq_along)
+    paste0(x, sep, counts)
+  }
+
+  abundance_idx <- grep(paste0("^", pfx.counts), colnames(dat))
+  if (length(abundance_idx) > 0) {
+    ab_names <- colnames(dat)[abundance_idx]
+    ab_names_unique <- suffix_all_duplicates(ab_names)
+    colnames(dat)[abundance_idx] <- ab_names_unique
+  }
+
+  ## --- (6) Make row-wise gene names unique ------------------------------------
   if (any(colnames(dat) %in% name) && any(colnames(dat) %in% id)) {
-    # Remove rows that have 'NA' in both specified name and id columns
-    row.rm <- which(is.na(dat[name]) & is.na(dat[id]), arr.ind = T)
+    row.rm <- which(is.na(dat[name]) & is.na(dat[id]), arr.ind = TRUE)
     if (length(row.rm) > 1) {
-      dat.rm <- dat[-c(row.rm),]
-      message(
-        paste0(
-          "Removing genes with no defined name in column \"",
-          name,
-          "\" or \"",
-          id,
-          "\". (Removed: ",
-          (nrow(dat) - nrow(dat.rm)),
-          " genes)"
-        )
-      )
+      dat.rm <- dat[-row.rm, ]
+      message(paste0("Removing genes with no defined name in column \"", name,
+                     "\" or \"", id, "\". (Removed: ",
+                     (nrow(dat) - nrow(dat.rm)), " genes)"))
     }
+
     if (length(row.rm) > 1) {
       rna_unique <- prot.make_unique(proteins = dat.rm, names = name, ids = id, delim = ";")
     } else {
@@ -136,123 +149,128 @@ rna.read_data <- function (data = NULL,
     }
 
   } else if (!any(colnames(dat) %in% name) && !any(colnames(dat) %in% id)) {
-    stop("\"", name, "\" and \"", id, "\" are not columns in \"", data, "\".", "Please provide valid column names with gene identifiers as \"name= \" and \"id= \".",
-         call. = F)
+    stop("\"", name, "\" and \"", id, "\" are not columns in \"", data, "\". Please provide valid column names with gene identifiers as \"name=\" and \"id=\".", call. = F)
   } else if (!any(colnames(dat) %in% name)) {
-    stop("\"", name, "\" is not a column in \"", data, "\".", "Please provide a valid column name with gene names as \"name= \".",
-         call. = F)
+    stop("\"", name, "\" is not a column in \"", data, "\". Please provide a valid column name with gene names as \"name=\".", call. = F)
   } else if (!any(colnames(dat) %in% id)) {
-    stop("\"", id, "\" is not a column in \"", data, "\".", "Please provide a valid column name with gene identifiers as \"id= \".",
-         call. = F)
+    stop("\"", id, "\" is not a column in \"", data, "\". Please provide a valid column name with gene identifiers as \"id=\".", call. = F)
   }
-
-
+  ## --- (7) Build experimental design if none is provided -----------------------
   if (is.null(expdesign)) {
-    # Create experimental design based on column names if neither file nor data frame is provided
     label <- rna_unique %>%
-      select(., contains(pfx.counts)) %>%
+      dplyr::select(contains(pfx.counts)) %>%
       colnames() %>%
       gsub(pfx.counts, "", .)
 
     condition <- rna_unique %>%
-      select(., contains(pfx.counts)) %>%
+      dplyr::select(contains(pfx.counts)) %>%
       colnames() %>%
       gsub(pfx.counts, "", .) %>%
-      gsub(".[[:digit:]]+$", "", .)  # Remove prefix and replicate number from sample name
+      gsub(".[[:digit:]]+$", "", .)
 
     replicate <- rna_unique %>%
-      select(., contains(pfx.counts)) %>%
+      dplyr::select(contains(pfx.counts)) %>%
       colnames() %>%
-      str_extract(., "[:digit:]{1,}$")  # Remove string before replicate number
+      stringr::str_extract("[:digit:]{1,}$")
 
     experimental_design <- data.frame(label, condition, replicate, check.names = FALSE)
-    message(paste0(
-      "Writing experimental design file to: " ,
-      getwd(),
-      "/experimental_design.txt"
-    ))
-    utils::write.table(
-      experimental_design,
-      file = "experimental_design.txt",
-      sep = "\t",
-      row.names = F
-      #col.names = NA
-    )
-
+    message(paste0("Writing experimental design file to: ", getwd(), "/experimental_design.txt"))
+    utils::write.table(experimental_design,
+                       file = "experimental_design.txt",
+                       sep = "\t",
+                       row.names = FALSE)
   } else if (is.list(expdesign)) {
     experimental_design <- expdesign
   } else if (is.character(expdesign) && file.exists(expdesign)) {
-    if (str_replace_all(expdesign, ".{1,}\\.", "") == "csv") {
-      experimental_design <- utils::read.csv( expdesign, sep = csvsep, header = T,
-                                              stringsAsFactors = F, fill = T, na.strings = "",
-                                              quote = "", comment.char = "", check.names=FALSE )
-    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "xls" |
-               str_replace_all(expdesign, ".{1,}\\.", "") == "xlsx") {
+    ext <- str_replace_all(expdesign, ".{1,}\\.", "")
+    if (ext == "csv") {
+      experimental_design <- utils::read.csv(expdesign, sep = csvsep, header = TRUE,
+                                             stringsAsFactors = FALSE, fill = TRUE, na.strings = "",
+                                             quote = "", comment.char = "", check.names = FALSE)
+    } else if (ext %in% c("xls", "xlsx")) {
       experimental_design <- readxl::read_excel(expdesign)
-    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "tsv") {
-      experimental_design <- utils::read.csv(expdesign, sep = "\t", header = T,
-                                             stringsAsFactors = F, fill = T, na.strings = "",
-                                             quote = "", comment.char = "", check.names=FALSE )
-    } else if (str_replace_all(expdesign, ".{1,}\\.", "") == "txt") {
-      experimental_design <- utils::read.table(expdesign, sep = "\t", header = T, stringsAsFactors = F,
-                                               fill = T, na.strings = "", comment.char = "", check.names=FALSE )
+    } else if (ext == "tsv") {
+      experimental_design <- utils::read.csv(expdesign, sep = "\t", header = TRUE,
+                                             stringsAsFactors = FALSE, fill = TRUE, na.strings = "",
+                                             quote = "", comment.char = "", check.names = FALSE)
+    } else if (ext == "txt") {
+      experimental_design <- utils::read.table(expdesign, sep = "\t", header = TRUE,
+                                               stringsAsFactors = FALSE, fill = TRUE, na.strings = "", comment.char = "", check.names = FALSE)
     } else {
-      stop(
-        "No compatible file format for experimental design provided.
-             Supported formats are: \\.txt (tab delimited), \\.csv (delimiters can be specified with the argument \"csvsep = \", \\.tsv, \\.xls, and \\.xlsx"
-      )
+      stop("No compatible file format for experimental design provided.
+           Supported formats are: .txt (tab delimited), .csv, .tsv, .xls, and .xlsx")
     }
   } else {
-    stop(paste0("File \"", expdesign, "\" does not exist."), call. = F)
+    stop(paste0("File \"", expdesign, "\" does not exist."), call. = FALSE)
   }
 
-  # Generate a SummarizedExperiment object using an experimental design
-  abundance_columns <- grep(pfx.counts, colnames(rna_unique))  # get abundance column numbers
-  rna_unique[,abundance_columns] <- suppressWarnings(matrix(as.numeric(as.matrix(rna_unique[,abundance_columns])),
-                                           ncol = ncol(as.matrix(rna_unique[,abundance_columns])) ) )
+  ## --- (8) Create SummarizedExperiment ----------------------------------------
+  abundance_columns <- grep(pfx.counts, colnames(rna_unique))
+
+  # Convert abundance columns to numeric with proper NA handling
+  if (any(sapply(rna_unique[, abundance_columns], function(x) is.character(x)))) {
+    rna_unique[, abundance_columns] <- apply(rna_unique[, abundance_columns], 2,
+                                             function(x) as.numeric(dplyr::na_if(x, "NA")))
+  }
+
   message("Generating SummarizedExperiment.")
   rna_se <- rna.make_se(rna_unique, abundance_columns, experimental_design)
 
-  # Apply RSD threshold
+  ## --- (9) Apply RSD threshold, if any ----------------------------------------
   if(!is.null(rsd_thresh)){
     rsd_thresh <- rsd_thresh/100
-
-    int.mat <- assay(rna_se)
-    # replace NA with 0
+    int.mat <- SummarizedExperiment::assay(rna_se)
     int.mat[is.na(int.mat)] <- 0
 
-    # Calculate the standard deviation for each compound in each group. Create a list of n vectors for n sample groups.
-    ls.sd <- lapply(1:length(unique(rna_se$condition)), function (x)
-      apply(int.mat[,unique(rna_se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))], 1, stats::sd, na.rm = F))
-    # Calculate the average for each compound in each group. Create a list of n vectors for n sample groups.
-    ls.mns <-
-      lapply(1:length(unique(rna_se$condition)), function (x)
-        apply(int.mat[,unique(rna_se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))], 1, mean, na.rm = F))
-    # Calculate the RSD for each compound in each group. Create a list of n vectors for n sample groups.
+    ls.sd <- lapply(seq_along(unique(rna_se$condition)), function (x)
+      apply(int.mat[, unique(rna_se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))],
+            1, stats::sd, na.rm = FALSE))
+    ls.mns <- lapply(seq_along(unique(rna_se$condition)), function (x)
+      apply(int.mat[, unique(rna_se$condition)[x] == gsub("_[[:digit:]]+$", "", colnames(int.mat))],
+            1, stats::mean, na.rm = FALSE))
     ls.rsd <- mapply("/", ls.sd, ls.mns, SIMPLIFY = FALSE)
-    # Combine group vectors in RSD list into matrix
     mat.rsd <- do.call(rbind, ls.rsd)
-    # Create vector with the maximum RSD value among all groups for each compound.
-    filter.val <- apply(mat.rsd, 2, max, na.rm = T)
-    # Check if each compound has an RSD value below the threshold.
+    filter.val <- apply(mat.rsd, 2, max, na.rm = TRUE)
     keep <- filter.val <= rsd_thresh
-
-    # Apply RSD filter to data matrix
     filtered_rsd <- rna_se[keep, ]
   } else {
     filtered_rsd <- rna_se
   }
-  if( (nrow(SummarizedExperiment::assay(rna_se)) - nrow(SummarizedExperiment::assay(filtered_rsd))) != 0 ){
+
+  if ((nrow(SummarizedExperiment::assay(rna_se)) - nrow(SummarizedExperiment::assay(filtered_rsd))) != 0) {
     number_removed_rsd <- nrow(SummarizedExperiment::assay(rna_se)) - nrow(SummarizedExperiment::assay(filtered_rsd))
     cat(paste0(number_removed_rsd, " out of ",
                nrow(SummarizedExperiment::assay(rna_se)), " genes were removed from the dataset due to too high RSD.\n\n"))
     filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
   }
   filtered_rsd@metadata$rsd.thresh <- rsd_thresh
-  ## Drop genes with missing values based on defined type filter "filt_thr"
-  if(!is.null(filt_type)) rna_se <- rna.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
 
-  cat(paste0("Identified conditions:\n ", paste(str_c(unique(rna_se$condition), collapse = ", ")), "\n"))
+  ## --- (10) Remove samples (columns) with all NA values -----------------------
+  assay_data <- SummarizedExperiment::assay(filtered_rsd)
+  na_cols <- which(colSums(!is.na(assay_data)) == 0)
+  na_sample_names <- colnames(assay_data)[na_cols]
+  if (length(na_sample_names) > 0) {
+    cat("Samples with all genes as NA:\n")
+    print(na_sample_names)
+  } else {
+    cat("No samples have all genes as NA.\n")
+  }
+
+  if (length(na_cols) > 0) {
+    filtered_rsd <- filtered_rsd[, -na_cols]
+    cat("Removed", length(na_cols), "samples with all NA values.\n")
+  } else {
+    cat("No samples to remove.\n")
+  }
+
+  ## --- (11) Filter missing values based on specified criteria ------------------
+  if(!is.null(filt_type)) {
+    rna_se <- rna.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
+  } else {
+    rna_se <- filtered_rsd
+  }
+
+  cat(paste0("Identified conditions:\n ", paste(unique(rna_se$condition), collapse = ", "), "\n"))
 
   return(rna_se)
 }
@@ -296,7 +314,7 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
       max_repl <- max(SummarizedExperiment::colData(se)$replicate)
       if (thr < 0 | thr > max_repl) {
         stop("invalid filter threshold 'thr' applied",
-             "\nRun filter() with a threshold ranging from 0 to ",
+             "\nRun filter() with a threshold ranging from 0 to the maximum number of replicates: ",
              max_repl)
       }
       filtered <- filter_missval(se, thr = thr)
@@ -388,7 +406,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           q = 0.01,
                           knn.rowmax = 0.5,
                           type = c("all", "control", "manual"),
-                          design = "~ condition",
+                          design = "~ 0 + condition",
                           size.factors = NULL,
                           altHypothesis = c("greaterAbs", "lessAbs", "greater", "less"),
                           control = NULL,
@@ -444,15 +462,20 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   if (export == TRUE){
     dir.create(paste0(getwd(), "/Plots"), showWarnings = F)
   }
+  # Pre-filtering:  keep only rows that have at least 3 samples with a count of 10 or more
+  message("Pre-filtering:  keep only rows that have at least 3 samples with a count of 10 or more")
+  message("Number of genes before pre-filtering: ", nrow(assay(se)))
+  keep <- MatrixGenerics::rowSums(assay(se) >= 10, na.rm = TRUE) >= 3
+  se <- se[keep, ]
+  message("Number of genes after pre-filtering: ", nrow(assay(se)))
   # Impute missing values
-    if (imp_fun == "MinProb"){
-        se_imp <- rna.impute(se, fun = imp_fun, q = q)
-    } else if (imp_fun == "knn"){
-        se_imp <- rna.impute(se, fun = imp_fun, rowmax = knn.rowmax)
-    } else {
-        se_imp <- rna.impute(se, fun = imp_fun)
-    }
-
+  if (imp_fun == "MinProb"){
+      se_imp <- rna.impute(se, fun = imp_fun, q = q)
+  } else if (imp_fun == "knn"){
+      se_imp <- rna.impute(se, fun = imp_fun, rowmax = knn.rowmax)
+  } else {
+      se_imp <- rna.impute(se, fun = imp_fun)
+  }
   # Create DESeqDataSet and define contrasts
   if(!quiet) message(">> Creating DESeqDataSet object <<")
   conditions <- as.character(unique(se$condition))
@@ -471,7 +494,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   }
   if (type == "manual") {
     if (is.null(contrast)) {
-      stop("run test_diff(type = 'manual') with a 'test' argument")
+      stop("run test_diff(type = 'manual') with a 'contrast' argument")
     }
     assertthat::assert_that(is.character(contrast))
     if (any(!unlist(strsplit(contrast, "_vs_")) %in% conditions)) {
@@ -481,7 +504,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
            "', for example '", paste0(conditions[1],
                                       "_vs_", conditions[2]), "'.", call. = FALSE)
     }
-    ddsSE$condition <- relevel(ddsSE$condition, unlist(strsplit(contrast, "_vs_"))[2])
+    #ddsSE$condition <- relevel(ddsSE$condition, unlist(strsplit(contrast, "_vs_"))[2])
     cntrst <- contrast
   }
   if (type == "all") {
@@ -499,8 +522,8 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   }
 
 
-  # Pre-filtering:  keep only rows that have at least 10 reads total
-  keep <- BiocGenerics::rowSums(BiocGenerics::counts(ddsSE) >= 5) >= 3
+  # Pre-filtering:  keep only rows that have at least 3 samples with a count of 5 or more
+  keep <- MatrixGenerics::rowSums(BiocGenerics::counts(ddsSE) >= 5) >= 3
   ddsSE <- ddsSE[keep,]
 
   # Differential expression analysis; Performs 'replaceOutliers' (replaces outlier counts flagged by extreme Cook's distances)
@@ -512,74 +535,127 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'mean'), error = function(e) { rlog(dds, fitType = 'mean') })
   rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts))
 
-  # Create list with test results for defined contrasts; Perform independent hypothesis weighting if pAdjustMethod == "IHW"
+  # Create list with test results for defined contrasts
   if(!quiet) message("assembling results for defined contrasts")
   results <- list()
   for(i in 1:length(cntrst)){
     trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
     ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
     if(!is.null(altHypothesis)){
-      results[[i]] <- DESeq2::results(dds, contrast=c("condition", trmt, ctrl), independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
+      results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
+                                      independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
                                       altHypothesis = altHypothesis, lfcThreshold = lfc,
-                                      alpha = alpha.independent, filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+                                      alpha = alpha.independent,
+                                      filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
     } else {
-      results[[i]] <- DESeq2::results(dds, contrast=c("condition", trmt, ctrl), independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
-                                      alpha = alpha.independent, filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+      results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
+                                      independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
+                                      alpha = alpha.independent,
+                                      filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
     }
-
   }
   names(results) <- cntrst
 
   # Store condition levels in object
   levels <- levels(ddsSE$condition)
 
-  # Creation of shrunken results list after re-running nbinomWaldTest with re-ordered conditions
+  # # Creation of shrunken results list after re-running nbinomWaldTest with re-ordered conditions
+  # if(lfcShrink == TRUE){
+  #   if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
+  #   results_shrink <- list()
+  #   if(shrink.method == "apeglm"){
+  #     cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
+  #     cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
+  #     names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
+  #     if(length(cntrst_ndx) > 0){
+  #       for(i in 1:length(cntrst_ndx)){
+  #         results_shrink[[i]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[i], gsub("condition_", "", DESeq2::resultsNames(dds))),
+  #                                                  type = "apeglm", returnList = F, quiet = T, )
+  #       }
+  #     }
+  #     names(results_shrink) <- names(cntrst_ndx)
+  #     if (type == "all") {
+  #       for(i in 2:length(levels)){
+  #         dds$condition <- relevel(dds$condition, levels[i])
+  #         dds <- DESeq2::nbinomWaldTest(object = dds, quiet = T)
+  #         cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
+  #         cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
+  #         names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
+  #         if(length(cntrst_ndx) > 0){
+  #           for(j in 1:length(cntrst_ndx)){
+  #             results_shrink[[length(results_shrink)+1]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[j], gsub("condition_", "", DESeq2::resultsNames(dds))),
+  #                                                                             type = "apeglm", returnList = F, quiet = T)
+  #             names(results_shrink)[length(results_shrink)] <- names(cntrst_ndx)[j]
+  #           }
+  #         }
+  #       }
+  #     }
+  #   }
+  #   if(shrink.method == "ashr" || shrink.method == "normal"){
+  #     for (i in 1:length(results)) {
+  #       trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
+  #       ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
+  #       results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl), type = shrink.method,
+  #                                                lfcThreshold = ifelse(shrink.method == "normal", lfc, 0), quiet = T)
+  #     }
+  #     names(results_shrink) <- cntrst
+  #   }
+  #   # add shrunken lfc values to results object
+  #   for(i in 1:length(cntrst)){
+  #     results[[match(cntrst[i], names(results))]]$lfc.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$log2FoldChange)
+  #     results[[match(cntrst[i], names(results))]]$lfcSE.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$lfcSE)
+  #   }
+  # } # if(lfcShrink == TRUE)
+
+  # --- Revised lfcShrink block ---
   if(lfcShrink == TRUE){
-    if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
-    results_shrink <- list()
     if(shrink.method == "apeglm"){
-      cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
-      cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
-      names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
-      if(length(cntrst_ndx) > 0){
-        for(i in 1:length(cntrst_ndx)){
-          results_shrink[[i]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[i], gsub("condition_", "", DESeq2::resultsNames(dds))),
-                                                   type = "apeglm", returnList = F, quiet = T, )
+      if(!quiet) message("performing lfc shrinkage with method 'apeglm'")
+      # For apeglm, we need to use a coefficient-based approach.
+      # Loop over each contrast, relevel dds so that the control becomes the reference,
+      # re-run the Wald test, and then call lfcShrink using the appropriate coefficient.
+      results_shrink <- list()
+      for(i in seq_along(cntrst)) {
+        parts <- str_split(cntrst[i], "_vs_")[[1]]
+        trmt <- parts[1]
+        ctrl <- parts[2]
+        # Make a temporary copy of dds
+        dds_temp <- dds
+        # Relevel so that ctrl is the reference level
+        dds_temp$condition <- relevel(dds_temp$condition, ref = ctrl)
+        # Re-run the Wald test after releveling
+        dds_temp <- DESeq2::nbinomWaldTest(dds_temp, quiet = TRUE)
+        # In an intercept model, the log fold change is given by the coefficient for the treatment level,
+        # which will have the name "condition<trmt>"
+        coef_name <- paste0("condition", trmt)
+        coef_index <- match(coef_name, DESeq2::resultsNames(dds_temp))
+        if(is.na(coef_index)) {
+          stop("Coefficient ", coef_name, " not found in resultsNames(dds_temp)")
         }
+        shrink_res <- DESeq2::lfcShrink(dds_temp, coef = coef_index, type = "apeglm", quiet = TRUE)
+        results_shrink[[ cntrst[i] ]] <- shrink_res
       }
-      names(results_shrink) <- names(cntrst_ndx)
-      if (type == "all") {
-        for(i in 2:length(levels)){
-          dds$condition <- relevel(dds$condition, levels[i])
-          dds <- DESeq2::nbinomWaldTest(object = dds, quiet = T)
-          cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
-          cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
-          names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
-          if(length(cntrst_ndx) > 0){
-            for(j in 1:length(cntrst_ndx)){
-              results_shrink[[length(results_shrink)+1]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[j], gsub("condition_", "", DESeq2::resultsNames(dds))),
-                                                                              type = "apeglm", returnList = F, quiet = T)
-              names(results_shrink)[length(results_shrink)] <- names(cntrst_ndx)[j]
-            }
-          }
-        }
-      }
-    }
-    if(shrink.method == "ashr" || shrink.method == "normal"){
-      for (i in 1:length(results)) {
-        trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
-        ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
-        results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl), type = shrink.method,
-                                                 lfcThreshold = ifelse(shrink.method == "normal", lfc, 0), quiet = T)
+    } else {
+      # For "ashr" or "normal", we can use the contrast argument directly.
+      if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
+      results_shrink <- list()
+      for(i in seq_along(cntrst)) {
+        parts <- str_split(cntrst[i], "_vs_")[[1]]
+        trmt <- parts[1]
+        ctrl <- parts[2]
+        results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl),
+                                                 type = shrink.method,
+                                                 lfcThreshold = ifelse(shrink.method == "normal", lfc, 0),
+                                                 quiet = TRUE)
       }
       names(results_shrink) <- cntrst
     }
-    # add shrunken lfc values to results object
-    for(i in 1:length(cntrst)){
-      results[[match(cntrst[i], names(results))]]$lfc.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$log2FoldChange)
-      results[[match(cntrst[i], names(results))]]$lfcSE.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$lfcSE)
+    # Add shrunken lfc values to results object
+    for(i in seq_along(cntrst)){
+      results[[ cntrst[i] ]]$lfc.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$log2FoldChange)
+      results[[ cntrst[i] ]]$lfcSE.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$lfcSE)
     }
-  } # if(lfcShrink == TRUE)
+  } # --- End revised lfcShrink block ---
 
   # add significant column for each contrast
   for(i in 1:length(cntrst)){
@@ -893,7 +969,7 @@ rna.report <- function(results, report.dir = NULL, ...){
   #file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    quiet = TRUE)
+                    intermediates_dir = tempdir(), quiet = TRUE)
   message(paste0("Files saved in: '", wd, "'"))
 }
 

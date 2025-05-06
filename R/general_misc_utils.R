@@ -73,6 +73,17 @@ enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_ke
         "Cannot perform KEGG pathway over-representation analysis without specifying a valid KEGG organism id in the 'kegg_organism' argument."
       )
     } else {
+      # if kegg_organism is Trichoderma reesei ("tre" or "trr") and gene IDs are only numbers, add "TRIREDRAFT_" to gene IDs
+      if (kegg_organism %in% c("tre", "trr")) {
+        if (all(grepl("^[0-9]+$", ls.significant_df[[1]]$ID))) {
+          ls.significant_df[[1]]$ID <- paste0("TRIREDRAFT_", ls.significant_df[[1]]$ID)
+        }
+        if (all(grepl("^[0-9]+$", ls.significant_up[[1]]$ID))) {
+          ls.significant_up[[1]]$ID <- paste0("TRIREDRAFT_", ls.significant_up[[1]]$ID)
+        }
+      }
+
+
 
       ls.pora_kegg_up <- rep(list(0), length(contrasts))
       kegg_pathway_up <- function(x) {
@@ -287,8 +298,13 @@ prot.get_kegg_pathways <- function(organism){
 
 ####____prot.get_pathway_genes____####
 prot.get_pathway_genes <- function(pathway_name, pathway_table, colid_pathways, colid_genes, gene_sep = ", "){
-  genes <- unlist(str_split(pathway_table[match(pathway_name, pathway_table[[colid_pathways]]),
-                                          colid_genes], gene_sep))
+  # genes <- unlist(str_split(pathway_table[match(pathway_name, pathway_table[[colid_pathways]]),
+  #                                         colid_genes], gene_sep))
+  genes <- pathway_table %>%
+    filter(str_detect(!!sym(colid_pathways), pathway_name)) %>%
+    pull(!!sym(colid_genes)) %>%
+    str_split(gene_sep) %>%
+    unlist()
 
   return(genes)
 }
