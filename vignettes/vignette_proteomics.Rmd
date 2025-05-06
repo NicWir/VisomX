@@ -861,7 +861,7 @@ library(SummarizedExperiment)
 kegg_pathways <- prot.get_kegg_pathways("ppu")
 
 # Extract genes constituting the TCA cycle
-TCA_genes <- kegg_pathways[["Citrate cycle (TCA cycle) - Pseudomonas putida KT2440"]]
+TCA_genes <- kegg_pathways[["Citrate cycle (TCA cycle)"]]
 
 # Get the names instead of IDs for the genes
 TCA_names <- rowData(results$dep)[rowData(results$dep)$ID %in% TCA_genes, "name"]
