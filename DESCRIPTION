@@ -105,7 +105,7 @@ VignetteBuilder:
     knitr
 Remotes: 
     github::NicWir/fluctuator,
-    github::NicWir/MetaboAnalystR,
+    github::xia-lab/MetaboAnalystR,
     github::NicWir/SSPA,
     github::stephenslab/mixsqp
 Encoding: UTF-8

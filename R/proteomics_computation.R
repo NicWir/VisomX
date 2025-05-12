@@ -194,8 +194,8 @@ prot.read_data <- function (data = "dat_prot.csv",
 
     # 3) only the duplicates get a "_n" appended; uniques stay as-is
     new_no_repl <- ifelse(counts > 1,
-                          +                          paste0(x_no_repl, sep, counts),
-                          +                          x_no_repl)
+                          paste0(x_no_repl, sep, counts),
+                          x_no_repl)
 
     # 4) stitch back: leave suffixed names untouched, swap in new_no_repl
     x[!has_repl] <- new_no_repl
