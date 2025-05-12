@@ -726,7 +726,7 @@ prot.plot_pca <- function (dep,
     } else if (length(unique(dep$condition)) <= 12) {
       p <- p + scale_fill_brewer(palette = "Set3", guide = guide_legend(override.aes = list(shape = 21))) +
         scale_color_manual(values=c(rep("black", length(unique(dep$condition)))))
-    } else if (length(unique(se$condition)) <= 25) {
+    } else if (length(unique(dep$condition)) <= 25) {
       p <- p + scale_fill_manual(
         values = c(
           "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
@@ -737,7 +737,7 @@ prot.plot_pca <- function (dep,
         )
       )
     } else {
-      p <- p + scale_fill_manual(values = rainbow(length(unique(se$condition))))
+      p <- p + scale_fill_manual(values = rainbow(length(unique(dep$condition))))
     }
 
 
