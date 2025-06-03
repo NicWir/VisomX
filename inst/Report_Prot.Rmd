@@ -229,7 +229,7 @@ try(suppressMessages(
 \pagebreak
 ### Volcano plot(s)
 Volcano plots can be used to visualize a particular contrast (comparison between two samples). This allows to examine the gene enrichment between two samples (x-axis) and their corresponding (adjusted) p-values (y-axis).
-```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.8, warning=F, message=F, fig.align='center'}
+```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.8, warning=F, message=F, fig.align='center', eval=plot_volcano_report}
 for (i in 1:length(contrasts)){
   prot.plot_volcano(dep, contrast = contrasts[i], add_names = volcano.add_names, label_size = 2.5, adjusted =  volcano.adjusted,
                           plot = T, export = F, lfc = dep@metadata$lfc, alpha = dep@metadata$alpha)

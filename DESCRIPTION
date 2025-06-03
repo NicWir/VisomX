@@ -64,7 +64,6 @@ Imports:
     knitr,
     lattice,
     limma,
-    magick,
     markdown,
     memoise,
     MSnbase,
@@ -91,6 +90,7 @@ Imports:
     UpSetR,
     vsn
 Suggests:
+    magick,
     DelayedArray,
     jsonlite,
     multtest,

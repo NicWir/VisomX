@@ -23,7 +23,7 @@
 #' @param volcano.label_size (Numeric) Font size of protein names in volcano plots if \code{volcano.add_names = TRUE}.
 #' @param volcano.adjusted (Logical) Shall adjusted p values be shown on the y axis of volcano plots (\code{TRUE}) or raw p values (\code{FALSE})?.
 #' @param plot (Logical) Show the generated plots in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).
-#' @param plot_volcano (Logical) Show the volcano plot in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).
+#' @param plot_volcano (Logical) Generate volcano plots for each defined contrast (\code{TRUE}) or not \code{FALSE}).
 #' @param export (Logical) Exported the generated plots as PNG and PDF files (\code{TRUE}) or not \code{FALSE}).
 #' @param report (Logical) Render and export a report in PDF and HTML format that summarizes the results (\code{TRUE}) or not \code{FALSE}).
 #' @param report.dir (Character string) Provide the name of or path to a folder into which the report will be saved.
@@ -61,7 +61,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           volcano.label_size = 2.5, # Size of labels in volcano plot if
                           volcano.adjusted = TRUE, # Display adjusted p-values on y axis of volcano plot?
                           plot = FALSE, # Shall plots be returned in the Plots pane?
-                          plot_volcano,
+                          plot_volcano = FALSE, # Shall volcano plots be generated?
                           export = FALSE, # Shall plots be exported as PDF and PNG files?
                           report = TRUE, # Shall a report (HTML and PDF) be created?
                           report.dir = NULL, # Folder name for created report (if report = TRUE)
@@ -202,13 +202,20 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     } else {
       volcano_plotting <- FALSE
     }
-    for (i in 1:length(contrasts)){
-      suppressMessages(
-        suppressWarnings(
-          prot.plot_volcano(prot_dep, contrast = contrasts[i],
-                            add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
-                            plot = volcano_plotting, export = export, lfc = lfc, alpha = alpha)
-        ) )
+    if (export == TRUE && plot_volcano == TRUE) {
+      volcano_exporting <- TRUE
+    } else {
+      volcano_exporting <- FALSE
+    }
+    if (volcano_plotting == TRUE | volcano_exporting == TRUE) {
+      for (i in 1:length(contrasts)){
+        suppressMessages(
+          suppressWarnings(
+            prot.plot_volcano(prot_dep, contrast = contrasts[i],
+                              add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+                              plot = volcano_plotting, export = volcano_exporting, lfc = lfc, alpha = alpha)
+          ) )
+      }
     }
     if (pathway_kegg) {
       for (i in 1:length(contrasts)) {

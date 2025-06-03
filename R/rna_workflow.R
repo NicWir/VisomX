@@ -6,6 +6,7 @@
 #'
 #' @param se A SummarizedExperiment object, generated with read_prot().
 #' @param imp_fun (Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{rna.impute}}) for details.
+#' @param trans_method (Character string) Transformation method for the data. Options are "rlog" (for \code{\link[DESeq2]{rlog}}) or "vst" (for \code{\link[DESeq2]{vst}}).
 #' @param q (Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.
 #' @param knn.rowmax (Numeric) The maximum percent missing data allowed in any row for \code{imp_fun = 'knn'}. Default: 0.5.
 #' @param type (Character string) Type of differential analysis to perform. "all" (contrast each condition with every other condition), "control" (contrast each condition to a defined control condition), "manual" (manually define selected conditions).
@@ -34,6 +35,7 @@
 #' @param volcano.label_size Size of labels in volcano plot.
 #' @param volcano.adjusted Display adjusted p-values on y axis of volcano plot?
 #' @param plot Shall plots be returned in the Plots pane?
+#' @param plot_volcano (Logical) Generate volcano plots for each defined contrast (\code{TRUE}) or not \code{FALSE}).
 #' @param export Shall plots be exported as PDF and PNG files?
 #' @param report Shall a report (HTML and PDF) be created?
 #' @param report.dir Folder name for created report (if report = TRUE)
@@ -50,6 +52,7 @@
 rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                          imp_fun = c("zero", "man", "bpca", "knn", "QRILC", "MLE", "MinDet",
                                      "MinProb", "min", "zero", "mixed", "nbavg", "SampMin"),
+                         trans_method = c("vst", "rlog"),
                          q = 0.01,
                          knn.rowmax = 0.5,
                          type = c("all", "control", "manual"),
@@ -76,6 +79,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                          volcano.label_size = 2.5,
                          volcano.adjusted = TRUE,
                          plot = FALSE,
+                         plot_volcano = FALSE, # Shall volcano plots be generated?
                          export = FALSE,
                          report = TRUE,
                          report.dir = NULL,
@@ -99,10 +103,16 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                           is.numeric(lfc),
                           length(lfc) == 1
   )
+  # Assert that trans_method is one of "rlog" or "vst"
+  if (!trans_method %in% c("rlog", "vst")) {
+    stop("run rna.workflow() with a valid 'trans_method'",
+         "\nValid trans_method values are: 'rlog' and 'vst'.",
+         call. = FALSE)
+  }
 
   # Show error if inputs are not valid
   if (!type %in% c("all", "control", "manual")) {
-    stop("run workflow_proteomics() with a valid type",
+    stop("run rna.workflow() with a valid 'type'",
          "\nValid types are: 'all', 'control' and 'manual'.",
          call. = FALSE)
   }
@@ -179,7 +189,13 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   # Perform PCA Analysis
   if(!quiet) message("performing PCA analysis")
   norm.counts <- BiocGenerics::counts(dds, normalized = TRUE)
-  rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'mean'), error = function(e) { rlog(dds, fitType = 'mean') })
+
+  if ( trans_method == "rlog"){
+    rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'parametric'), error = function(e) { rlog(dds, fitType = 'parametric') })
+  }
+  else {
+    rlog.counts <- tryCatch(DESeq2::vst(dds, fitType = 'parametric'), error = function(e) { rlog(dds, fitType = 'parametric') })
+  }
   rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts))
 
   # Create list with test results for defined contrasts
@@ -487,14 +503,44 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                        show_row_names = heatmap.show_row_names, row_font_size = heatmap.row_font_size,
                        plot = plot, export = export)
     )
-    for (i in 1:length(cntrst)){
-      suppressMessages(
-        suppressWarnings(
-          volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
-                                          add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
-                                          plot = plot, export = export, lfc = lfc, alpha = alpha)
-        ) )
+
+    # Define variable 'volcano_plotting' if plot is TRUE and plot_volcano is TRUE
+    if (plot == TRUE && plot_volcano == TRUE) {
+      volcano_plotting <- TRUE
+    } else {
+      volcano_plotting <- FALSE
     }
+    if (export == TRUE && plot_volcano == TRUE) {
+      volcano_exporting <- TRUE
+    } else {
+      volcano_exporting <- FALSE
+    }
+    if (volcano_plotting == TRUE | volcano_exporting == TRUE) {
+      # for (i in 1:length(contrasts)){
+      #   suppressMessages(
+      #     suppressWarnings(
+      #       prot.plot_volcano(prot_dep, contrast = contrasts[i],
+      #                         add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+      #                         plot = volcano_plotting, export = volcano_exporting, lfc = lfc, alpha = alpha)
+      #     ) )
+      # }
+      for (i in 1:length(cntrst)){
+        suppressMessages(
+          suppressWarnings(
+            volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
+                                            add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+                                            plot = volcano_plotting, export = volcano_exporting, lfc = lfc, alpha = alpha)
+          ) )
+      }
+    }
+    # for (i in 1:length(cntrst)){
+    #   suppressMessages(
+    #     suppressWarnings(
+    #       volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
+    #                                       add_names = volcano.add_names, label_size = volcano.label_size, adjusted =  volcano.adjusted,
+    #                                       plot = plot, export = export, lfc = lfc, alpha = alpha)
+    #     ) )
+    # }
 
     if (pathway_kegg) {
       for (i in 1:length(cntrst)) {

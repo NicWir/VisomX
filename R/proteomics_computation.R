@@ -185,21 +185,14 @@ prot.read_data <- function (data = "dat_prot.csv",
   ###   paste0(x, sep, counts)
   ### }
   suffix_all_duplicates <- function(x, sep = "_") {
-    # 1) mark which names already end in "_<digits>"
-    has_repl <- grepl(paste0(sep, "[[:digit:]]+$"), x)
-
-    # 2) among the ones without a suffix, compute per-name counts
-    x_no_repl <- x[!has_repl]
-    counts   <- ave(seq_along(x_no_repl), x_no_repl, FUN = seq_along)
-
-    # 3) only the duplicates get a "_n" appended; uniques stay as-is
-    new_no_repl <- ifelse(counts > 1,
-                          paste0(x_no_repl, sep, counts),
-                          x_no_repl)
-
-    # 4) stitch back: leave suffixed names untouched, swap in new_no_repl
-    x[!has_repl] <- new_no_repl
-    x
+    # 1) compute the occurrence index within each group
+    idx  <- ave(seq_along(x), x, FUN = seq_along)
+    # 2) compute the group size of each name
+    freq <- ave(x, x, FUN = length)
+    # 3) if a name appears more than once, append _<idx>; otherwise leave as-is
+    ifelse(freq > 1,
+           paste0(x, sep, idx),
+           x)
   }
 
 
@@ -963,6 +956,16 @@ prot.report <- function(results, report.dir = NULL, ...)
   pca <- results$pca
   dep <- results$dep
   param <- results$param
+
+  # Check if plot_volcano has been defined in the environment
+  if (exists("plot_volcano", envir = .GlobalEnv)) {
+    # if yes, plot_volcano_report is set to TRUE
+    plot_volcano_report <- TRUE
+  } else {
+    # if no, plot_volcano_report is set to FALSE
+    plot_volcano_report <- FALSE
+  }
+
   if("pora_kegg_up" %in% names(results)){
     pora_kegg_up <- results$pora_kegg_up
   }
@@ -1154,11 +1157,22 @@ filter_missval <- function (se, thr = 0)
   idx <- is.na(SummarizedExperiment::assay(se))
   bin_data[!idx] <- 1
   bin_data[idx] <- 0
-  keep <- bin_data %>% data.frame() %>% tibble::rownames_to_column() %>%
-    gather(ID, value, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(se)),
-                                              by = "ID") %>% group_by(rowname, condition) %>% dplyr::summarize(miss_val = n() -
-                                                                                                          sum(value)) %>% filter(miss_val <= thr) %>% tidyr::spread(condition,
-                                                                                                                                                             miss_val)
+  keep <- bin_data %>%
+    data.frame() %>%
+    tibble::rownames_to_column("rowname") %>%
+    tidyr::gather("ID", "value", -rowname) %>%
+    dplyr::left_join(
+      data.frame(SummarizedExperiment::colData(se)),
+      by = "ID"
+    ) %>%
+    dplyr::group_by(rowname, condition) %>%
+    dplyr::summarise(
+      miss_val = dplyr::n() - sum(value),
+      .groups = "drop"
+    ) %>%
+    dplyr::filter(miss_val <= thr) %>%
+    tidyr::spread(condition, miss_val)
+
   se_fltrd <- se[keep$rowname, ]
   return(se_fltrd)
 }

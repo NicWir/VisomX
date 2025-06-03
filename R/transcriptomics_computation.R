@@ -385,6 +385,16 @@ rna.report <- function(results, report.dir = NULL, ...){
   dds <- results$dds
   param <- results$param
   res <- results
+
+  # Check if plot_volcano has been defined in the environment
+  if (exists("plot_volcano", envir = .GlobalEnv)) {
+    # if yes, plot_volcano_report is set to TRUE
+    plot_volcano_report <- TRUE
+  } else {
+    # if no, plot_volcano_report is set to FALSE
+    plot_volcano_report <- FALSE
+  }
+
   if("pora_kegg_up" %in% names(results)){
     pora_kegg_up <- results$pora_kegg_up
   }
