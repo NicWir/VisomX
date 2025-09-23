@@ -69,6 +69,14 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           pathway_kegg = FALSE, # Perform pathway over-representation analysis with gene sets in the KEGG database
                           kegg_organism = NULL, # Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
                           custom_pathways = NULL, # Dataframe providing custom pathway annotations
+                          # GSEA parameters
+                          gsea = FALSE,
+                          gsea_gmt = NULL,
+                          gsea_pAdjustMethod = c("BH", "none"),
+                          gsea_pvalueCutoff = 0.05,
+                          gsea_minGSSize = 5,
+                          gsea_maxGSSize = 500,
+                          gsea_nPerm = 1000,
                           out.dir = NULL)
 {
   # Show error if inputs are not the required classes
@@ -82,6 +90,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           length(lfc) == 1)
 
   imp_fun <- match.arg(imp_fun)
+  gsea_pAdjustMethod <- match.arg(gsea_pAdjustMethod)
   out_dir <- out.dir
 
   # If out.dir is defined, create the directory and set it as the working directory
@@ -146,6 +155,60 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     res.pathway <- enrich_pathways(prot_dep, contrasts, alpha_pathways = alpha_pathways,
                                    pathway_kegg = pathway_kegg, kegg_organism = kegg_organism,
                                    custom_pathways = custom_pathways)
+  }
+
+  # GSEA for each contrast
+  if (gsea) {
+    # Decide which GMT to use: either gsea_gmt, or fallback to custom_pathways if it's a .gmt file
+    gmt_file_to_use <- NULL
+    if (!is.null(gsea_gmt)) {
+      gmt_file_to_use <- gsea_gmt
+    } else if (is.character(custom_pathways) && grepl("\\.gmt$", custom_pathways)) {
+      gmt_file_to_use <- custom_pathways
+    }
+    if (is.null(gmt_file_to_use)) {
+      stop("GSEA requested but no GMT file provided in 'gsea_gmt', and 'custom_pathways' is not a GMT file.")
+    }
+
+    if (!is.null(contrasts) && length(contrasts) > 0) {
+      if (!isTRUE(plot) && !isTRUE(export)) {
+        message("performing GSEA for each contrast")
+      }
+      ls_gsea <- vector("list", length(contrasts))
+      names(ls_gsea) <- contrasts
+
+      for (i in seq_along(contrasts)) {
+        # build ranked vector of fold-changes
+        fc_col <- paste0(contrasts[i], "_diff")
+        gene_list <- results$results[[fc_col]]
+        names(gene_list) <- results$results$ID
+        gene_list <- sort(gene_list, decreasing = TRUE)
+
+        set.seed(1234)
+        gsea_res <- gsea_custom(
+          geneList      = gene_list,
+          gmt_file      = gmt_file_to_use,
+          pAdjustMethod = gsea_pAdjustMethod,
+          pvalueCutoff  = gsea_pvalueCutoff,
+          minGSSize     = gsea_minGSSize,
+          maxGSSize     = gsea_maxGSSize,
+          nPerm         = gsea_nPerm
+        )
+
+        ls_gsea[[contrasts[i]]] <- gsea_res
+
+        if (!is.null(gsea_res) && nrow(as.data.frame(gsea_res)) > 0) {
+          utils::write.table(
+            as.data.frame(gsea_res),
+            paste0(getwd(), "/gsea_", contrasts[i], ".txt"),
+            row.names = FALSE, sep = "\t"
+          )
+        }
+      }
+
+      # attach GSEA results to output
+      results$gsea_results <- ls_gsea
+    }
   }
   suppress_ggrepel <- function(w) {
     if (any(grepl("ggrepel", w)))

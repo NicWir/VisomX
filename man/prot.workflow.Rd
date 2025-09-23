@@ -27,7 +27,7 @@ prot.workflow(
   volcano.label_size = 2.5,
   volcano.adjusted = TRUE,
   plot = FALSE,
-  plot_volcano,
+  plot_volcano = FALSE,
   export = FALSE,
   report = TRUE,
   report.dir = NULL,
@@ -35,6 +35,13 @@ prot.workflow(
   pathway_kegg = FALSE,
   kegg_organism = NULL,
   custom_pathways = NULL,
+  gsea = FALSE,
+  gsea_gmt = NULL,
+  gsea_pAdjustMethod = c("BH", "none"),
+  gsea_pvalueCutoff = 0.05,
+  gsea_minGSSize = 5,
+  gsea_maxGSSize = 500,
+  gsea_nPerm = 1000,
   out.dir = NULL
 )
 }
@@ -81,7 +88,7 @@ prot.workflow(
 
 \item{plot}{(Logical) Show the generated plots in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).}
 
-\item{plot_volcano}{(Logical) Show the volcano plot in the \code{Plots} pane of RStudio (\code{TRUE}) or not \code{FALSE}).}
+\item{plot_volcano}{(Logical) Generate volcano plots for each defined contrast (\code{TRUE}) or not \code{FALSE}).}
 
 \item{export}{(Logical) Exported the generated plots as PNG and PDF files (\code{TRUE}) or not \code{FALSE}).}
 

@@ -327,15 +327,18 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
         stop("invalid filter threshold 'min' applied",
              "\nRun filter() with a percent ranging from 0 to 1")
       }
-      bin_data <- SummarizedExperiment::assay(se)
-      idx <- is.na(SummarizedExperiment::assay(se))
-      bin_data[!idx] <- 1
-      bin_data[idx] <- 0
-      keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
-        gather(ID, value, -rowname) %>% group_by(rowname) %>%
-        dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
-        filter(frac >= min)
-      filtered <- se[keep$rowname, ]
+      # bin_data <- SummarizedExperiment::assay(se)
+      # idx <- is.na(SummarizedExperiment::assay(se))
+      # bin_data[!idx] <- 1
+      # bin_data[idx] <- 0
+      # keep <- bin_data %>% as.data.frame() %>% tibble::rownames_to_column() %>%
+      #   gather(ID, value, -rowname) %>% group_by(rowname) %>%
+      #   dplyr::summarize(n = n(), valid = sum(value), frac = valid/n) %>%
+      #   filter(frac >= min)
+      # filtered <- se[keep$rowname, ]
+      mat <- SummarizedExperiment::assay(se)
+      keep <- rowMeans(!is.na(mat)) >= min
+      filtered <- se[keep, ]
     }
   } else {
     filtered <- se
@@ -344,6 +347,19 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
     number_removed <- nrow(SummarizedExperiment::assay(se)) - nrow(SummarizedExperiment::assay(filtered))
     cat(paste0(number_removed, " out of ",
                nrow(SummarizedExperiment::assay(se)), " genes were removed from the dataset due to missing values.\n\n"))
+
+    # Get indices of removed rows
+    removed_idx <- base::setdiff(rownames(se), rownames(filtered))
+
+    # Randomly pick up to 10
+    sample_rows <- sample(removed_idx, min(10, length(removed_idx)))
+
+    # Extract assay values for those rows
+    preview <- SummarizedExperiment::assay(se)[sample_rows, , drop = FALSE]
+
+    cat("Random sample of removed genes:\n")
+    print(preview)
+
     filtered@metadata$n.filtered <- number_removed
   }
   filtered@metadata$filt_type <- type
@@ -417,15 +433,16 @@ rna.report <- function(results, report.dir = NULL, ...){
   dir.create(wd, showWarnings = F)
   message("Save RData object")
   save(results, file = paste(wd, "results.RData", sep = "/"))
-  for (i in 1:length(.libPaths()))
-  {
-    VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
-    if (length(VisomX.ndx) > 0)
-    {
-      Report.wd <- paste0(.libPaths()[i], "/VisomX")
+  # Prefer local repo template if available; else use installed package copy
+  local_rmd <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
+  if (file.exists(local_rmd)) {
+    file <- local_rmd
+  } else {
+    file <- system.file("Report_RNA.Rmd", package = "VisomX")
+    if (!nzchar(file) || !file.exists(file)) {
+      stop("Report_RNA.Rmd not found in local repo or installed package.")
     }
   }
-  file <- paste0(Report.wd, "/Report_RNA.Rmd")
   #file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,

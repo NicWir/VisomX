@@ -43,7 +43,22 @@
 #' @param pathway_kegg Perform pathway over-representation analysis with gene sets in the KEGG database
 #' @param kegg_organism Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')
 #' @param custom_pathways Dataframe providing custom pathway annotations.
+#' @param sample_covariates Optional data.frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns will be used for correlation analysis.
+#' @param correlate_genes Logical; if TRUE compute per-gene correlations vs provided numeric sample covariates on transformed (rlog/vst) expression values.
+#' @param correlate_pathways Logical; if TRUE compute per-pathway correlations (mean expression per pathway) vs covariates. Requires `custom_pathways` as gene set definition (data.frame with Pathway/Accession or GMT filepath).
+#' @param pathway_min_genes Minimum number of genes required in a pathway to compute a pathway score (default 5).
+#' @param correlation_method Correlation method for covariate analyses: "spearman" (default) or "pearson".
+#' @param correlation_p_adjust Multiple testing adjustment method applied within each covariate (default "BH").
+#' @param gsea Perform GSEA (Gene Set Enrichment Analysis) for each defined contrast.
+#' @param gsea_gmt Path to a GMT file containing gene sets for GSEA.
+#' @param gsea_pAdjustMethod Method for adjusting p-values in GSEA. Options are "BH" (Benjamini-Hochberg) or "none".
+#' @param gsea_pvalueCutoff P-value cutoff for GSEA results.
+#' @param gsea_minGSSize Minimum size of gene sets to be considered in GSEA.
+#' @param gsea_maxGSSize Maximum size of gene sets to be considered in GSEA.
 #' @param quiet Suppress messages and warnings.
+#' @param allow_no_replicates Allow analysis of conditions with no replicates (default: TRUE).
+#' @param de_if_no_reps Strategy for differential expression when no replicates per condition. One of "none" or "edgeR_fixed" (default: "edgeR_fixed").
+#' @param assumed_dispersion Fixed dispersion value used by edgeR when `de_if_no_reps = "edgeR_fixed"` (default: 0.1).
 #'
 #' @return The function returns a SummarizedExperiment object with added columns for log2 fold change, p-values and adjusted p-values for each comparison.
 #' It also includes a column for significant genes for each comparison and a column for significant genes overall.
@@ -87,13 +102,33 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                          pathway_kegg = FALSE,
                          kegg_organism = NULL,
                          custom_pathways = NULL,
-                         quiet = FALSE
+                         # Sample covariate correlation parameters
+                         sample_covariates = NULL,              # data.frame with rownames = sample IDs, numeric columns are used
+                         correlate_genes = FALSE,               # compute gene-level correlations vs covariates
+                         correlate_pathways = FALSE,            # compute pathway-level correlations vs covariates (requires custom_pathways)
+                         pathway_min_genes = 5,                 # min genes for pathway score
+                         correlation_method = c("spearman","pearson"),
+                         correlation_p_adjust = "BH",
+                         # GSEA parameters
+                         gsea = FALSE,
+                         gsea_gmt = NULL,
+                         gsea_pAdjustMethod = c("BH", "none"),
+                         gsea_pvalueCutoff = 0.05,
+                         gsea_minGSSize = 5,
+                         gsea_maxGSSize = 500,
+                         quiet = FALSE,
+                         allow_no_replicates = TRUE,
+                         de_if_no_reps = c("edgeR_fixed","none"),
+                         assumed_dispersion = 0.1
 )
 {
   # Show error if inputs are not the required classes
   imp_fun <- match.arg(imp_fun)
   shrink.method <- match.arg(shrink.method)
   pAdjustMethod <- match.arg(pAdjustMethod)
+  gsea_pAdjustMethod <- match.arg(gsea_pAdjustMethod)
+  de_if_no_reps <- match.arg(de_if_no_reps)
+  correlation_method <- match.arg(correlation_method)
   if(is.integer(alpha)) alpha <- as.numeric(alpha)
   if(is.integer(lfc)) lfc <- as.numeric(lfc)
   assertthat::assert_that(is.character(imp_fun),
@@ -124,7 +159,8 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   message("Number of genes before pre-filtering: ", nrow(assay(se)))
   keep <- MatrixGenerics::rowSums(assay(se) >= 10, na.rm = TRUE) >= 3
   se <- se[keep, ]
-  message("Number of genes after pre-filtering: ", nrow(assay(se)))
+  message("Number of genes after pre-filtering for counts ≥ 10 in ≥ 3 samples: ", nrow(assay(se)))
+
   # Impute missing values
   if (imp_fun == "MinProb"){
     se_imp <- rna.impute(se, fun = imp_fun, q = q)
@@ -133,6 +169,13 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   } else {
     se_imp <- rna.impute(se, fun = imp_fun)
   }
+
+  # Second Pre-filtering:  keep only rows that have at least 3 samples with a CPM of 1 or more
+  dge   <- edgeR::DGEList(counts = assay(se_imp))
+  cpm_m <- edgeR::cpm(dge)
+  keep2 <- rowSums(cpm_m >= 1) >= 3        # CPM ≥ 1 in ≥ 3 samples
+  se_imp    <- se_imp[keep2, ]
+  message("Number of genes after pre-filtering for CPM ≥ 1 in ≥ 3 samples: ", nrow(assay(se_imp)))
   # Create DESeqDataSet and define contrasts
   if(!quiet) message(">> Creating DESeqDataSet object <<")
   conditions <- as.character(unique(se$condition))
@@ -171,11 +214,18 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
       flip <- grep(paste("^", control, "_vs_", sep = ""),
                    cntrst)
       if (length(flip) >= 1) {
-        cntrst[flip] <- cntrst[flip] %>% gsub(paste(control,
-                                                    "_vs_", sep = ""), "", .) %>%
-          paste("_vs_", control, sep = "")
+  # rewrite without magrittr placeholder to avoid visible binding NOTE
+  tmp_flip <- gsub(paste(control, "_vs_", sep = ""), "", cntrst[flip])
+  cntrst[flip] <- paste(tmp_flip, "_vs_", control, sep = "")
       }
     }
+  }
+
+  # --- detect replicate structure ---
+  n_per_cond <- table(SummarizedExperiment::colData(se_imp)$condition)
+  singleton_mode <- !all(n_per_cond >= 2)
+  if (singleton_mode && !allow_no_replicates) {
+    stop("No biological replicates per condition. Set allow_no_replicates=TRUE or add replicates.", call. = FALSE)
   }
 
 
@@ -183,170 +233,162 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   keep <- MatrixGenerics::rowSums(BiocGenerics::counts(ddsSE) >= 5) >= 3
   ddsSE <- ddsSE[keep,]
 
-  # Differential expression analysis; Performs 'replaceOutliers' (replaces outlier counts flagged by extreme Cook's distances)
-  dds <- DESeq2::DESeq(ddsSE, sfType = "ratio", quiet = quiet)
-
-  # Perform PCA Analysis
-  if(!quiet) message("performing PCA analysis")
-  norm.counts <- BiocGenerics::counts(dds, normalized = TRUE)
-
-  if ( trans_method == "rlog"){
-    rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'parametric'), error = function(e) { rlog(dds, fitType = 'parametric') })
+  # Fit model if replicates exist; otherwise run normalization + transform only
+  if (!singleton_mode) {
+    # Differential expression analysis; Performs 'replaceOutliers'
+    dds <- DESeq2::DESeq(ddsSE, sfType = "ratio", quiet = quiet)
+    if(!quiet) message("performing PCA analysis")
+    norm.counts <- BiocGenerics::counts(dds, normalized = TRUE)
+    if ( trans_method == "rlog"){
+      rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'parametric'),
+                              error = function(e) { DESeq2::rlog(dds, fitType = 'parametric') })
+    } else {
+      rlog.counts <- tryCatch(DESeq2::vst(dds, fitType = 'parametric'),
+                              error = function(e) { DESeq2::rlog(dds, fitType = 'parametric') })
+    }
+  } else {
+    if(!quiet) message("No replicates detected. Skipping DESeq model fit. Performing size-factor normalization and blind transform.")
+    # Estimate size factors only
+    dds <- DESeq2::estimateSizeFactors(ddsSE)
+    norm.counts <- BiocGenerics::counts(dds, normalized = TRUE)
+    # Use blind transformation which does not require replicates
+    if ( trans_method == "rlog"){
+      rlog.counts <- tryCatch(DESeq2::rlog(dds, fitType = 'parametric', blind = TRUE),
+                              error = function(e) { DESeq2::rlog(dds, fitType = 'parametric', blind = TRUE) })
+    } else {
+      rlog.counts <- tryCatch(DESeq2::vst(dds, fitType = 'parametric', blind = TRUE),
+                              error = function(e) { DESeq2::rlog(dds, fitType = 'parametric', blind = TRUE) })
+    }
   }
-  else {
-    rlog.counts <- tryCatch(DESeq2::vst(dds, fitType = 'parametric'), error = function(e) { rlog(dds, fitType = 'parametric') })
-  }
-  rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts))
+  rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts), center=TRUE,scale=TRUE)
 
   # Create list with test results for defined contrasts
   if(!quiet) message("assembling results for defined contrasts")
-  results <- list()
-  for(i in 1:length(cntrst)){
-    trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
-    ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
-    if(!is.null(altHypothesis)){
-      results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
-                                      independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
-                                      altHypothesis = altHypothesis, lfcThreshold = lfc,
-                                      alpha = alpha.independent,
-                                      filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+
+  if (!singleton_mode) {
+    results <- list()
+  for(i in seq_along(cntrst)){
+      trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
+      ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
+      if(!is.null(altHypothesis)){
+        results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
+                                        independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
+                                        altHypothesis = altHypothesis, lfcThreshold = lfc,
+                                        alpha = alpha.independent,
+                                        filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+      } else {
+        results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
+                                        independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
+                                        alpha = alpha.independent,
+                                        filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+      }
+    }
+    names(results) <- cntrst
+
+    # Store condition levels in object
+    levels <- levels(ddsSE$condition)
+
+    # --- Revised lfcShrink block ---
+    if(lfcShrink == TRUE){
+      if(shrink.method == "apeglm"){
+        if(!quiet) message("performing lfc shrinkage with method 'apeglm'")
+        results_shrink <- list()
+        for(i in seq_along(cntrst)) {
+          parts <- str_split(cntrst[i], "_vs_")[[1]]
+          trmt <- parts[1]
+          ctrl <- parts[2]
+          dds_temp <- dds
+          dds_temp$condition <- relevel(dds_temp$condition, ref = ctrl)
+          dds_temp <- DESeq2::nbinomWaldTest(dds_temp, quiet = TRUE)
+          coef_name <- paste0("condition", trmt)
+          coef_index <- match(coef_name, DESeq2::resultsNames(dds_temp))
+          if(is.na(coef_index)) {
+            stop("Coefficient ", coef_name, " not found in resultsNames(dds_temp)")
+          }
+          shrink_res <- DESeq2::lfcShrink(dds_temp, coef = coef_index, type = "apeglm", quiet = TRUE)
+          results_shrink[[ cntrst[i] ]] <- shrink_res
+        }
+      } else {
+        if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
+        results_shrink <- list()
+        for(i in seq_along(cntrst)) {
+          parts <- str_split(cntrst[i], "_vs_")[[1]]
+          trmt <- parts[1]
+          ctrl <- parts[2]
+          results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl),
+                                                   type = shrink.method,
+                                                   lfcThreshold = ifelse(shrink.method == "normal", lfc, 0),
+                                                   quiet = TRUE)
+        }
+        names(results_shrink) <- cntrst
+      }
+      for(i in seq_along(cntrst)){
+        results[[ cntrst[i] ]]$lfc.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$log2FoldChange)
+        results[[ cntrst[i] ]]$lfcSE.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$lfcSE)
+      }
+    } # --- End revised lfcShrink block ---
+
+  } else {
+    # singleton_mode: perform optional DE using edgeR with fixed dispersion
+    if (de_if_no_reps == "edgeR_fixed") {
+      if(!quiet) message(sprintf("No replicates: running edgeR GLM with fixed dispersion=%.3f", assumed_dispersion))
+      grp <- droplevels(se_imp$condition)
+      dge <- edgeR::DGEList(counts = SummarizedExperiment::assay(se_imp), group = grp)
+      dge <- edgeR::calcNormFactors(dge, method = "TMM")
+      design_edge <- stats::model.matrix(~0 + grp)
+      colnames(design_edge) <- levels(grp)
+      fit <- edgeR::glmFit(dge, design_edge, dispersion = assumed_dispersion)
+
+      results <- setNames(vector("list", length(cntrst)), cntrst)
+      for (i in seq_along(cntrst)) {
+        parts <- str_split(cntrst[i], "_vs_")[[1]]
+        trmt <- parts[1]
+        ctrl <- parts[2]
+        # L <- edgeR::makeContrasts(contrasts = paste0(trmt, "-", ctrl), levels = design_edge)
+        #lrt <- edgeR::glmLRT(fit, contrast = L[,1])
+        contr <- rep(0, ncol(design_edge))
+        names(contr) <- colnames(design_edge)
+        contr[trmt] <- 1
+        contr[ctrl] <- -1
+        lrt <- edgeR::glmLRT(fit, contrast = contr)
+        tt  <- edgeR::topTags(lrt, n = Inf)$table
+        tt  <- tt[match(rownames(se_imp), rownames(tt)), ]
+        results[[i]] <- data.frame(
+          log2FoldChange = tt$logFC,
+          lfcSE = NA_real_,
+          pvalue = tt$PValue,
+          padj = stats::p.adjust(tt$PValue, method = pAdjustMethod),
+          row.names = rownames(se_imp)
+        )
+      }
     } else {
-      results[[i]] <- DESeq2::results(dds, contrast = c("condition", trmt, ctrl),
-                                      independentFiltering = ifelse(!is.null(alpha.independent), TRUE, FALSE),
-                                      alpha = alpha.independent,
-                                      filterFun = ifelse(pAdjustMethod == "IHW", IHW::ihw, NULL))
+      if(!quiet) message("No replicates: skipping DE as requested (de_if_no_reps='none').")
+      results <- list()
     }
   }
-  names(results) <- cntrst
 
-  # Store condition levels in object
-  levels <- levels(ddsSE$condition)
-
-  # # Creation of shrunken results list after re-running nbinomWaldTest with re-ordered conditions
-  # if(lfcShrink == TRUE){
-  #   if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
-  #   results_shrink <- list()
-  #   if(shrink.method == "apeglm"){
-  #     cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
-  #     cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
-  #     names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
-  #     if(length(cntrst_ndx) > 0){
-  #       for(i in 1:length(cntrst_ndx)){
-  #         results_shrink[[i]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[i], gsub("condition_", "", DESeq2::resultsNames(dds))),
-  #                                                  type = "apeglm", returnList = F, quiet = T, )
-  #       }
-  #     }
-  #     names(results_shrink) <- names(cntrst_ndx)
-  #     if (type == "all") {
-  #       for(i in 2:length(levels)){
-  #         dds$condition <- relevel(dds$condition, levels[i])
-  #         dds <- DESeq2::nbinomWaldTest(object = dds, quiet = T)
-  #         cntrst_ndx <- lapply(2:length(DESeq2::resultsNames(dds)), function(x) match(gsub("condition_", "", DESeq2::resultsNames(dds)[x]), cntrst))
-  #         cntrst_ndx <- cntrst_ndx[!sapply(cntrst_ndx,is.na)]
-  #         names(cntrst_ndx) <- cntrst[unlist(cntrst_ndx)]
-  #         if(length(cntrst_ndx) > 0){
-  #           for(j in 1:length(cntrst_ndx)){
-  #             results_shrink[[length(results_shrink)+1]] <- DESeq2::lfcShrink(dds, coef = match(names(cntrst_ndx)[j], gsub("condition_", "", DESeq2::resultsNames(dds))),
-  #                                                                             type = "apeglm", returnList = F, quiet = T)
-  #             names(results_shrink)[length(results_shrink)] <- names(cntrst_ndx)[j]
-  #           }
-  #         }
-  #       }
-  #     }
-  #   }
-  #   if(shrink.method == "ashr" || shrink.method == "normal"){
-  #     for (i in 1:length(results)) {
-  #       trmt <- str_split(cntrst[i], "_vs_")[[1]][1]
-  #       ctrl <- str_split(cntrst[i], "_vs_")[[1]][2]
-  #       results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl), type = shrink.method,
-  #                                                lfcThreshold = ifelse(shrink.method == "normal", lfc, 0), quiet = T)
-  #     }
-  #     names(results_shrink) <- cntrst
-  #   }
-  #   # add shrunken lfc values to results object
-  #   for(i in 1:length(cntrst)){
-  #     results[[match(cntrst[i], names(results))]]$lfc.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$log2FoldChange)
-  #     results[[match(cntrst[i], names(results))]]$lfcSE.shrink <- as.vector(results_shrink[[match(cntrst[i], names(results_shrink))]]$lfcSE)
-  #   }
-  # } # if(lfcShrink == TRUE)
-
-  # --- Revised lfcShrink block ---
-  if(lfcShrink == TRUE){
-    if(shrink.method == "apeglm"){
-      if(!quiet) message("performing lfc shrinkage with method 'apeglm'")
-      # For apeglm, we need to use a coefficient-based approach.
-      # Loop over each contrast, relevel dds so that the control becomes the reference,
-      # re-run the Wald test, and then call lfcShrink using the appropriate coefficient.
-      results_shrink <- list()
-      for(i in seq_along(cntrst)) {
-        parts <- str_split(cntrst[i], "_vs_")[[1]]
-        trmt <- parts[1]
-        ctrl <- parts[2]
-        # Make a temporary copy of dds
-        dds_temp <- dds
-        # Relevel so that ctrl is the reference level
-        dds_temp$condition <- relevel(dds_temp$condition, ref = ctrl)
-        # Re-run the Wald test after releveling
-        dds_temp <- DESeq2::nbinomWaldTest(dds_temp, quiet = TRUE)
-        # In an intercept model, the log fold change is given by the coefficient for the treatment level,
-        # which will have the name "condition<trmt>"
-        coef_name <- paste0("condition", trmt)
-        coef_index <- match(coef_name, DESeq2::resultsNames(dds_temp))
-        if(is.na(coef_index)) {
-          stop("Coefficient ", coef_name, " not found in resultsNames(dds_temp)")
+  # add significant column for each contrast, if any
+  if (length(results) > 0) {
+    for(i in seq_along(results)){
+      if ("lfc.shrink" %in% colnames(results[[i]])) {
+        results[[i]]$significant <- if(!is.null(altHypothesis)) {
+          results[[i]]$padj <= alpha
+        } else {
+          abs(results[[i]]$lfc.shrink) >= lfc & results[[i]]$padj <= alpha
         }
-        shrink_res <- DESeq2::lfcShrink(dds_temp, coef = coef_index, type = "apeglm", quiet = TRUE)
-        results_shrink[[ cntrst[i] ]] <- shrink_res
-      }
-    } else {
-      # For "ashr" or "normal", we can use the contrast argument directly.
-      if(!quiet) message(paste0("performing lfc shrinkage with method '", shrink.method, "'"))
-      results_shrink <- list()
-      for(i in seq_along(cntrst)) {
-        parts <- str_split(cntrst[i], "_vs_")[[1]]
-        trmt <- parts[1]
-        ctrl <- parts[2]
-        results_shrink[[i]] <- DESeq2::lfcShrink(dds, contrast = c("condition", trmt, ctrl),
-                                                 type = shrink.method,
-                                                 lfcThreshold = ifelse(shrink.method == "normal", lfc, 0),
-                                                 quiet = TRUE)
-      }
-      names(results_shrink) <- cntrst
-    }
-    # Add shrunken lfc values to results object
-    for(i in seq_along(cntrst)){
-      results[[ cntrst[i] ]]$lfc.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$log2FoldChange)
-      results[[ cntrst[i] ]]$lfcSE.shrink <- as.vector(results_shrink[[ cntrst[i] ]]$lfcSE)
-    }
-  } # --- End revised lfcShrink block ---
-
-  # add significant column for each contrast
-  for(i in 1:length(cntrst)){
-    if(lfcShrink == TRUE){
-      if(!is.null(altHypothesis)){
-        results[[match(cntrst[i], names(results))]]$significant <-
-          results[[match(cntrst[i], names(results))]]$padj <= alpha
       } else {
-        results[[match(cntrst[i], names(results))]]$significant <-
-          abs(results[[match(cntrst[i], names(results))]]$lfc.shrink) >= lfc &
-          results[[match(cntrst[i], names(results))]]$padj <= alpha
-      }
-    }
-    else{
-      if(!is.null(altHypothesis)){
-        results[[match(cntrst[i], names(results))]]$significant <-
-          results[[match(cntrst[i], names(results))]]$padj <= alpha
-      } else {
-        results[[match(cntrst[i], names(results))]]$significant <-
-          abs(results[[match(cntrst[i], names(results))]]$log2FoldChange) >= lfc &
-          results[[match(cntrst[i], names(results))]]$padj <= alpha
+        results[[i]]$significant <- if(!is.null(altHypothesis)) {
+          results[[i]]$padj <= alpha
+        } else {
+          abs(results[[i]]$log2FoldChange) >= lfc & results[[i]]$padj <= alpha
+        }
       }
     }
   }
 
   if(!quiet) message("gathering results into list")
   # store results values for each contrast in dds object
-  for(i in 1:length(results)){
+  for(i in seq_along(results)){
     SummarizedExperiment::rowData(dds)[,paste0("lfc.", names(results)[i])] <- results[[i]]$log2FoldChange
     SummarizedExperiment::rowData(dds)[,paste0("lfcSE.", names(results)[i])] <- results[[i]]$lfcSE
     if(lfcShrink == TRUE){
@@ -366,7 +408,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   }
   if(!quiet) message("Significantly different genes identified:")
   if(!quiet){
-    for (i in 1:length(cntrst)) {
+  for (i in seq_along(cntrst)) {
       message(paste0("* ",
                      nrow(dds[SummarizedExperiment::rowData(dds)[[paste0("significant.", cntrst[i])]][!is.na(SummarizedExperiment::rowData(dds)[[paste0("significant.", cntrst[i])]])],]),
                      " genes for contrast ", cntrst[i], "\n"))
@@ -381,18 +423,40 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     res.pathway <- NA
   }
 
-  # Write output
-  df <- data.frame(SummarizedExperiment::rowData(dds))
-  res.table <- data.frame("gene_symbol" = df$ID,
-                          "gene_name" = df$name,
-                          "imputed" = df$imputed,
-                          "baseMean" = df$baseMean,
-                          "baseVar" = df$baseVar,
-                          df[,grep("lfc\\.", colnames(df))[1]:match("significant", colnames(df))]
+  # Write output (robust to missing columns)
+  df <- data.frame(SummarizedExperiment::rowData(dds), check.names = FALSE)
+  n_df <- nrow(df)
+
+  # Ensure expected metadata columns exist
+  if (!"ID"   %in% names(df)) df$ID   <- rownames(df)
+  if (!"name" %in% names(df)) df$name <- rownames(df)
+  if (!"imputed"  %in% names(df)) df$imputed  <- NA
+  if (!"baseMean" %in% names(df)) df$baseMean <- rep(NA_real_, n_df)
+  if (!"baseVar"  %in% names(df)) df$baseVar  <- rep(NA_real_, n_df)
+
+  # Collect DE result columns if present
+  lfc_cols <- grep("^lfc\\.", names(df))
+  end_sig  <- match("significant", names(df))
+  if (length(lfc_cols) > 0 && !is.na(end_sig)) {
+    res_cols <- df[, lfc_cols[1]:end_sig, drop = FALSE]
+  } else {
+    res_cols <- data.frame()
+  }
+
+  res.table <- cbind(
+    data.frame(
+      gene_symbol = df$ID,
+      gene_name   = df$name,
+      imputed     = df$imputed,
+      baseMean    = df$baseMean,
+      baseVar     = df$baseVar,
+      check.names = FALSE
+    ),
+    res_cols
   )
+
   if(!quiet) message(paste0("Save results as tab-delimited table to: ", getwd(), "/results.txt"))
-  utils::write.table(res.table, paste(getwd(), "results.txt",
-                                      sep = "/"), row.names = FALSE, sep = "\t")
+  utils::write.table(res.table, file.path(getwd(), "results.txt"), row.names = FALSE, sep = "\t")
 
   param <- data.frame(type, design, altHypothesis = ifelse(!is.null(altHypothesis), altHypothesis, NA), controlGenes = ifelse(is.null(controlGenes), "none", controlGenes), pAdjustMethod,
                       lfcShrink, shrink.method, alpha, lfc, check.names = FALSE)
@@ -401,16 +465,96 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
               dds = dds, pca = rna.pca,
               results = results, param = param)
 
+  #### ----- Sample covariate correlations (gene-level & pathway-level) ----- ####
+  if (!is.null(sample_covariates) && (correlate_genes || correlate_pathways)) {
+    if (!all(rownames(sample_covariates) %in% colnames(rlog.counts))) {
+      warning("Some rownames in 'sample_covariates' do not match sample names; they will be ignored.")
+    }
+    # Keep only samples present in expression matrix
+    common_samples <- intersect(rownames(sample_covariates), colnames(rlog.counts))
+    if (length(common_samples) < 3) {
+      warning("<3 overlapping samples between expression data and 'sample_covariates'; skipping correlation analysis.")
+    } else {
+      cov_df <- sample_covariates[common_samples, , drop = FALSE]
+      expr_mat <- SummarizedExperiment::assay(rlog.counts)
+      expr_mat <- expr_mat[, common_samples, drop = FALSE]
+
+      # Gene-level correlations
+      if (correlate_genes) {
+        if (!quiet) message("Computing gene-level correlations with sample covariates")
+        gene_cor <- tryCatch(
+          correlate_matrix_with_covariates(
+            mat = expr_mat,
+            covariates = cov_df,
+            method = correlation_method,
+            adjust_method = correlation_p_adjust,
+            feature_type = "gene"
+          ),
+          error = function(e){ warning("Gene correlation failed: ", e$message); NULL }
+        )
+        res$gene_covariate_correlations <- gene_cor
+        if (!is.null(gene_cor) && export) {
+          utils::write.table(gene_cor, file.path(getwd(), "gene_covariate_correlations.txt"), sep = "\t", row.names = FALSE)
+        }
+      }
+
+      # Pathway-level correlations (requires custom_pathways gene sets)
+      if (correlate_pathways) {
+        if (is.null(custom_pathways)) {
+          warning("'correlate_pathways=TRUE' requires 'custom_pathways'; skipping pathway correlation.")
+        } else {
+          if (!quiet) message("Computing pathway-level correlations with sample covariates")
+          # Accept either dataframe with Pathway/Accession or GMT filepath
+          pathway_list <- list()
+          if (is.data.frame(custom_pathways)) {
+            if (!all(c("Pathway","Accession") %in% colnames(custom_pathways))) {
+              warning("custom_pathways lacks 'Pathway' and 'Accession' columns; skipping pathway correlation.")
+            } else {
+              pathway_list <- lapply(seq_len(nrow(custom_pathways)), function(i){
+                acc <- custom_pathways$Accession[i]
+                # split by common delimiters
+                unlist(strsplit(acc, "[,;/] ?| // "))
+              })
+              names(pathway_list) <- custom_pathways$Pathway
+            }
+          } else if (is.character(custom_pathways) && length(custom_pathways) == 1 && grepl("\\.gmt$", custom_pathways) && file.exists(custom_pathways)) {
+            gmt_df <- clusterProfiler::read.gmt(custom_pathways)
+            pathway_list <- split(gmt_df$gene, gmt_df$term)
+          } else {
+            warning("Unsupported 'custom_pathways' format for pathway correlation; expected data.frame or GMT filepath.")
+          }
+          if (length(pathway_list) > 0) {
+            pw_cor <- tryCatch(
+              correlate_pathways(
+                expr_mat = expr_mat,
+                pathway_list = pathway_list,
+                covariates = cov_df,
+                min_genes = pathway_min_genes,
+                method = correlation_method,
+                adjust_method = correlation_p_adjust
+              ),
+              error = function(e){ warning("Pathway correlation failed: ", e$message); NULL }
+            )
+            res$pathway_covariate_correlations <- pw_cor
+            if (!is.null(pw_cor) && export) {
+              utils::write.table(pw_cor, file.path(getwd(), "pathway_covariate_correlations.txt"), sep = "\t", row.names = FALSE)
+            }
+          }
+        }
+      }
+    }
+  }
+
   if (pathway_enrichment == T && pathway_kegg) {
     res <- c(res, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
     if(!quiet) message(paste0("Writing results of KEGG pathway enrichment analysis to: ", getwd(), "/pora_kegg_contrast...txt"))
-    for(i in 1:length(res.pathway$ls.pora_kegg_up)){
+  for(i in seq_along(res.pathway$ls.pora_kegg_up)){
       if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
         utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
                                                                           sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
-    for(i in 1:length(res.pathway$ls.pora_kegg_dn)){
+  for(i in seq_along(res.pathway$ls.pora_kegg_dn)){
       if(!is.null(res.pathway$ls.pora_kegg_dn[[i]])){
         utils::write.table(res.pathway$ls.pora_kegg_dn[[i]]@result, paste(getwd(), paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_dn)[i], "_down.txt"),
                                                                           sep = "/"), row.names = FALSE, sep = "\t")
@@ -420,18 +564,72 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
     res <- c(res, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
     if(!quiet) message(paste0("Writing results of custom pathway enrichment analysis to: ", getwd(), "/pora_custom_contrast...txt"))
-    for(i in 1:length(res.pathway$ls.pora_custom_up)){
+  for(i in seq_along(res.pathway$ls.pora_custom_up)){
       if(!is.null(res.pathway$ls.pora_custom_up[[i]])){
         utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),
                                                                             sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
-    for(i in 1:length(res.pathway$ls.pora_custom_dn)){
+  for(i in seq_along(res.pathway$ls.pora_custom_dn)){
       if(!is.null(res.pathway$ls.pora_custom_dn[[i]])){
         utils::write.table(res.pathway$ls.pora_custom_dn[[i]]@result, paste(getwd(), paste0("pora_custom_", names(res.pathway$ls.pora_custom_dn)[i], "_down.txt"),
                                                                             sep = "/"), row.names = FALSE, sep = "\t")
       }
     }
+  }
+
+  # GSEA for each contrast (after ORA output)
+  if (gsea) {
+    # Decide which GMT to use: either gsea_gmt, or fallback to custom_pathways if it's a .gmt file
+    gmt_file_to_use <- NULL
+    if (!is.null(gsea_gmt)) {
+      gmt_file_to_use <- gsea_gmt
+    } else if (is.character(custom_pathways) && grepl("\\.gmt$", custom_pathways)) {
+      gmt_file_to_use <- custom_pathways
+    }
+    if (is.null(gmt_file_to_use)) {
+      stop("GSEA requested but no GMT file provided in 'gsea_gmt', and 'custom_pathways' is not a GMT file.")
+    }
+
+    if (!quiet) message("performing GSEA for each contrast")
+    ls_gsea_up <- vector("list", length(cntrst))
+    names(ls_gsea_up) <- cntrst
+    #browser()
+
+    for (i in seq_along(cntrst)) {
+      ## 1) extract ranked vector from DESeq2 results
+      res_df <- as.data.frame(results[[cntrst[i]]])
+      gene_list <- res_df$log2FoldChange
+      names <- rownames(res_df)
+      IDs <- SummarizedExperiment::rowData(dds)[match(names, SummarizedExperiment::rowData(dds)$name), "ID"]
+      names(gene_list) <- IDs
+      gene_list <- sort(gene_list, decreasing = TRUE)
+
+      set.seed(1234)
+      ## 2) run gsea_custom()
+      gsea_res <- gsea_custom(
+        geneList      = gene_list,
+        gmt_file      = gmt_file_to_use,
+        pAdjustMethod = gsea_pAdjustMethod,
+        pvalueCutoff  = gsea_pvalueCutoff,
+        minGSSize     = gsea_minGSSize,
+        maxGSSize     = gsea_maxGSSize
+      )
+
+      ls_gsea_up[[cntrst[i]]] <- gsea_res
+
+      ## 3) write to disk if non‐empty
+      if (!is.null(gsea_res) && nrow(as.data.frame(gsea_res)) > 0) {
+        utils::write.table(
+          as.data.frame(gsea_res),
+          paste0(getwd(), "/gsea_", cntrst[i], ".txt"),
+          row.names = FALSE, sep = "\t"
+        )
+      }
+    }
+
+    ## 4) attach to return list
+    res$gsea_results <- ls_gsea_up
   }
 
   # Create Plots
@@ -446,20 +644,26 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     }
     #### Box plot of Cook's distance for each sample (outlier detection)
     if(plot==TRUE){
-      par(mar=c(8,5,2,2))
-      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+      if (!singleton_mode) {
+        par(mar=c(8,5,2,2))
+  boxplot(log10(SummarizedExperiment::assays(dds)[["cooks"]]), range=0, las=2)
+      }
     }
     if (export == TRUE){
       grDevices::pdf(paste0("Plots/BoxPlot_CooksDistance", ".pdf"),
                      width = 6*length(dds$condition)/20, height = 6)
-      par(mar=c(8,5,2,2))
-      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+      if (!singleton_mode) {
+        par(mar=c(8,5,2,2))
+  boxplot(log10(SummarizedExperiment::assays(dds)[["cooks"]]), range=0, las=2)
+      }
       grDevices::dev.off()
 
       grDevices::png(paste0("Plots/BoxPlot_CooksDistance", ".png"),
                      width = 6*length(dds$condition)/20, height = 6, units = 'in', res = 300)
-      par(mar=c(8,5,2,2))
-      boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
+      if (!singleton_mode) {
+        par(mar=c(8,5,2,2))
+  boxplot(log10(SummarizedExperiment::assays(dds)[["cooks"]]), range=0, las=2)
+      }
       grDevices::dev.off()
     }
     try(suppressMessages(
@@ -467,7 +671,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     ))
 
     se_log2 <- se
-    assay(se_log2) <- log2(assay(se_log2))
+  SummarizedExperiment::assay(se_log2) <- log2(SummarizedExperiment::assay(se_log2))
     try(suppressMessages(
       prot.plot_detect(se_log2, basesize = 10, plot = plot, export = export)
     ))
@@ -515,7 +719,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     } else {
       volcano_exporting <- FALSE
     }
-    if (volcano_plotting == TRUE | volcano_exporting == TRUE) {
+  if (volcano_plotting || volcano_exporting) {
       # for (i in 1:length(contrasts)){
       #   suppressMessages(
       #     suppressWarnings(
@@ -524,7 +728,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
       #                         plot = volcano_plotting, export = volcano_exporting, lfc = lfc, alpha = alpha)
       #     ) )
       # }
-      for (i in 1:length(cntrst)){
+  for (i in seq_along(cntrst)){
         suppressMessages(
           suppressWarnings(
             volcano.tmp <- rna.plot_volcano(dds, contrast = cntrst[i],
@@ -543,7 +747,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
     # }
 
     if (pathway_kegg) {
-      for (i in 1:length(cntrst)) {
+  for (i in seq_along(cntrst)) {
         if(!(nrow(as.data.frame(res.pathway$ls.pora_kegg_up[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(
@@ -561,7 +765,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
       }
     }
     if(!is.null(custom_pathways)){
-      for (i in 1:length(cntrst)) {
+  for (i in seq_along(cntrst)) {
         if(!(nrow(as.data.frame(res.pathway$ls.pora_custom_up[[i]])) == 0)){
           suppressMessages(
             suppressWarnings(

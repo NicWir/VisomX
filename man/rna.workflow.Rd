@@ -8,6 +8,7 @@ rna.workflow(
   se,
   imp_fun = c("zero", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min",
     "zero", "mixed", "nbavg", "SampMin"),
+  trans_method = c("vst", "rlog"),
   q = 0.01,
   knn.rowmax = 0.5,
   type = c("all", "control", "manual"),
@@ -34,6 +35,7 @@ rna.workflow(
   volcano.label_size = 2.5,
   volcano.adjusted = TRUE,
   plot = FALSE,
+  plot_volcano = FALSE,
   export = FALSE,
   report = TRUE,
   report.dir = NULL,
@@ -41,13 +43,24 @@ rna.workflow(
   pathway_kegg = FALSE,
   kegg_organism = NULL,
   custom_pathways = NULL,
-  quiet = FALSE
+  gsea = FALSE,
+  gsea_gmt = NULL,
+  gsea_pAdjustMethod = c("BH", "none"),
+  gsea_pvalueCutoff = 0.05,
+  gsea_minGSSize = 5,
+  gsea_maxGSSize = 500,
+  quiet = FALSE,
+  allow_no_replicates = TRUE,
+  de_if_no_reps = c("edgeR_fixed", "none"),
+  assumed_dispersion = 0.1
 )
 }
 \arguments{
 \item{se}{A SummarizedExperiment object, generated with read_prot().}
 
 \item{imp_fun}{(Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (\code{\link{rna.impute}}) for details.}
+
+\item{trans_method}{(Character string) Transformation method for the data. Options are "rlog" (for \code{\link[DESeq2]{rlog}}) or "vst" (for \code{\link[DESeq2]{vst}}).}
 
 \item{q}{(Numeric) q value for imputing missing values with method \code{imp_fun = 'MinProb'}.}
 
@@ -103,6 +116,8 @@ or in shrinkage method "apeglm" or "normal".}
 
 \item{plot}{Shall plots be returned in the Plots pane?}
 
+\item{plot_volcano}{(Logical) Generate volcano plots for each defined contrast (\code{TRUE}) or not \code{FALSE}).}
+
 \item{export}{Shall plots be exported as PDF and PNG files?}
 
 \item{report}{Shall a report (HTML and PDF) be created?}
@@ -117,7 +132,25 @@ or in shrinkage method "apeglm" or "normal".}
 
 \item{custom_pathways}{Dataframe providing custom pathway annotations.}
 
+\item{gsea}{Perform GSEA (Gene Set Enrichment Analysis) for each defined contrast.}
+
+\item{gsea_gmt}{Path to a GMT file containing gene sets for GSEA.}
+
+\item{gsea_pAdjustMethod}{Method for adjusting p-values in GSEA. Options are "BH" (Benjamini-Hochberg) or "none".}
+
+\item{gsea_pvalueCutoff}{P-value cutoff for GSEA results.}
+
+\item{gsea_minGSSize}{Minimum size of gene sets to be considered in GSEA.}
+
+\item{gsea_maxGSSize}{Maximum size of gene sets to be considered in GSEA.}
+
 \item{quiet}{Suppress messages and warnings.}
+
+\item{allow_no_replicates}{Allow analysis of conditions with no replicates (default: TRUE).}
+
+\item{de_if_no_reps}{Strategy for differential expression when no replicates per condition. One of "none" or "edgeR_fixed" (default: "edgeR_fixed").}
+
+\item{assumed_dispersion}{Fixed dispersion value used by edgeR when \code{de_if_no_reps = "edgeR_fixed"} (default: 0.1).}
 }
 \value{
 The function returns a SummarizedExperiment object with added columns for log2 fold change, p-values and adjusted p-values for each comparison.

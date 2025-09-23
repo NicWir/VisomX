@@ -1909,7 +1909,7 @@ prot.plot_screeplot <- function (pcaobj, components, xlim = NULL,
 #'   element_rect element_line element_text element_blank arrow
 #' @importFrom ggrepel geom_text_repel
 #' @export
-prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pcaobj, seq_len(5)),
+prot.plot_loadings <- function (pcaobj, components = PCAtools::getComponents(pcaobj, seq_len(ncol(pcaobj$loadings))),
                                 rangeRetain = 0.05, absolute = FALSE, col = c("gold",
                                                                               "white", "royalblue"), colMidpoint = 0, shape = 21,
                                 shapeSizeRange = c(10, 10), legendPosition = "top",

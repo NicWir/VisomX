@@ -7,9 +7,10 @@
 rna.plot_bar(
   dds,
   genes,
-  type = c("contrast", "centered"),
-  shrunken.lfc = T,
+  type = c("contrast", "log_centered", "centered", "raw", "log2"),
+  shrunken.lfc = TRUE,
   contrast = NULL,
+  conditions = NULL,
   col.id = "ID",
   name_table = NULL,
   match.id = "Accession",
@@ -27,13 +28,22 @@ rna.plot_bar(
 
 \item{genes}{A vector of gene names or IDs.}
 
-\item{type}{Type of plot: "centered" or "contrast".}
+\item{type}{Type of plot: "contrast", "log_centered", "centered", "raw", or "log2".
+\itemize{
+\item "log_centered": log2-transformed intensities centered to their mean.
+\item "centered": raw intensities centered to their mean.
+\item "contrast": log2 fold changes for specified contrasts.
+\item "raw": raw (or normalized) read counts with mean and 95\% CI.
+\item "log2": log2-transformed intensities with mean and 95\% CI.
+}}
 
 \item{shrunken.lfc}{A logical indicating if shrunken log2 fold changes should be used if \code{type = "contrast"}. Default is TRUE.}
 
 \item{contrast}{Name of the contrast for plotting when type is "contrast".}
 
-\item{col.id}{Name of the column with gene IDs in \code{dep}.}
+\item{conditions}{Character vector of condition names to be plotted.}
+
+\item{col.id}{Name of the column with gene IDs in \code{dds}.}
 
 \item{name_table}{A data frame containing the mapping of gene names to reference names.}
 
@@ -41,21 +51,21 @@ rna.plot_bar(
 
 \item{match.name}{The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.}
 
-\item{convert_name}{Logical value indicating whether to convert the gene names to reference names based on \code{name_table} (e.g., gene names).}
+\item{convert_name}{Logical indicating whether to convert gene names based on \code{name_table}.}
 
-\item{shape.size}{Numeric value defining the (replicate) symbol size in the plot}
+\item{shape.size}{Numeric; replicate symbol size in the plot.}
 
-\item{collage}{A logical indicating if multiple plots for different genes should be combined into collages of up to 8 plots. Default is TRUE.}
+\item{collage}{Logical; combine multiple gene plots into collages of up to 8. Default TRUE.}
 
-\item{plot}{wether to return the plot or not.}
+\item{plot}{Logical; print the plot if TRUE or return data frame if FALSE. Default TRUE.}
 
-\item{export}{Logical; whether to export the plot as PDF an PNG files}
+\item{export}{Logical; export plots as PDF/PNG if TRUE. Default TRUE.}
 
-\item{export.nm}{Name of the output PDF and PNG files if \code{export = TRUE}.}
+\item{export.nm}{Base name for exported files if \code{export = TRUE}.}
 }
 \value{
-If \code{plot} is set to FALSE and the length of \code{genes} is less than or equal to 8, a data frame with the log2 fold changes or log2 intensities, along with their lower and upper bounds of 95\% confidence intervals, is returned.
+If \code{plot = FALSE} and length(genes) <= 8, returns a data frame of values and 95\% CIs.
 }
 \description{
-This function generates bar plots for gene abundance or fold change, normalized by either a reference gene or centered to the mean. The user can also plot the contrast of two conditions.
+This function generates bar plots for gene abundance or fold change, normalized by either a reference gene or centered to the mean. The user can also plot log2 intensities, contrasts, or raw counts.
 }

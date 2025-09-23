@@ -84,9 +84,15 @@ rna.plot_numbers(data, plot = T, export = F, basesize = 9)
 
 Cooks distance in all samples for outlier detection.
 ```{r cooks, echo=FALSE, warning=FALSE, fig.height = 4.2, fig.width = 6, fig.align='center'}
-par(mar=c(8,5,2,2))
-boxplot(log10(assays(dds)[["cooks"]]), range=0, las=2)
-title("Box plot of Cook's distance")
+if ("cooks" %in% names(assays(dds))) {
+  vals <- assays(dds)[["cooks"]]
+  vals <- log10(pmax(vals, .Machine$double.xmin))
+  par(mar=c(8,5,2,2))
+  boxplot(vals, range=0, las=2)
+  title("Box plot of Cook's distance")
+} else {
+  cat("Cook's distance is unavailable because DESeq2 model fitting was skipped (no replicates).\n")
+}
 ```
 \pagebreak
 ## Normalization
@@ -194,10 +200,11 @@ PCA loadings are the coefficients of the linear combination of the original vari
 The heat map gives an overview of all genes with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of genes (rows) can indicate genes that behave in a similar way.
 ```{r heatmap_contrast,echo=FALSE, warning=F, message=F}
 width = 6+length(dds$condition)/10
-if (width < 7) { width = 7 }
+if (width < 7)  { width = 7 }
 if (width > 12) { width = 12 }
 len = nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) / 55
-if (len < 5) { len = 5 }
+if (len < 5)  { len = 5 }
+if (len > 40) { len = 40 }
 ```
 ```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
 if(export==TRUE){

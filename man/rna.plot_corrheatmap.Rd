@@ -13,6 +13,7 @@ rna.plot_corrheatmap(
   indicate = NULL,
   font_size = 12,
   plot = TRUE,
+  significant = TRUE,
   ...
 )
 }
@@ -31,11 +32,11 @@ rna.plot_corrheatmap(
 
 \item{plot}{Logical. If FALSE, no plot is generated, only data frame is returned. Default is TRUE.}
 
+\item{significant}{Logical. If TRUE, only significant correlations are plotted. Default is TRUE.}
+
 \item{...}{Other arguments to be passed to \code{\link[ComplexHeatmap]{Heatmap}}.}
 
 \item{dep}{A DESeqDataSet object.}
-
-\item{significant}{Logical. If TRUE, only significant correlations are plotted. Default is TRUE.}
 }
 \value{
 (Invisibly) a data frame with Pearson correlation values is returned.

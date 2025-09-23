@@ -216,6 +216,62 @@ enricher_custom <- function (gene, pvalueCutoff, pAdjustMethod = "BH", universe 
   return(x)
 }
 
+
+#' GSEA Custom
+#'
+#' Perform GSEA using a custom GMT gene set file.
+#'
+#' @param geneList Named numeric vector of gene-level statistics (e.g., log2FC), names are gene IDs.
+#' @param gmt_file Path to GMT file.
+#' @param pAdjustMethod Method for p-value adjustment (default: "BH").
+#' @param pvalueCutoff Numeric; p-value cutoff.
+#' @param minGSSize Integer; minimum gene set size.
+#' @param maxGSSize Integer; maximum gene set size.
+#'
+#' @return A `gseaResult` object.
+#' @importFrom clusterProfiler read.gmt GSEA
+gsea_custom <- function(geneList, gmt_file, pAdjustMethod = "BH", pvalueCutoff = 0.05,
+                        minGSSize = 10, maxGSSize = 500) {
+  gmt <- clusterProfiler::read.gmt(gmt_file)
+  res <- clusterProfiler::GSEA(
+    geneList = geneList,
+    TERM2GENE = gmt,
+    pAdjustMethod = pAdjustMethod,
+    pvalueCutoff = pvalueCutoff,
+    minGSSize = minGSSize,
+    maxGSSize = maxGSSize
+  )
+  return(res)
+}
+
+#' GSEA KEGG
+#'
+#' Perform GSEA using KEGG pathways.
+#'
+#' @param geneList Named numeric vector of gene-level statistics (e.g., log2FC), names are gene IDs.
+#' @param organism KEGG organism code.
+#' @param keyType Type of gene ID (default: "kegg").
+#' @param pAdjustMethod Method for p-value adjustment (default: "BH").
+#' @param pvalueCutoff Numeric; p-value cutoff.
+#' @param minGSSize Integer; minimum gene set size.
+#' @param maxGSSize Integer; maximum gene set size.
+#'
+#' @return A `gseaResult` object.
+#' @importFrom clusterProfiler gseKEGG
+gsea_kegg <- function(geneList, organism, keyType = "kegg", pAdjustMethod = "BH", pvalueCutoff = 0.05,
+                      minGSSize = 10, maxGSSize = 500) {
+  res <- clusterProfiler::gseKEGG(
+    geneList = geneList,
+    organism = organism,
+    keyType = keyType,
+    pAdjustMethod = pAdjustMethod,
+    pvalueCutoff = pvalueCutoff,
+    minGSSize = minGSSize,
+    maxGSSize = maxGSSize
+    )
+  return(res)
+}
+
 ####____enriched_pathways____####
 # internal function
 #' @title Enrichment analysis of pathways

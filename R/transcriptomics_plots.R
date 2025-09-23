@@ -27,7 +27,7 @@
 #' @importFrom dplyr filter
 #'
 rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
-                                   pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE,
+                                   pal_rev = FALSE, indicate = NULL, font_size = 12, plot = TRUE, significant = TRUE,
                                    ...)
 {
   assertthat::assert_that(inherits(dds, "DESeqDataSet"),
@@ -55,7 +55,7 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
     columns <- colnames(col_data)
     if (any(!indicate %in% columns)) {
       stop("'", paste0(indicate, collapse = "' and/or '"),
-           "' column(s) is/are not present in ", ddsarse(substitute(dds)),
+           "' column(s) is/are not present in ", deparse(substitute(dds)),
            ".\nValid columns are: '", paste(columns,
                                             collapse = "', '"), "'.", call. = FALSE)
     }
@@ -82,7 +82,17 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
   } else {
     ha1 <- NULL
   }
-  cor_mat <- cor(SummarizedExperiment::assay(dds))
+  if (significant) {
+    if (!"significant" %in% colnames(SummarizedExperiment::rowData(dds))) {
+      stop("'", deparse(substitute(dds)), "' does not contain a 'significant' column.\nRun rna.workflow() to obtain the required column.",
+           call. = FALSE)
+    }
+    sig <- SummarizedExperiment::rowData(dds, use.names = FALSE)$significant
+    sig[is.na(sig)] <- FALSE
+    dds <- dds[sig, ]
+  }
+  dds_assay <- SummarizedExperiment::assay(dds)
+  cor_mat <- cor(dds_assay)
   ht1 = ComplexHeatmap::Heatmap(cor_mat, col = circlize::colorRamp2(seq(lower,
                                                                         upper, ((upper - lower)/7)), if (pal_rev) {
                                                                           rev(RColorBrewer::brewer.pal(8, pal))
@@ -1094,243 +1104,212 @@ rna.plot_numbers <- function (se, plot = TRUE, export = FALSE, basesize = 12)
 
 #' Plot bar plots for gene abundance or fold change
 #'
-#' This function generates bar plots for gene abundance or fold change, normalized by either a reference gene or centered to the mean. The user can also plot the contrast of two conditions.
+#' This function generates bar plots for gene abundance or fold change, normalized by either a reference gene or centered to the mean. The user can also plot log2 intensities, contrasts, or raw counts.
 #'
 #' @param dds A DESeqDataSet object containing the data.
 #' @param genes A vector of gene names or IDs.
-#' @param type Type of plot: "centered" or "contrast".
+#' @param type Type of plot: "contrast", "log_centered", "centered", "raw", or "log2".
+#'   - "log_centered": log2-transformed intensities centered to their mean.
+#'   - "centered": raw intensities centered to their mean.
+#'   - "contrast": log2 fold changes for specified contrasts.
+#'   - "raw": raw (or normalized) read counts with mean and 95% CI.
+#'   - "log2": log2-transformed intensities with mean and 95% CI.
 #' @param shrunken.lfc A logical indicating if shrunken log2 fold changes should be used if \code{type = "contrast"}. Default is TRUE.
 #' @param contrast Name of the contrast for plotting when type is "contrast".
-#' @param col.id Name of the column with gene IDs in \code{dep}.
+#' @param conditions Character vector of condition names to be plotted.
+#' @param col.id Name of the column with gene IDs in \code{dds}.
 #' @param name_table A data frame containing the mapping of gene names to reference names.
 #' @param match.id The name of a column in \code{name_table} to find matches with \code{col.id}.
 #' @param match.name The name of a column in \code{name_table} to assign new names based on matches of \code{col.id} and \code{match.id}.
-#' @param convert_name Logical value indicating whether to convert the gene names to reference names based on \code{name_table} (e.g., gene names).
-#' @param shape.size Numeric value defining the (replicate) symbol size in the plot
-#' @param collage A logical indicating if multiple plots for different genes should be combined into collages of up to 8 plots. Default is TRUE.
-#' @param plot wether to return the plot or not.
-#' @param export Logical; whether to export the plot as PDF an PNG files
-#' @param export.nm Name of the output PDF and PNG files if \code{export = TRUE}.
+#' @param convert_name Logical indicating whether to convert gene names based on \code{name_table}.
+#' @param shape.size Numeric; replicate symbol size in the plot.
+#' @param collage Logical; combine multiple gene plots into collages of up to 8. Default TRUE.
+#' @param plot Logical; print the plot if TRUE or return data frame if FALSE. Default TRUE.
+#' @param export Logical; export plots as PDF/PNG if TRUE. Default TRUE.
+#' @param export.nm Base name for exported files if \code{export = TRUE}.
 #'
-#' @return If `plot` is set to FALSE and the length of `genes` is less than or equal to 8, a data frame with the log2 fold changes or log2 intensities, along with their lower and upper bounds of 95% confidence intervals, is returned.
-#'
+#' @return If \code{plot = FALSE} and length(genes) <= 8, returns a data frame of values and 95% CIs.
 #' @export
 #'
-#' @importFrom SummarizedExperiment assay rowData colData
-#' @importFrom assertthat assert_that
-#' @importFrom stats qnorm
-#' @importFrom stringr str_split str_count
-#' @importFrom tibble rownames_to_column
-#' @importFrom tidyr gather spread
-#' @importFrom dplyr mutate group_by summarize left_join case_when
-#' @importFrom RColorBrewer brewer.pal
-#' @importFrom ggplot2 ggplot aes geom_hline geom_col geom_point geom_errorbar facet_wrap labs scale_fill_manual position_dodge theme
-#' @importFrom ggnewscale new_scale_fill
-#' @importFrom grDevices png pdf dev.off
-#' @importFrom magrittr %>%
-#'
-rna.plot_bar <- function (dds,
-                          genes,
-                          type = c("contrast", "centered"),
-                          shrunken.lfc = T,
-                          contrast = NULL,
-                          col.id = "ID",
-                          name_table = NULL,
-                          match.id = "Accession",
-                          match.name = "Name",
-                          convert_name = FALSE,
-                          shape.size = 2.5,
-                          collage = TRUE,
-                          plot = TRUE,
-                          export = TRUE,
-                          export.nm = NULL)
-{
+rna.plot_bar <- function(dds,
+                         genes,
+                         type = c("contrast", "log_centered", "centered", "raw", "log2"),
+                         shrunken.lfc = TRUE,
+                         contrast = NULL,
+                         conditions = NULL,
+                         col.id = "ID",
+                         name_table = NULL,
+                         match.id = "Accession",
+                         match.name = "Name",
+                         convert_name = FALSE,
+                         shape.size = 2.5,
+                         collage = TRUE,
+                         plot = TRUE,
+                         export = TRUE,
+                         export.nm = NULL) {
   assertthat::assert_that(inherits(dds, "SummarizedExperiment"),
-                          is.character(genes), is.character(type), is.logical(plot),
-                          length(plot) == 1)
+                          is.character(genes), is.character(type), is.logical(plot), length(plot) == 1)
+  ## ---- subset by user-selected conditions -----------------------------------
+  if (!is.null(conditions)) {
+    assertthat::assert_that(
+      is.character(conditions),
+      msg = "'conditions' must be a character vector"
+    )
+    keep_cols <- which(dds$condition %in% conditions)
+    if (length(keep_cols) == 0) {
+      stop("None of the specified `conditions` were found in `dds$condition`.", call. = FALSE)
+    }
+    dds <- dds[, keep_cols]
+  }
   type <- match.arg(type)
-  if(shrunken.lfc == TRUE && length(grep("lfc_shrink", colnames(SummarizedExperiment::rowData(dds))))>0){
+
+  # determine lfc prefix
+  if (shrunken.lfc && any(grepl("lfc_shrink", colnames(SummarizedExperiment::rowData(dds))))) {
     lfc.pfx <- "lfc_shrink."
   } else {
     lfc.pfx <- "lfc."
   }
-  # Replace rownames of dds with column of original data frame defined in "col.id" argument
-  row_data <- SummarizedExperiment::rowData(dds, use.names = F)
-  GeneID <- match(col.id,
-                  colnames(row_data))
-  rownames(dds) <- row_data[, GeneID]
+
+  # set rownames by col.id
+  rd <- SummarizedExperiment::rowData(dds, use.names = FALSE)
+  id_col <- match(col.id, colnames(rd))
+  rownames(dds) <- rd[, id_col]
   rownames(dds)[is.na(rownames(dds))] <- 0
-  row_data <- SummarizedExperiment::rowData(dds, use.names = FALSE)
-  if (any(!c("label", "condition", "replicate") %in%
-          colnames(SummarizedExperiment::colData(dds)))) {
-    stop("'label', 'condition' and/or 'replicate' columns are not present in '",
-         deparse(substitute(dds)), "'\nRun make_se() or make_se_parse() to obtain the required columns",
-         call. = FALSE)
-  }
-  if (length(grep(paste0("padj\\.|", gsub("\\.", "\\\\.", lfc.pfx)), colnames(row_data))) < 2 && type == "contrast") {
-    stop(paste0("'", lfc.pfx, "[contrast]' and 'padj.[contrast]' columns are not present in '"),
-         deparse(substitute(dds)), "'\nRun rna.workflow() to obtain the required columns",
-         call. = FALSE)
-  }
-  if (!"name" %in% colnames(row_data)) {
-    stop("'name' column not present in '", deparse(substitute(dds)),
-         "'\nRun rna.read_data() to obtain the required columns",
-         call. = FALSE)
-  }
-  if (all(!genes %in% row_data[,col.id])) {
-    if (length(genes) == 1) {
-      rows <- grep(substr(genes, 1, nchar(genes) -
-                            1), row_data[,col.id])
-      possibilities <- row_data[,col.id][rows]
-    }
-    else {
-      rows <- lapply(genes, function(x) grep(substr(x,
-                                                       1, nchar(x) - 1), row_data[,col.id]))
-      possibilities <- row_data[,col.id][unlist(rows)]
-    }
-    if (length(possibilities) > 0) {
-      possibilities_msg <- paste0("Do you mean: '",
-                                  paste0(possibilities, collapse = "', '"),
-                                  "'")
-    }
-    else {
-      possibilities_msg <- NULL
-    }
-    stop(paste0("The genes ", paste(genes, collapse=", "), " were not found in the column '", col.id,
-                "'. Please run `prot.plot_bar()` with a valid gene names in the 'genes' argument or provide the valid column ID in the 'col.id' argument.\n"),
-         possibilities_msg, call. = FALSE)
-  }
-  if (any(!genes %in% row_data[,col.id])) {
-    genes <- genes[genes %in% row_data[,col.id]]
-    warning("Only used the following gene(s): '",
-            paste0(genes, collapse = "', '"), "'", call. = F)
-  }
-  subset_list <- list()
-  if(collage){
-    if(length(genes)<=8){
-      subset_list[[1]] <- dds[genes]
-    } else if(length(genes)<=16){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:length(genes)]]
-    } else if(length(genes)<=24){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:length(genes)]]
-    }else if(length(genes)<=32){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:24]]
-      subset_list[[4]] <- dds[genes[25:length(genes)]]
-    } else if(length(genes)<=40){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:24]]
-      subset_list[[4]] <- dds[genes[25:32]]
-      subset_list[[5]] <- dds[genes[33:length(genes)]]
-    } else if(length(genes)<=48){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:24]]
-      subset_list[[4]] <- dds[genes[25:32]]
-      subset_list[[5]] <- dds[genes[33:40]]
-      subset_list[[6]] <- dds[genes[41:length(genes)]]
-    } else if(length(genes)<=56){
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:24]]
-      subset_list[[4]] <- dds[genes[25:32]]
-      subset_list[[5]] <- dds[genes[33:40]]
-      subset_list[[6]] <- dds[genes[41:48]]
-      subset_list[[7]] <- dds[genes[49:length(genes)]]
-    } else {
-      subset_list[[1]] <- dds[genes[1:8]]
-      subset_list[[2]] <- dds[genes[9:16]]
-      subset_list[[3]] <- dds[genes[17:24]]
-      subset_list[[4]] <- dds[genes[25:32]]
-      subset_list[[5]] <- dds[genes[33:40]]
-      subset_list[[6]] <- dds[genes[41:48]]
-      subset_list[[7]] <- dds[genes[49:56]]
-      subset_list[[8]] <- dds[genes[57:length(genes)]]
-    }
-  } else {
-    subset_list <- lapply(1:length(genes), function(x) dds[genes[x]])
+  rd <- SummarizedExperiment::rowData(dds, use.names = FALSE)
+
+  # check required colData columns
+  cdn <- colnames(SummarizedExperiment::colData(dds))
+  if (!all(c("label", "condition", "replicate") %in% cdn)) {
+    stop("'label', 'condition' and/or 'replicate' columns are missing in ", deparse(substitute(dds)), call. = FALSE)
   }
 
-  for(i in 1:length(subset_list)) {
-    if (type == "centered") {
-      means <- rowMeans(log2(SummarizedExperiment::assay(subset_list[[i]])), na.rm = TRUE)
-      df_reps <-
-        data.frame(log2(SummarizedExperiment::assay(subset_list[[i]])) - means, check.names = FALSE) %>% tibble::rownames_to_column() %>%
-        gather(ID, val, -rowname) %>% left_join(., data.frame(SummarizedExperiment::colData(subset_list[[i]]), check.names = FALSE),
-                                                by = "ID")
-      if (convert_name == TRUE) {
-        df_reps$rowname <- transform(df_reps,
-                                     rowname = name_table[match(paste(df_reps$rowname),
-                                                                paste(unlist(str_split(
-                                                                  Reduce(c, name_table[match.id]), ", "
-                                                                )))),
-                                                          match.name]) %>%
-          select(rowname) %>% unlist(., use.names = F)
-      }
+  # ensure contrast columns exist
+  if (type == "contrast" && length(grep(paste0("padj\\.|", gsub("\\.", "\\\\.", lfc.pfx)), colnames(rd))) < 2) {
+    stop("Contrast columns not found in rowData. Run rna.workflow().", call. = FALSE)
+  }
+
+  # check name column
+  if (!"name" %in% colnames(rd)) stop("'name' column missing in ", deparse(substitute(dds)), call. = FALSE)
+
+  # validate genes
+  if (!any(genes %in% rd[, col.id])) {
+    poss <- unlist(lapply(genes, function(x) grep(substr(x,1,nchar(x)-1), rd[,col.id], value=TRUE)))
+    msg <- if (length(poss)) paste0("Do you mean: '", paste(unique(poss), collapse="', '"), "'?") else NULL
+    stop("Genes not found in col.id column. ", msg, call. = FALSE)
+  }
+  genes <- intersect(genes, rd[, col.id])
+  if (!length(genes)) stop("No valid genes to plot.")
+  if (length(setdiff(genes, rd[,col.id]))) warning("Some genes omitted: ", paste(setdiff(genes, rd[,col.id]), collapse=", "))
+
+  # split into subsets for collage
+  subsets <- split(genes, ceiling(seq_along(genes)/8))
+  subset_list <- lapply(subsets, function(g) dds[g])
+
+  # Loop subsets
+  for (i in seq_along(subset_list)) {
+    se_sub <- subset_list[[i]]
+    df <- NULL; p <- NULL; w <- 8; h <- 10
+
+    # Prepare data and plot for each type
+    if (type %in% c("log_centered", "centered", "log2")) {
+      mat <- SummarizedExperiment::assay(se_sub)
+      if (type %in% c("log_centered","log2")) mat <- log2(mat + 1)
+      # For log_centered only: center after log2
+      if (type == "log_centered") mat <- mat - rowMeans(mat, na.rm=TRUE)
+      # For centered: center raw
+      if (type == "centered") mat <- mat - rowMeans(mat, na.rm=TRUE)
+
+      # Build df for replicates
+      df_reps <- data.frame(mat, check.names=FALSE) %>%
+        tibble::rownames_to_column(var="gene") %>%
+        tidyr::gather(key="label", value="val", -gene) %>%
+        dplyr::left_join(
+          data.frame(SummarizedExperiment::colData(se_sub), label=rownames(SummarizedExperiment::colData(se_sub))),
+          by = "label"
+        )
+      if (convert_name) df_reps$gene <- name_table[match(df_reps$gene, name_table[[match.id]]), match.name]
       df_reps$replicate <- as.factor(df_reps$replicate)
-      df <-
-        df_reps %>% group_by(condition, rowname) %>% dplyr::summarize(
-          mean = mean(val,
-                      na.rm = TRUE),
-          sd = sd(val, na.rm = TRUE),
-          n = n()
+
+      # Summarise mean & CI
+      df <- df_reps %>%
+        dplyr::group_by(condition, gene) %>%
+        dplyr::summarise(
+          mean = mean(val, na.rm=TRUE),
+          sd = sd(val, na.rm=TRUE),
+          n = dplyr::n()
         ) %>%
-        mutate(
-          error = stats::qnorm(0.975) * sd / sqrt(n),
-          CI.L = mean -
-            error,
+        dplyr::mutate(
+          error = stats::qnorm(0.975)*sd/sqrt(n),
+          CI.L = mean - error,
           CI.R = mean + error
-        ) %>% data.frame(check.names = FALSE)
+        ) %>% data.frame(check.names=FALSE)
 
+      # Determine y-axis label
+      ylab <- switch(type,
+                     log_centered = expression(log[2]~"Centered intensity"~"(±95% CI)"),
+                     centered     = expression("Centered intensity"~"(±95% CI)"),
+                     log2         = expression(log[2]~"Intensity"~"(±95% CI)"))
 
-
-      p <-
-        ggplot(df, aes(condition, mean)) + geom_hline(yintercept = 0) +
-        geom_col(aes(y = mean, fill = condition), colour = "black")
-      if (length(unique(dds$condition)) <= 8) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Dark2"))
-      } else if (length(unique(dds$condition)) <= 12) {
-        p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Set3"))
+      # Plot
+      if (length(unique(df$condition)) <= 2) {
+        n_cond <- length(unique(df$condition))
+        pal_all <- RColorBrewer::brewer.pal(max(3, n_cond), "Dark2")
+        pal <- pal_all[1:n_cond]
+      } else if (length(unique(df$condition)) <= 8) {
+        pal <- RColorBrewer::brewer.pal(n = length(unique(df$condition)), name = "Dark2")
+      } else if (length(unique(df$condition)) <= 12) {
+        pal <- RColorBrewer::brewer.pal(n = length(unique(df$condition)), name = "Set3")
       } else {
-        p <- p + scale_fill_manual(values = c(
+        pal <- c(
           "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
           "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
           "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
           "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
           "green1", "yellow4", "yellow3", "darkorange4", "brown"
-        ))
+        )
       }
-      p <- p +
+      n_reps <- max(as.numeric(df_reps$replicate))
+      if (n_reps <= 2) {
+        pal_all_reps <- RColorBrewer::brewer.pal(max(3, n_reps), "Dark2")
+        pal_reps <- pal_all[1:n_cond]
+      } else if (n_reps <= 8) {
+        pal_reps <- RColorBrewer::brewer.pal(n = n_reps, name = "Dark2")
+      } else if (n_reps <= 12) {
+        pal_reps <- RColorBrewer::brewer.pal(n = n_reps, name = "Set3")
+      } else {
+        pal_reps <- c(
+          "dodgerblue2", "#E31A1C", "green4", "#6A3D9A", "#FF7F00",
+          "black", "gold1", "skyblue2", "#FB9A99", "palegreen2",
+          "#CAB2D6", "#FDBF6F", "gray70", "khaki2", "maroon",
+          "orchid1", "deeppink1", "blue1", "steelblue4", "darkturquoise",
+          "green1", "yellow4", "yellow3", "darkorange4", "brown"
+        )
+      }
+      # scale_fill_manual(values = if(length(unique(df$condition))<=12)
+      #   RColorBrewer::brewer.pal(length(unique(df$condition)),"Dark2") else
+      #     RColorBrewer::brewer.pal(12,"Set3"))
+
+      p <- ggplot(df, aes(condition, mean)) +
+        # geom_hline(yintercept=ifelse(type=="log2", NA, 0)) +
+        geom_col(aes(y=mean, fill=condition), colour="black") +
+        geom_errorbar(aes(ymin=CI.L,ymax=CI.R), width=0.3) +
+        scale_fill_manual(values = pal) +
         ggnewscale::new_scale_fill() +
-        geom_point(
-          data = df_reps,
-          aes(condition, val, fill = replicate),
-          shape = 23,
-          size = shape.size,
-          color = "black",
-          position = position_dodge(width = 0.3)
-        ) +
-        scale_fill_manual(values = case_when(
-          as.numeric(max(dds$replicate))<=8       ~ RColorBrewer::brewer.pal(n=as.numeric(max(dds$replicate)), name="Greys"),
-          as.numeric(max(dds$replicate))>8        ~ grDevices::colorRampPalette(RColorBrewer::brewer.pal(n=8, name="Greys"))(as.numeric(max(dds$replicate))))
-        ) +
-        geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
-        labs(
-          x = "Baits",
-          y = expression(log[2] ~ "Centered intensity" ~
-                           "(\u00B195% CI)"),
-          col = "Rep"
-        ) + facet_wrap( ~ rowname) +
-        theme(basesize = 12) + theme_DEP2()
-      w <- 8+log(max(str_count(df[,"condition"]))-3, base = 1.6)
+        geom_point(data=df_reps, aes(condition, val, fill=replicate),
+                   shape=23, size=shape.size, color="black",
+                   position=position_dodge(width=0.3)) +
+        scale_fill_manual(values = pal_reps) +
+        facet_wrap(~gene,
+                   scales = if (type == "log2") "fixed" else "free_y") +
+        labs(x="Condition", y=ylab, fill="Condition") + theme_DEP2()
+      w <- 8 + log(max(nchar(as.character(df$condition))) - 3, base=1.6)
       h <- 10
-    }
-    if (type == "contrast") {
+      if (type != "log2") {
+        p <- p + geom_hline(yintercept = 0)
+      }
+
+    } else if (type == "contrast") {
+    # if (type == "contrast") {
       if(is.null(contrast)){
         contrast <- SummarizedExperiment::rowData(subset_list[[i]], use.names = FALSE) %>% data.frame(check.names = FALSE) %>% select(starts_with(lfc.pfx))  %>%
           colnames(.) %>% gsub(lfc.pfx, "", .)
@@ -1354,7 +1333,11 @@ rna.plot_bar <- function (dds,
         p <-
           ggplot(df, aes(contrast, .data[[gsub("\\.", "", lfc.pfx)]])) + geom_hline(yintercept = 0) +
           geom_col(aes(y = .data[[gsub("\\.", "", lfc.pfx)]], fill = contrast), colour = "black")
-        if (length(unique(dds$condition)) <= 8) {
+        if (length(unique(dds$condition)) <= 2) {
+          n_cond <- length(unique(dds$condition))
+          pal_all <- RColorBrewer::brewer.pal(max(3, n_cond), "Dark2")
+          p <- p + scale_fill_manual(values = pal_all[1:n_cond])
+        } else if (length(unique(dds$condition)) <= 8) {
           p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Dark2"))
         } else if (length(unique(dds$condition)) <= 12) {
           p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Set3"))
@@ -1395,7 +1378,11 @@ rna.plot_bar <- function (dds,
         p <-
           ggplot(df, aes(contrast, .data[[gsub("\\.", "", lfc.pfx)]])) + geom_hline(yintercept = 0) +
           geom_col(aes(y = .data[[gsub("\\.", "", lfc.pfx)]], fill = contrast), colour = "black")
-        if (length(unique(dds$condition)) <= 8) {
+        if (length(unique(dds$condition)) <= 2) {
+          n_cond <- length(unique(dds$condition))
+          pal_all <- RColorBrewer::brewer.pal(max(3, n_cond), "Dark2")
+          p <- p + scale_fill_manual(values = pal_all[1:n_cond])
+        } else if (length(unique(dds$condition)) <= 8) {
           p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Dark2"))
         } else if (length(unique(dds$condition)) <= 12) {
           p <- p + scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(unique(dds$condition)), name = "Set3"))
@@ -1418,7 +1405,103 @@ rna.plot_bar <- function (dds,
       }
       w <- 8+log(max(str_count(df[,"contrast"]))-3, base = 1.6)
       h <- 10
+    } else if (type == "raw") {
+      mat <- SummarizedExperiment::assay(se_sub)
+      df_reps <- data.frame(mat, check.names=FALSE) %>%
+        tibble::rownames_to_column(var="gene") %>%
+        tidyr::gather(key="label", value="count", -gene) %>%
+        dplyr::left_join(
+          data.frame(SummarizedExperiment::colData(se_sub), label=rownames(SummarizedExperiment::colData(se_sub))),
+          by = "label"
+        )
+      if (convert_name) df_reps$gene <- name_table[match(df_reps$gene, name_table[[match.id]]), match.name]
+      df_reps$replicate <- as.factor(df_reps$replicate)
+      df_reps$condition <- as.factor(df_reps$condition)
+
+      df <- df_reps %>%
+        dplyr::group_by(gene, condition) %>%
+        dplyr::summarise(
+          mean = mean(count, na.rm=TRUE),
+          sd = sd(count, na.rm=TRUE),
+          n = dplyr::n()
+        ) %>%
+        dplyr::mutate(
+          error = stats::qnorm(0.975) * sd / sqrt(n),
+          CI.L = mean - error,
+          CI.R = mean + error
+        ) %>% data.frame(check.names=FALSE)
+
+      p <- ggplot(df, aes(condition, mean, fill=condition)) +
+        geom_col(colour="black", width=0.7) +
+        geom_errorbar(aes(ymin=CI.L, ymax=CI.R), width=0.3) +
+        geom_point(
+          data = df_reps, aes(condition, count, group=replicate),
+          position=position_jitter(width=0.15), shape=21,
+          size=shape.size, color="black", fill="white"
+        ) +
+        facet_wrap(~gene, scales="free_y") + theme_DEP2() +
+        labs(x="Condition", y="Read count (mean ± 95% CI)", fill="Condition")
+
+      w <- 8 + log(max(nchar(as.character(df$condition))) - 3, base=1.6)
+      h <- 10
     }
+
+    # if (type == "raw") {
+    #   # Get counts (raw or normalized, as stored in assay(dds))
+    #   counts_mat <- SummarizedExperiment::assay(subset_list[[i]])
+    #   # If you want normalized counts from DESeq2:
+    #   # counts_mat <- DESeq2::counts(subset_list[[i]], normalized = TRUE)
+    #
+    #   # Make a tidy data.frame for plotting
+    #   df_reps <- data.frame(counts_mat, check.names = FALSE) %>%
+    #     tibble::rownames_to_column(var = "gene") %>%
+    #     tidyr::gather(key = "label", value = "count", -gene) %>%
+    #     dplyr::left_join(
+    #       SummarizedExperiment::colData(subset_list[[i]]) %>%
+    #         data.frame(label = rownames(.), .), by = "label"
+    #     )
+    #
+    #   # Optional: convert gene names
+    #   if (convert_name == TRUE) {
+    #     df_reps$gene <- name_table[match(df_reps$gene, name_table[[match.id]]), match.name]
+    #   }
+    #
+    #   df_reps$replicate <- as.factor(df_reps$replicate)
+    #   df_reps$condition <- as.factor(df_reps$condition)
+    #
+    #   # ---- CALCULATE AVERAGE AND CI PER GENE, CONDITION ----
+    #   df <- df_reps %>%
+    #     dplyr::group_by(gene, condition) %>%
+    #     dplyr::summarise(
+    #       mean = mean(count, na.rm = TRUE),
+    #       sd = sd(count, na.rm = TRUE),
+    #       n = dplyr::n(),
+    #       error = stats::qnorm(0.975) * sd / sqrt(n),
+    #       CI.L = mean - error,
+    #       CI.R = mean + error
+    #     ) %>% data.frame(check.names = FALSE)
+    #
+    #   # ---- PLOTTING ----
+    #   p <-
+    #     ggplot(df, aes(x = condition, y = mean, fill = condition)) +
+    #     geom_col(colour = "black", width = 0.7) +
+    #     geom_errorbar(aes(ymin = CI.L, ymax = CI.R), width = 0.3) +
+    #     geom_point(
+    #       data = df_reps,
+    #       aes(x = condition, y = count, group = replicate),
+    #       position = position_jitter(width = 0.15, height = 0), # spread points a bit
+    #       shape = 21, size = shape.size, color = "black", fill = "white"
+    #     ) +
+    #     facet_wrap(~ gene, scales = "free_y") +
+    #     theme_DEP2() +
+    #     labs(
+    #       x = "Condition",
+    #       y = "Read count (mean \u00B1 95% CI)",
+    #       fill = "Condition"
+    #     )
+    #   w <- 8 + log(max(str_count(df$condition)) - 3, base = 1.6)
+    #   h <- 10
+    # }
 
     if (export == TRUE) {
       if(collage){
