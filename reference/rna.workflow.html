@@ -53,6 +53,7 @@ several options for plotting, exporting plots, and creating a report.</p>
 <span>  <span class="va">se</span>,</span>
 <span>  imp_fun <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"zero"</span>, <span class="st">"man"</span>, <span class="st">"bpca"</span>, <span class="st">"knn"</span>, <span class="st">"QRILC"</span>, <span class="st">"MLE"</span>, <span class="st">"MinDet"</span>, <span class="st">"MinProb"</span>, <span class="st">"min"</span>,</span>
 <span>    <span class="st">"zero"</span>, <span class="st">"mixed"</span>, <span class="st">"nbavg"</span>, <span class="st">"SampMin"</span><span class="op">)</span>,</span>
+<span>  trans_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"vst"</span>, <span class="st">"rlog"</span><span class="op">)</span>,</span>
 <span>  q <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  knn.rowmax <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"control"</span>, <span class="st">"manual"</span><span class="op">)</span>,</span>
@@ -79,6 +80,7 @@ several options for plotting, exporting plots, and creating a report.</p>
 <span>  volcano.label_size <span class="op">=</span> <span class="fl">2.5</span>,</span>
 <span>  volcano.adjusted <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  plot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  plot_volcano <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  export <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  report <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  report.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -86,7 +88,16 @@ several options for plotting, exporting plots, and creating a report.</p>
 <span>  pathway_kegg <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  kegg_organism <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  custom_pathways <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  gsea <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  gsea_gmt <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  gsea_pAdjustMethod <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"BH"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  gsea_pvalueCutoff <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  gsea_minGSSize <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  gsea_maxGSSize <span class="op">=</span> <span class="fl">500</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  allow_no_replicates <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  de_if_no_reps <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"edgeR_fixed"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  assumed_dispersion <span class="op">=</span> <span class="fl">0.1</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -100,6 +111,10 @@ several options for plotting, exporting plots, and creating a report.</p>
 
 <dt id="arg-imp-fun">imp_fun<a class="anchor" aria-label="anchor" href="#arg-imp-fun"></a></dt>
 <dd><p>(Character string)  Function used for data imputation. "SampMin", "man", "bpca", "knn", "QRILC", "MLE", "MinDet", "MinProb", "min", "zero", "mixed", or "nbavg". See (<code><a href="rna.impute.html">rna.impute</a></code>) for details.</p></dd>
+
+
+<dt id="arg-trans-method">trans_method<a class="anchor" aria-label="anchor" href="#arg-trans-method"></a></dt>
+<dd><p>(Character string) Transformation method for the data. Options are "rlog" (for <code><a href="https://rdrr.io/pkg/DESeq2/man/rlog.html" class="external-link">rlog</a></code>) or "vst" (for <code><a href="https://rdrr.io/pkg/DESeq2/man/vst.html" class="external-link">vst</a></code>).</p></dd>
 
 
 <dt id="arg-q">q<a class="anchor" aria-label="anchor" href="#arg-q"></a></dt>
@@ -208,6 +223,10 @@ or in shrinkage method "apeglm" or "normal".</p></dd>
 <dd><p>Shall plots be returned in the Plots pane?</p></dd>
 
 
+<dt id="arg-plot-volcano">plot_volcano<a class="anchor" aria-label="anchor" href="#arg-plot-volcano"></a></dt>
+<dd><p>(Logical) Generate volcano plots for each defined contrast (<code>TRUE</code>) or not <code>FALSE</code>).</p></dd>
+
+
 <dt id="arg-export">export<a class="anchor" aria-label="anchor" href="#arg-export"></a></dt>
 <dd><p>Shall plots be exported as PDF and PNG files?</p></dd>
 
@@ -236,8 +255,44 @@ or in shrinkage method "apeglm" or "normal".</p></dd>
 <dd><p>Dataframe providing custom pathway annotations.</p></dd>
 
 
+<dt id="arg-gsea">gsea<a class="anchor" aria-label="anchor" href="#arg-gsea"></a></dt>
+<dd><p>Perform GSEA (Gene Set Enrichment Analysis) for each defined contrast.</p></dd>
+
+
+<dt id="arg-gsea-gmt">gsea_gmt<a class="anchor" aria-label="anchor" href="#arg-gsea-gmt"></a></dt>
+<dd><p>Path to a GMT file containing gene sets for GSEA.</p></dd>
+
+
+<dt id="arg-gsea-padjustmethod">gsea_pAdjustMethod<a class="anchor" aria-label="anchor" href="#arg-gsea-padjustmethod"></a></dt>
+<dd><p>Method for adjusting p-values in GSEA. Options are "BH" (Benjamini-Hochberg) or "none".</p></dd>
+
+
+<dt id="arg-gsea-pvaluecutoff">gsea_pvalueCutoff<a class="anchor" aria-label="anchor" href="#arg-gsea-pvaluecutoff"></a></dt>
+<dd><p>P-value cutoff for GSEA results.</p></dd>
+
+
+<dt id="arg-gsea-mingssize">gsea_minGSSize<a class="anchor" aria-label="anchor" href="#arg-gsea-mingssize"></a></dt>
+<dd><p>Minimum size of gene sets to be considered in GSEA.</p></dd>
+
+
+<dt id="arg-gsea-maxgssize">gsea_maxGSSize<a class="anchor" aria-label="anchor" href="#arg-gsea-maxgssize"></a></dt>
+<dd><p>Maximum size of gene sets to be considered in GSEA.</p></dd>
+
+
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Suppress messages and warnings.</p></dd>
+
+
+<dt id="arg-allow-no-replicates">allow_no_replicates<a class="anchor" aria-label="anchor" href="#arg-allow-no-replicates"></a></dt>
+<dd><p>Allow analysis of conditions with no replicates (default: TRUE).</p></dd>
+
+
+<dt id="arg-de-if-no-reps">de_if_no_reps<a class="anchor" aria-label="anchor" href="#arg-de-if-no-reps"></a></dt>
+<dd><p>Strategy for differential expression when no replicates per condition. One of "none" or "edgeR_fixed" (default: "edgeR_fixed").</p></dd>
+
+
+<dt id="arg-assumed-dispersion">assumed_dispersion<a class="anchor" aria-label="anchor" href="#arg-assumed-dispersion"></a></dt>
+<dd><p>Fixed dispersion value used by edgeR when <code>de_if_no_reps = "edgeR_fixed"</code> (default: 0.1).</p></dd>
 
 </dl></div>
     <div class="section level2">
