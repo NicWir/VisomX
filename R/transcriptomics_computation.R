@@ -51,8 +51,10 @@ rna.read_data <- function (data = NULL,
   if(!is.null(data)){
     if (is.character(data)) {
       dat <- read_file(data, csvsep = csvsep, dec = dec, sheet = sheet)
-    } else if(exists(paste(quote(data)))){
+    } else if (is.data.frame(data) || is.matrix(data)) {
       dat <- data
+    } else {
+      stop("`data` must be a file path, data.frame, or matrix.")
     }
   } else {
     # Combine separate data files into a single dataframe
@@ -245,6 +247,19 @@ rna.read_data <- function (data = NULL,
     filtered_rsd@metadata$n.filtered.rsd <- number_removed_rsd
   }
   filtered_rsd@metadata$rsd.thresh <- rsd_thresh
+  # record key parameters in metadata for reproducibility
+  meta <- filtered_rsd@metadata
+  if (is.null(meta) || !is.list(meta)) meta <- list()
+  meta$filt.type   <- if (is.null(filt_type)) NA else filt_type[1]
+  meta$filt.thr    <- filt_thr
+  meta$filt.min    <- filt_min
+  meta$pfx.counts  <- pfx.counts
+  meta$csvsep      <- csvsep
+  meta$dec         <- dec
+  meta$sheet       <- sheet
+  meta$name.col    <- name
+  meta$id.col      <- id
+  filtered_rsd@metadata <- meta
 
   ## --- (10) Remove samples (columns) with all NA values -----------------------
   assay_data <- SummarizedExperiment::assay(filtered_rsd)
@@ -269,6 +284,11 @@ rna.read_data <- function (data = NULL,
     rna_se <- rna.filter_missing(filtered_rsd, type = filt_type, thr = filt_thr, min = filt_min)
   } else {
     rna_se <- filtered_rsd
+  }
+
+  # carry over metadata to final SummarizedExperiment
+  if (is.list(filtered_rsd@metadata)) {
+    rna_se@metadata <- filtered_rsd@metadata
   }
 
   cat(paste0("Identified conditions:\n ", paste(unique(rna_se$condition), collapse = ", "), "\n"))
@@ -382,7 +402,8 @@ rna.filter_missing <- function (se, type = c("complete", "condition", "fraction"
 #' @examples
 #'
 #' rna.report(results, report.dir = NULL)
-rna.report <- function(results, report.dir = NULL, ...){
+rna.report <- function(res, ..., report.dir = NULL, param = NULL) {
+  results <- get0("results", ifnotfound = get0("res", ifnotfound = NULL))
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se",
              "imputed", "dds", "pca", "results",
@@ -399,8 +420,14 @@ rna.report <- function(results, report.dir = NULL, ...){
   imp <- results$imputed
   pca <- results$pca
   dds <- results$dds
-  param <- results$param
+  #param <- results$param
   res <- results
+
+  sample_covariates <- if (exists("sample_covariates")) get("sample_covariates") else NULL
+  if (!is.null(sample_covariates)) {
+    common <- intersect(rownames(sample_covariates), colnames(dds))
+    sample_covariates <- if (length(common) >= 3) sample_covariates[common, , drop = FALSE] else NULL
+  }
 
   # Check if plot_volcano has been defined in the environment
   if (exists("plot_volcano", envir = .GlobalEnv)) {
@@ -446,7 +473,9 @@ rna.report <- function(results, report.dir = NULL, ...){
   #file <- "/Users/ncw/VisomX/inst/Report_RNA.Rmd"
   message("Render reports...")
   rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    intermediates_dir = tempdir(), quiet = TRUE)
+                    intermediates_dir = tempdir(), quiet = TRUE,
+                      params = list(param = param),
+                    envir = environment())
   message(paste0("Files saved in: '", wd, "'"))
 }
 

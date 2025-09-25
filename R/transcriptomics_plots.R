@@ -93,7 +93,7 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
   }
   dds_assay <- SummarizedExperiment::assay(dds)
   cor_mat <- cor(dds_assay)
-  ht1 = ComplexHeatmap::Heatmap(cor_mat, col = circlize::colorRamp2(seq(lower,
+  ht1 <- ComplexHeatmap::Heatmap(cor_mat, col = circlize::colorRamp2(seq(lower,
                                                                         upper, ((upper - lower)/7)), if (pal_rev) {
                                                                           rev(RColorBrewer::brewer.pal(8, pal))
                                                                         }
@@ -102,8 +102,8 @@ rna.plot_corrheatmap <- function (dds, lower = 0, upper = 1, pal = "PRGn",
                                                                     }), heatmap_legend_param = list(color_bar = "continuous",
                                                                                                     legend_direction = "horizontal", legend_width = unit(5,
                                                                                                                                                          "cm"), title_position = "topcenter"),
-                                name = "Pearson correlation", column_names_gp = grid:::gpar(fontsize = font_size),
-                                row_names_gp = grid:::gpar(fontsize = font_size), top_annotation = ha1,
+                                name = "Pearson correlation", column_names_gp = grid::gpar(fontsize = font_size),
+                                row_names_gp = grid::gpar(fontsize = font_size), top_annotation = ha1,
                                 ...)
   if (plot) {
     ComplexHeatmap::draw(ht1, heatmap_legend_side = "top")
@@ -223,6 +223,14 @@ rna.plot_heatmap <- function (dds,
     ha1 <- NULL
   }
   filtered <- dds[row_data$significant[!is.na(row_data$significant)], ]
+  # Reduce k when k > nrows
+  if (isTRUE(kmeans)) {
+    n_rows_filtered <- nrow(SummarizedExperiment::assay(filtered))
+    if (is.finite(k) && k > n_rows_filtered) {
+      warning(sprintf("Requested k = %d exceeds number of rows = %d; reducing k.", k, n_rows_filtered), call. = FALSE)
+      k <- n_rows_filtered
+    }
+  }
   if (nrow(SummarizedExperiment::assay(filtered)) == 0){
     stop("No genes with significantly different abundance were found.")
   }
@@ -263,6 +271,10 @@ rna.plot_heatmap <- function (dds,
   }
   if (kmeans && !obs_NA) {
     set.seed(1)
+    if (nrow(df) < k) {
+      warning(sprintf("k (%d) is larger than the number of rows (%d); reducing k to %d", k, nrow(df), nrow(df)))
+      k <- max(1, nrow(df))
+    }
     df_kmeans <- kmeans(df, k)
     if (type == "centered") {
       order <- data.frame(df, check.names = FALSE) %>% cbind(., cluster = df_kmeans$cluster) %>%
@@ -322,16 +334,22 @@ rna.plot_heatmap <- function (dds,
                                      col_limit, (col_limit /
                                                    5)),
                                  rev(RColorBrewer::brewer.pal(11, pal)), space = "LAB")
+  # Dynamic height to avoid stretched cells for small n
+  n_rows_hm <- if (is.data.frame(df)) nrow(df) else nrow(as.data.frame(df))
+  # target ~3.5 mm per row, clamp to [60, 220] mm
+  hm_height <- grid::unit(min(max(n_rows_hm * 3.5, 60), 220), "mm")
+
   ht1 = ComplexHeatmap::Heatmap(
     df,
     col = col_fun,
+    height = hm_height,
     split = if (kmeans) {
       df_kmeans$cluster
     } else {
       NULL
     },
-    cluster_rows = col_clust,
-    cluster_columns = row_clust,
+    cluster_rows = row_clust,
+    cluster_columns = col_clust,
     row_names_side = "left",
     column_names_side = "top",
     clustering_distance_rows = clustering_distance,

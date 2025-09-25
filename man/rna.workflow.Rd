@@ -43,6 +43,12 @@ rna.workflow(
   pathway_kegg = FALSE,
   kegg_organism = NULL,
   custom_pathways = NULL,
+  sample_covariates = NULL,
+  correlate_genes = FALSE,
+  correlate_pathways = FALSE,
+  pathway_min_genes = 3,
+  correlation_method = c("spearman", "pearson"),
+  correlation_p_adjust = "BH",
   gsea = FALSE,
   gsea_gmt = NULL,
   gsea_pAdjustMethod = c("BH", "none"),
@@ -131,6 +137,18 @@ or in shrinkage method "apeglm" or "normal".}
 \item{kegg_organism}{Name of the organism in the KEGG database (if 'pathway_kegg = TRUE')}
 
 \item{custom_pathways}{Dataframe providing custom pathway annotations.}
+
+\item{sample_covariates}{Optional data.frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns will be used for correlation analysis.}
+
+\item{correlate_genes}{Logical; if TRUE compute per-gene correlations vs provided numeric sample covariates on transformed (rlog/vst) expression values.}
+
+\item{correlate_pathways}{Logical; if TRUE compute per-pathway correlations (mean expression per pathway) vs covariates. Requires \code{custom_pathways} as gene set definition (data.frame with Pathway/Accession or GMT filepath).}
+
+\item{pathway_min_genes}{Minimum number of genes required in a pathway to compute a pathway score (default 3).}
+
+\item{correlation_method}{Correlation method for covariate analyses: "spearman" (default) or "pearson".}
+
+\item{correlation_p_adjust}{Multiple testing adjustment method applied within each covariate (default "BH").}
 
 \item{gsea}{Perform GSEA (Gene Set Enrichment Analysis) for each defined contrast.}
 

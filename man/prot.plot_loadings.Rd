@@ -6,7 +6,7 @@
 \usage{
 prot.plot_loadings(
   pcaobj,
-  components = PCAtools::getComponents(pcaobj, seq_len(5)),
+  components = PCAtools::getComponents(pcaobj, seq_len(ncol(pcaobj$loadings))),
   rangeRetain = 0.05,
   absolute = FALSE,
   col = c("gold", "white", "royalblue"),

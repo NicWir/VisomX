@@ -26,31 +26,38 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
                             pvalueCutoff = 0.05, pAdjustMethod = "BH", universe,
                             minGSSize = 10, maxGSSize = 500, qvalueCutoff = 0.2, use_internal_kegg = FALSE, custom_gene_sets = FALSE, custom_pathways = NULL)
 {
-  # — allow custom_pathways to be a GMT filepath —
-  if (custom_gene_sets &&
-      is.character(custom_pathways) &&
-      length(custom_pathways) == 1 &&
-      grepl("\\.gmt$", custom_pathways) &&
-      file.exists(custom_pathways))
-  {
-    # read.gmt returns a data.frame with columns `term` and `gene`
-    gmt_df <- clusterProfiler::read.gmt(custom_pathways)
-    # collapse genes into comma-space lists per pathway
-    custom_pathways <- gmt_df %>%
-      dplyr::group_by(term) %>%
-      dplyr::summarise(Accession = paste(gene, collapse = ", "), .groups = "drop") %>%
-      dplyr::rename(Pathway = term)
-  }
-
+  # Support custom_pathways either as a GMT file path or as a data.frame with columns Pathway and Accession
   if (custom_gene_sets) {
-    custom_pathways$Accession <-
-      custom_pathways$Accession %>% str_replace_all(., " // ", ", ") %>%
-      str_replace_all(., ", ", ",") %>% str_replace_all(., ",", ", ")
-    custom_vec <-
-      custom_pathways[, match(c("Pathway", "Accession"), colnames(custom_pathways))] %>% tibble::deframe()
-    NAME2EXTID <- strsplit(as.character(custom_vec), ", ")
+    # Convert GMT filepath to data.frame if given
+    if (is.character(custom_pathways) && length(custom_pathways) == 1 && grepl("\\.gmt$", custom_pathways) && file.exists(custom_pathways)) {
+      gmt_df <- clusterProfiler::read.gmt(custom_pathways)
+      custom_pathways <- gmt_df %>%
+        dplyr::group_by(term) %>%
+        dplyr::summarise(Accession = paste(gene, collapse = ", "), .groups = "drop") %>%
+        dplyr::rename(Pathway = term)
+    } else if (is.data.frame(custom_pathways)) {
+      # OK as provided
+    } else {
+      stop("`custom_pathways` must be either a GMT filepath or a data.frame with columns 'Pathway' and 'Accession'.", call. = FALSE)
+    }
+
+    # Ensure required columns exist
+    if (!all(c("Pathway", "Accession") %in% colnames(custom_pathways))) {
+      stop("custom_pathways must contain columns 'Pathway' and 'Accession'.", call. = FALSE)
+    }
+
+    # Normalize accession strings and ensure character type (use base gsub to avoid vector-length issues)
+    custom_pathways$Accession <- as.character(custom_pathways$Accession)
+    custom_pathways$Accession <- gsub(" // ", ", ", custom_pathways$Accession, fixed = TRUE)
+    custom_pathways$Accession <- gsub(",\\s*", ", ", custom_pathways$Accession)
+    custom_pathways$Accession <- gsub(",\\s*$", "", custom_pathways$Accession)
+
+    # Build NAME2EXTID mapping (Pathway -> vector of gene IDs)
+    custom_vec <- custom_pathways[, match(c("Pathway", "Accession"), colnames(custom_pathways))] %>% tibble::deframe()
+    NAME2EXTID <- strsplit(as.character(custom_vec), ",\\s*")
     names(NAME2EXTID) <- names(custom_vec)
     EXTID2NAME <- Biobase::reverseSplit(NAME2EXTID)
+
     DATA <- new.env()
     DATA$NAME2EXTID  <- NAME2EXTID
     DATA$EXTID2NAME  <- EXTID2NAME
@@ -61,6 +68,7 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
     if (is.null(res))
       return(res)
   } else {
+    # existing KEGG/internal path remains unchanged
     species <- clusterProfiler:::organismMapper(organism)
     if (use_internal_kegg) {
       DATA <- clusterProfiler:::get_data_from_KEGG_db(species)
@@ -76,6 +84,7 @@ pathway_enrich <- function (gene, organism = "ppu", keyType = "kegg",
     res@organism <- species
     res@keytype <- keyType
   }
+
   res <- dplyr::mutate(res, richFactor = Count / as.numeric(sub("/\\d+", "", BgRatio)))
   return(res)
 }
@@ -414,11 +423,11 @@ enrich_pathways <- function (object, contrasts, alpha_pathways = 0.1, pathway_ke
     ls.pora_custom_dn <- suppressMessages(lapply(1:length(contrasts), custom_pathway_dn))
 
     for (i in 1:length(contrasts)) {
-      if(is.null(nrow(ls.pora_custom_up[[i]]))){
-        cat(paste0("No significantly upregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+      if(!is.null(nrow(ls.pora_custom_up[[i]]))){
+        cat(paste0("Found ", nrow(ls.pora_custom_up[[i]]), " significantly upregulated custom pathways for contrast:\n", contrasts[i], "\n"))
       }
-      if(is.null(nrow(ls.pora_custom_dn[[i]]))){
-        cat(paste0("No significantly downregulated custom pathways found for contrast:\n", contrasts[i], "\n"))
+      if(!is.null(nrow(ls.pora_custom_dn[[i]]))){
+        cat(paste0("Found ", nrow(ls.pora_custom_dn[[i]]), " significantly downregulated custom pathways for contrast:\n", contrasts[i], "\n"))
       }
     }
     names(ls.pora_custom_up) <- contrasts

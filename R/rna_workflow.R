@@ -46,9 +46,13 @@
 #' @param sample_covariates Optional data.frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns will be used for correlation analysis.
 #' @param correlate_genes Logical; if TRUE compute per-gene correlations vs provided numeric sample covariates on transformed (rlog/vst) expression values.
 #' @param correlate_pathways Logical; if TRUE compute per-pathway correlations (mean expression per pathway) vs covariates. Requires `custom_pathways` as gene set definition (data.frame with Pathway/Accession or GMT filepath).
-#' @param pathway_min_genes Minimum number of genes required in a pathway to compute a pathway score (default 5).
+#' @param pathway_min_genes Minimum number of genes required in a pathway to compute a pathway score (default 3).
 #' @param correlation_method Correlation method for covariate analyses: "spearman" (default) or "pearson".
 #' @param correlation_p_adjust Multiple testing adjustment method applied within each covariate (default "BH").
+#' @param correlation_var_filter Optional [0,1]. Keep only features above this variance quantile (rlog/vst) before covariate testing. Example: 0.5 keeps the top 50% most-variable genes. Default NULL.
+#' @param correlation_min_sd Optional numeric. Keep only features with SD >= this value (rlog/vst) before testing. Default NULL.
+#' @param correlation_low_n Integer. Flag correlations computed with fewer than this many non-missing pairs. Default 6.
+#' @param gsea_covariates Logical. If TRUE and 'gsea_gmt' is provided, run GSEA on gene–covariate correlation ranks per covariate.
 #' @param gsea Perform GSEA (Gene Set Enrichment Analysis) for each defined contrast.
 #' @param gsea_gmt Path to a GMT file containing gene sets for GSEA.
 #' @param gsea_pAdjustMethod Method for adjusting p-values in GSEA. Options are "BH" (Benjamini-Hochberg) or "none".
@@ -106,9 +110,12 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                          sample_covariates = NULL,              # data.frame with rownames = sample IDs, numeric columns are used
                          correlate_genes = FALSE,               # compute gene-level correlations vs covariates
                          correlate_pathways = FALSE,            # compute pathway-level correlations vs covariates (requires custom_pathways)
-                         pathway_min_genes = 5,                 # min genes for pathway score
+                         pathway_min_genes = 3,                 # min genes for pathway score
                          correlation_method = c("spearman","pearson"),
                          correlation_p_adjust = "BH",
+                         correlation_var_filter = NULL,
+                         correlation_min_sd = NULL,
+                         correlation_low_n = 6,
                          # GSEA parameters
                          gsea = FALSE,
                          gsea_gmt = NULL,
@@ -116,6 +123,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                          gsea_pvalueCutoff = 0.05,
                          gsea_minGSSize = 5,
                          gsea_maxGSSize = 500,
+                         gsea_covariates = FALSE,
                          quiet = FALSE,
                          allow_no_replicates = TRUE,
                          de_if_no_reps = c("edgeR_fixed","none"),
@@ -160,6 +168,29 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   keep <- MatrixGenerics::rowSums(assay(se) >= 10, na.rm = TRUE) >= 3
   se <- se[keep, ]
   message("Number of genes after pre-filtering for counts ≥ 10 in ≥ 3 samples: ", nrow(assay(se)))
+  # Store parameters in metadata
+  param <- list(
+    imp_fun=imp_fun, trans_method=trans_method, type=type, design=design,
+    pAdjustMethod=pAdjustMethod, alpha=alpha, alpha.independent=alpha.independent,
+    lfcShrink=lfcShrink, shrink.method=shrink.method, lfc=lfc,
+    heatmap.show_all=heatmap.show_all, heatmap.kmeans=heatmap.kmeans, k=k,
+    heatmap.row_font_size=heatmap.row_font_size,
+    volcano.add_names=volcano.add_names, volcano.label_size=volcano.label_size, volcano.adjusted=volcano.adjusted,
+    pathway_enrichment=pathway_enrichment, pathway_kegg=pathway_kegg, kegg_organism=kegg_organism,
+    custom_pathways=custom_pathways,
+    correlate_genes=correlate_genes, correlate_pathways=correlate_pathways, pathway_min_genes=pathway_min_genes,
+    correlation_method=correlation_method, correlation_p_adjust=correlation_p_adjust,
+    correlation_var_filter=correlation_var_filter, correlation_min_sd=correlation_min_sd,
+    correlation_low_n=correlation_low_n,
+    gsea=gsea, gsea_gmt=gsea_gmt, gsea_pAdjustMethod=gsea_pAdjustMethod, gsea_pvalueCutoff=gsea_pvalueCutoff,
+    gsea_minGSSize=gsea_minGSSize, gsea_maxGSSize=gsea_maxGSSize,
+    allow_no_replicates=allow_no_replicates, de_if_no_reps=de_if_no_reps, assumed_dispersion=assumed_dispersion,
+    # add extra fields here
+    altHypothesis = ifelse(!is.null(altHypothesis), altHypothesis, NA),
+    controlGenes  = ifelse(is.null(controlGenes), "none", controlGenes)
+  )
+
+  metadata(se)$param <- param
 
   # Impute missing values
   if (imp_fun == "MinProb"){
@@ -260,6 +291,7 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
                               error = function(e) { DESeq2::rlog(dds, fitType = 'parametric', blind = TRUE) })
     }
   }
+  metadata(dds)$param <- param
   rna.pca <- prot.pca(SummarizedExperiment::assay(rlog.counts), center=TRUE,scale=TRUE)
 
   # Create list with test results for defined contrasts
@@ -458,9 +490,6 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
   if(!quiet) message(paste0("Save results as tab-delimited table to: ", getwd(), "/results.txt"))
   utils::write.table(res.table, file.path(getwd(), "results.txt"), row.names = FALSE, sep = "\t")
 
-  param <- data.frame(type, design, altHypothesis = ifelse(!is.null(altHypothesis), altHypothesis, NA), controlGenes = ifelse(is.null(controlGenes), "none", controlGenes), pAdjustMethod,
-                      lfcShrink, shrink.method, alpha, lfc, check.names = FALSE)
-
   res <- list(data = SummarizedExperiment::rowData(se), se = se, imputed = se_imp,
               dds = dds, pca = rna.pca,
               results = results, param = param)
@@ -488,16 +517,75 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
             covariates = cov_df,
             method = correlation_method,
             adjust_method = correlation_p_adjust,
-            feature_type = "gene"
+            feature_type = "gene",
+            var_filter_quantile = correlation_var_filter,
+            min_sd = correlation_min_sd,
+            low_n_threshold = correlation_low_n
           ),
           error = function(e){ warning("Gene correlation failed: ", e$message); NULL }
         )
+        if (!is.null(gene_cor)) {
+          wide <- reshape2::dcast(gene_cor, gene ~ variable, value.var = "cor")
+          for (v in setdiff(colnames(wide), "gene")) {
+            SummarizedExperiment::rowData(dds)[[paste0("cor.", v)]] <-
+              wide[[v]][match(rownames(SummarizedExperiment::rowData(dds)), wide$gene)]
+          }
+          wide_p <- reshape2::dcast(gene_cor, gene ~ variable, value.var = "padj")
+          for (v in setdiff(colnames(wide_p), "gene")) {
+            SummarizedExperiment::rowData(dds)[[paste0("padj.", v)]] <-
+              wide_p[[v]][match(rownames(SummarizedExperiment::rowData(dds)), wide_p$gene)]
+          }
+        }
         res$gene_covariate_correlations <- gene_cor
+        # Optional GSEA on correlation ranks
+        if (!is.null(gene_cor) && gsea_covariates && !is.null(gsea_gmt)) {
+          id_map <- SummarizedExperiment::rowData(dds)$ID
+          names(id_map) <- SummarizedExperiment::rowData(dds)$name
+          gsea_cov <- run_gsea_on_correlation(
+            gene_cor_df   = gene_cor,
+            id_map        = id_map,
+            gmt_file      = gsea_gmt,
+            pAdjustMethod = gsea_pAdjustMethod,
+            pvalueCutoff  = gsea_pvalueCutoff,
+            minGSSize     = gsea_minGSSize,
+            maxGSSize     = gsea_maxGSSize
+          )
+          if (length(gsea_cov) > 0) {
+            res$gsea_covariate_results <- gsea_cov
+            if (export) {
+              for (v in names(gsea_cov)) {
+                if (!is.null(gsea_cov[[v]]) && nrow(as.data.frame(gsea_cov[[v]])) > 0) {
+                  utils::write.table(as.data.frame(gsea_cov[[v]]),
+                                     file.path(getwd(), paste0("gsea_covariate_", v, ".txt")),
+                                     row.names = FALSE, sep = "\t")
+                }
+              }
+            }
+          }
+        }
         if (!is.null(gene_cor) && export) {
           utils::write.table(gene_cor, file.path(getwd(), "gene_covariate_correlations.txt"), sep = "\t", row.names = FALSE)
         }
       }
-
+      if (!is.null(gene_cor) && !is.null(gsea_gmt)) {
+        for (v in unique(gene_cor$variable)) {
+          gl <- gene_cor$cor[gene_cor$variable == v]
+          names(gl) <- SummarizedExperiment::rowData(dds)$ID[
+            match(gene_cor$gene[gene_cor$variable == v], SummarizedExperiment::rowData(dds)$name)
+          ]
+          gl <- sort(gl[!is.na(names(gl)) & !is.na(gl)], decreasing = TRUE)
+          gsea_res_cov <- gsea_custom(geneList = gl, gmt_file = gsea_gmt,
+                                      pAdjustMethod = gsea_pAdjustMethod,
+                                      pvalueCutoff = gsea_pvalueCutoff,
+                                      minGSSize = gsea_minGSSize, maxGSSize = gsea_maxGSSize)
+          res$gsea_covariate_results[[v]] <- gsea_res_cov
+          if (export && !is.null(gsea_res_cov) && nrow(as.data.frame(gsea_res_cov)) > 0) {
+            utils::write.table(as.data.frame(gsea_res_cov),
+                               file.path(getwd(), paste0("gsea_covariate_", v, ".txt")),
+                               row.names = FALSE, sep = "\t")
+          }
+        }
+      }
       # Pathway-level correlations (requires custom_pathways gene sets)
       if (correlate_pathways) {
         if (is.null(custom_pathways)) {
@@ -783,18 +871,37 @@ rna.workflow <- function(se, # SummarizedExperiment, generated with read_prot().
       }
     } # if(!is.null(custom_pathways))
   } #if(export == TRUE || plot == TRUE)
-
+print(str(param))
   if(report == TRUE){
-    rna.report(res,
-               volcano.adjusted = volcano.adjusted,
-               volcano.add_names = volcano.add_names,
-               pathway_enrichment = pathway_enrichment,
-               heatmap.show_all = heatmap.show_all,
-               heatmap.kmeans = heatmap.kmeans,
-               heatmap.row_font_size = heatmap.row_font_size,
-               export = export,
-               k = k,
-               report.dir = report.dir)
+    rna.report(
+        res,
+        report.dir = if (exists("report.dir")) report.dir else NULL,
+        # volcano
+        volcano.adjusted = volcano.adjusted,
+        volcano.add_names = volcano.add_names,
+        volcano.label_size = volcano.label_size,
+        plot_volcano = plot_volcano,
+        # heatmap settings used by the Rmd
+        heatmap.kmeans = heatmap.kmeans,
+        k = k,
+        heatmap.show_all = heatmap.show_all,
+        heatmap.row_font_size = heatmap.row_font_size,
+        heatmap.col_limit = heatmap.col_limit,
+        # pathway/report toggles
+        pathway_enrichment = pathway_enrichment,
+        pathway_kegg = pathway_kegg,
+        # covariates + thresholds for tables
+        sample_covariates = if (exists("sample_covariates")) sample_covariates else NULL,
+        correlation_low_n = correlation_low_n,
+        correlation_var_filter = correlation_var_filter,
+        # covariate-rank GSEA
+        gsea_covariates = gsea_covariates,
+        gsea_gmt = gsea_gmt,
+        # misc flags
+        export = export,
+        quiet = quiet,
+        param = param
+    )
   }
   message("Done!")
   return(res)

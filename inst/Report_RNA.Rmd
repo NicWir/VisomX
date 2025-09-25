@@ -15,16 +15,50 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(dev = "pdf")
+if (knitr::is_html_output()) {
+  knitr::opts_chunk$set(dev = "png", dpi = 150, out.height = 'auto')
+} else {
+  knitr::opts_chunk$set(dev = "pdf")
+}
 diff_true <- nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) != 0
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
 ```
-````{r,echo=FALSE}
-contrasts <- SummarizedExperiment::rowData(dds) %>% 
-    data.frame(check.names = FALSE) %>% 
-    select(starts_with("lfc.")) %>% 
-    colnames() %>% str_replace_all("lfc.", "")
-````
+```{r init_env, echo=FALSE}
+`%||%` <- function(a,b) if(!is.null(a)) a else b
+
+# Bring `param` in from rmarkdown::render(params=...) if present
+param <- tryCatch(params$param, error = function(e) NULL)
+if (is.null(param)) param <- get0("param", ifnotfound = NULL)
+
+# Build contrasts robustly without relying on unqualified dplyr verbs
+rd <- tryCatch(SummarizedExperiment::rowData(dds), error = function(e) NULL)
+if (!is.null(rd)) {
+  cn <- colnames(rd)
+  lfc_cols <- grep("^lfc\\.", cn, value = TRUE)
+  contrasts <- gsub("^lfc\\.", "", lfc_cols)
+} else {
+  contrasts <- character(0)
+}
+```
+
+```{r, results='asis', echo=FALSE}
+if (knitr::is_html_output()) cat('
+<style>
+/* let figures use full height; no vertical scroll */
+div.figure, div.knitr-figure, div.figure > div {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+/* images scale naturally */
+div.figure img, div.knitr-figure img {
+  height: auto !important;
+  max-width: 100%;
+}
+/* optional: horizontal scroll wrapper you use elsewhere */
+div.scroll-x { overflow-x: auto; overflow-y: visible; }
+</style>
+')
+```
 
 ## Summary
 `r #browser()`
@@ -148,6 +182,85 @@ suppressMessages(
   )
 ```
 \pagebreak
+## Analysis parameters
+
+```{r run_summary, echo=FALSE, results='asis'}
+`%||%` <- function(a,b) if(!is.null(a)) a else b
+
+# Find parameters recorded by rna.workflow()
+param <- get0("param", ifnotfound = NULL)
+if (is.null(param)) {
+  param <- tryCatch({
+    if (exists("res")) {
+      if (is.list(res) && "param" %in% names(res)) res$param
+      else if (inherits(res, "SummarizedExperiment") || inherits(res, "DESeqDataSet")) metadata(res)$param
+      else NULL
+    } else NULL
+  }, error=function(e) NULL)
+}
+if (is.null(param) && exists("dds")) param <- tryCatch(metadata(dds)$param, error=function(e) NULL)
+if (is.null(param) && exists("se"))  param <- tryCatch(metadata(se)$param,  error=function(e) NULL)
+
+# Never fall back to globals (prevents grabbing functions by name)
+getp <- function(name, default = NA) {
+  if (!is.null(param) && name %in% names(param)) return(param[[name]])
+  default
+}
+
+safe_format <- function(v) {
+  if (is.null(v)) return(NA_character_)
+  if (length(v) == 1 && (is.atomic(v) || is.numeric(v) || is.logical(v) || is.character(v))) return(as.character(v))
+  if (is.data.frame(v)) return(sprintf("data.frame[%d x %d]", nrow(v), ncol(v)))
+  if (is.list(v) && !is.data.frame(v)) return(sprintf("list(%d)", length(v)))
+  if (is.atomic(v) && length(v) > 1) return(paste0(utils::head(as.character(v), 8), collapse=", "))
+  out <- tryCatch(capture.output(str(v, give.attr = FALSE, vec.len = 6)), error=function(e) NULL)
+  if (is.null(out)) "<unprintable>" else paste(out, collapse=" ")
+}
+
+keys <- c("imp_fun","trans_method","type","design","pAdjustMethod","alpha","alpha.independent",
+          "lfcShrink","shrink.method","lfc","heatmap.show_all","heatmap.kmeans","k",
+          "heatmap.row_font_size","volcano.add_names","volcano.label_size","volcano.adjusted",
+          "pathway_enrichment","pathway_kegg","kegg_organism","custom_pathways","correlate_genes",
+          "correlate_pathways","pathway_min_genes","correlation_method","correlation_p_adjust",
+          "correlation_var_filter","correlation_min_sd","correlation_low_n","gsea","gsea_gmt",
+          "gsea_pAdjustMethod","gsea_pvalueCutoff","gsea_minGSSize","gsea_maxGSSize",
+          "allow_no_replicates","de_if_no_reps","assumed_dispersion")
+
+vals <- vapply(keys, function(x) safe_format(getp(x, NA)), character(1), USE.NAMES = FALSE)
+cfg <- data.frame(Parameter = keys, Value = vals, check.names = FALSE)
+print(knitr::kable(cfg, caption = "Key analysis parameters"))
+cat("\n")
+
+# Data summary
+n_in  <- tryCatch(nrow(SummarizedExperiment::assay(data)), error=function(e) NA_integer_)
+n_dds <- tryCatch(if (exists("dds")) nrow(BiocGenerics::counts(dds)) else NA_integer_, error=function(e) NA_integer_)
+sig_total <- tryCatch({ rd <- tryCatch(SummarizedExperiment::rowData(dds, use.names = FALSE), error=function(e) NULL);
+  if (!is.null(rd) && "significant" %in% colnames(as.data.frame(rd))) sum(as.data.frame(rd)$significant, na.rm=TRUE) else NA_integer_ }, error=function(e) NA_integer_)
+samples_n <- tryCatch(if (exists("dds")) ncol(dds) else if (exists("se")) ncol(se) else NA_integer_, error=function(e) NA_integer_)
+conds_n   <- tryCatch(if (exists("dds")) length(unique(SummarizedExperiment::colData(dds)$condition)) else NA_integer_, error=function(e) NA_integer_)
+
+summary_tab <- data.frame(Step = c("Input genes","Genes after DESeq filter","Significant genes (any contrast)","Samples","Conditions"),
+                          Value = c(n_in, n_dds, sig_total, samples_n, conds_n), check.names = FALSE)
+print(knitr::kable(summary_tab, caption = "Data summary"))
+```
+```{r expdesign_summary, echo=FALSE, results='asis'}
+if (exists("dds")) {
+  cd <- as.data.frame(SummarizedExperiment::colData(dds))
+  show_cols <- intersect(c("label","condition","replicate"), colnames(cd))
+  if (length(show_cols) > 0) print(knitr::kable(cd[, show_cols, drop=FALSE], caption="Sample metadata"))
+  cat("\nSamples per condition:\n\n")
+  print(knitr::kable(as.data.frame(table(cd$condition)), col.names = c("condition","n")))
+}
+```
+```{r counts_summary, echo=FALSE}
+if (exists("dds")) {
+  lib <- colSums(BiocGenerics::counts(dds))
+  summary_df <- data.frame(sample = names(lib), library_size = as.numeric(lib), stringsAsFactors = FALSE)
+  print(knitr::kable(summary_df, caption = "Library size per sample"))
+}
+```
+\pagebreak
+
 ## Quality control
 
 ### Principal component analysis
@@ -186,14 +299,29 @@ PCA loadings are the coefficients of the linear combination of the original vari
 \pagebreak
 ### Correlation matrix for samples with all genes
 ```{r correlation_heatmap_all, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-    prot.plot_corrheatmap(dds, font_size = 12, significant = FALSE )
+    rna.plot_corrheatmap(dds, font_size = 12, significant = FALSE )
 ```
 \pagebreak
 ## Differential expression analysis
 
 ### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed genes", "")` 
 ```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-  prot.plot_corrheatmap(dds, font_size = 12, significant = T )
+  rna.plot_corrheatmap(dds, font_size = 12, significant = T )
+```
+\pagebreak
+```{r de_summary, echo=FALSE, results='asis'}
+if (exists("dds")) {
+  rd <- as.data.frame(SummarizedExperiment::rowData(dds))
+  sig_cols <- grep("^significant\\.", colnames(rd), value = TRUE)
+  if (length(sig_cols) > 0) {
+    df <- data.frame(
+      contrast = gsub("^significant\\.", "", sig_cols),
+      n_significant = vapply(sig_cols, function(cn) sum(!is.na(rd[[cn]]) & rd[[cn]]), integer(1)),
+      stringsAsFactors = FALSE
+    )
+    print(knitr::kable(df, caption = "Significant DE genes per contrast"))
+  }
+}
 ```
 \pagebreak
 ### Heatmaps
@@ -204,7 +332,7 @@ if (width < 7)  { width = 7 }
 if (width > 12) { width = 12 }
 len = nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) / 55
 if (len < 5)  { len = 5 }
-if (len > 40) { len = 40 }
+if (len > 30) { len = 30 }
 ```
 ```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
 if(export==TRUE){
@@ -258,9 +386,254 @@ if(export==TRUE){
 } else {
 for (i in 1:length(contrasts)){
     volcano.temp <- rna.plot_volcano(dds, contrast = contrasts[i],
-                            add_names = volcano.add_names, label_size = 2.5, adjusted =  volcano.adjusted,
+                            add_names = volcano.add_names, label_size = 2.5, adjusted = volcano.adjusted,
                             plot = T, export = F, lfc = param$lfc, alpha = param$alpha)
   }
+}
+```
+\pagebreak
+## Sample covariate correlations
+
+```{r covariate_setup, echo=FALSE}
+gene_cor <- if ("gene_covariate_correlations" %in% names(res)) res$gene_covariate_correlations else NULL
+pw_cor   <- if ("pathway_covariate_correlations" %in% names(res)) res$pathway_covariate_correlations else NULL
+low_n_thr <- if (exists("correlation_low_n")) correlation_low_n else 6
+var_filter_q <- if (exists("correlation_var_filter")) correlation_var_filter else NULL
+```
+```{r covariate_notes, echo=FALSE, results='asis'}
+if (!is.null(gene_cor)) {
+  cat_cov  <- attr(gene_cor, "categorical_covariates"); if (length(cat_cov))  cat(paste0("Categorical covariates (not correlated): ", paste(cat_cov, collapse=", "), "\n\n"))
+  low_uni  <- attr(gene_cor, "skipped_covariates_low_unique"); if (length(low_uni))  cat(paste0("Skipped numeric covariates with <4 unique values: ", paste(low_uni, collapse=", "), "\n\n"))
+  num_like <- attr(gene_cor, "numeric_categorical_covariates"); if (length(num_like)) cat(paste0("Numeric covariates that look categorical (integer-like, ≤8 levels): ", paste(num_like, collapse=", "), "\n\n"))
+}
+```
+```{r gene_cov_tables, echo=FALSE, results='asis', eval=!is.null(gene_cor) && nrow(gene_cor) > 0}
+if (!is.null(gene_cor) && nrow(gene_cor) > 0) {
+  vars <- unique(gene_cor$variable)
+  for (v in vars) {
+    sub <- gene_cor[gene_cor$variable == v, ]
+    sub <- sub[order(sub$padj, -abs(sub$cor)), ]
+    # Fisher-z 95% CI for r where n>=4
+    if (all(c("cor","n") %in% colnames(sub))) {
+      fisher_ci <- function(r, n, level = 0.95) {
+        if (is.na(r) || is.na(n) || n < 4) return(c(NA_real_, NA_real_))
+        z <- atanh(max(min(r, 0.999999), -0.999999))
+        se <- 1 / sqrt(n - 3)
+        zc <- stats::qnorm(1 - (1 - level)/2)
+        lo <- tanh(z - zc*se); hi <- tanh(z + zc*se)
+        c(lo, hi)
+      }
+      ci_mat <- t(mapply(fisher_ci, sub$cor, sub$n))
+      sub$CI95 <- ifelse(is.finite(ci_mat[,1]), sprintf("[%.2f, %.2f]", ci_mat[,1], ci_mat[,2]), NA_character_)
+    }
+    for (col in intersect(c("pvalue","padj","cor"), colnames(sub))) sub[[col]] <- signif(sub[[col]], 3)
+    if ("n" %in% colnames(sub)) sub$flag_low_n <- ifelse(sub$n < low_n_thr, "*", "")
+    show_cols <- intersect(c("gene","variable","cor","CI95","pvalue","padj","n","flag_low_n"), colnames(sub))    
+    print(knitr::kable(utils::head(sub[, show_cols, drop=FALSE], 40),
+                       caption = paste("Top genes for covariate:", v)))
+    if (!is.null(var_filter_q)) cat(paste0("_Note_: variance filter applied (top ", round(100*var_filter_q), "% most-variable genes).\n\n"))
+    if ("flag_low_n" %in% colnames(sub)) cat(paste0("_* entries have n < ", low_n_thr, "._\n\n"))
+  }
+} else {
+  cat("No gene–covariate correlations available.\n")
+}
+```
+```{r covariate_diag, echo=FALSE, results='asis', eval=!is.null(gene_cor) && nrow(gene_cor) > 0}
+alpha_fdr <- if (!is.null(get0("param", ifnotfound=list())$alpha)) get0("param", ifnotfound=list())$alpha else 0.05
+sum_tab <- do.call(rbind, lapply(split(gene_cor, gene_cor$variable), function(df) {
+  pv  <- df$pvalue; pad <- df$padj
+  data.frame(variable = df$variable[1],
+             tests_m = sum(!is.na(pv)),
+             min_p = signif(min(pv, na.rm=TRUE), 3),
+             min_padj = signif(min(pad, na.rm=TRUE), 3),
+             n_sig = sum(pad <= alpha_fdr, na.rm=TRUE),
+             check.names = FALSE)
+}))
+rownames(sum_tab) <- NULL
+print(knitr::kable(sum_tab[order(-sum_tab$n_sig, sum_tab$min_padj),], caption="Covariate multiple-testing diagnostics"))
+```
+```{r covariate_p_hist, echo=FALSE, fig.width=5, fig.height=4, warning=FALSE, message=FALSE, eval=!is.null(gene_cor) && nrow(gene_cor) > 0}
+vars <- unique(gene_cor$variable)
+for (v in vars) {
+  pv <- gene_cor$pvalue[gene_cor$variable == v]
+  m  <- sum(!is.na(pv))
+  if (m >= 200) {
+    hist(pv, breaks = 40, main = paste0("P-value distribution: ", v, " (m=", m, ")"), xlab = "p-value")
+  }
+}
+```
+```{r gene_cov_scatter, echo=FALSE, fig.width=7, fig.height=7, warning=FALSE, message=FALSE, eval=!is.null(gene_cor) && nrow(gene_cor) > 0 && !is.null(sample_covariates)}
+if (!is.null(gene_cor) && nrow(gene_cor) > 0 && !is.null(sample_covariates)) {
+  try({
+    expr_mat <- log2(BiocGenerics::counts(dds, normalized = TRUE) + 1)
+    vars <- unique(gene_cor$variable)
+    for (v in vars) {
+      sub <- gene_cor[gene_cor$variable == v, ]
+      sub <- sub[order(sub$padj, -abs(sub$cor)), ]
+      top_genes <- head(sub$gene, 6)
+      common_samples <- intersect(rownames(sample_covariates), colnames(expr_mat))
+      if (length(common_samples) < 3) next
+      df_long <- do.call(rbind, lapply(top_genes, function(g){
+        if (!g %in% rownames(expr_mat)) return(NULL)
+        data.frame(
+          sample = common_samples,
+          expr = as.numeric(expr_mat[g, common_samples]),
+          covar = as.numeric(sample_covariates[common_samples, v]),
+          gene = g,
+          stringsAsFactors = FALSE
+        )
+      }))
+      df_long <- df_long[stats::complete.cases(df_long), , drop = FALSE]
+      if (nrow(df_long) >= 6) {
+        if (requireNamespace("ggplot2", quietly = TRUE)) {
+          # compute annotation positions per gene (safe finite positions)
+          labs_df <- do.call(rbind, lapply(split(df_long, df_long$gene), function(d){
+            r <- if (nrow(d) >= 3) suppressWarnings(stats::cor(d$expr, d$covar, method="spearman", use="complete.obs")) else NA_real_
+            data.frame(
+              gene = unique(d$gene),
+              lab = sprintf("r=%.2f, n=%d", ifelse(is.na(r), NA_real_, r), nrow(d)),
+              x = min(d$covar, na.rm = TRUE),
+              y = max(d$expr, na.rm = TRUE),
+              stringsAsFactors = FALSE
+            )
+          }))
+          p <- ggplot2::ggplot(df_long, ggplot2::aes(x = covar, y = expr)) +
+            ggplot2::geom_point(alpha = 0.8) +
+            ggplot2::geom_smooth(method = "lm", se = FALSE) +
+            ggplot2::facet_wrap(~ gene, scales = "free_y", ncol = 2) +
+            ggplot2::labs(title = paste("Gene expression vs", v), x = v, y = "log2 normalized counts") +
+            ggplot2::theme_bw(base_size = 10)
+          if (nrow(labs_df) > 0) {
+            p <- p + ggplot2::geom_text(data = labs_df, ggplot2::aes(x = x, y = y, label = lab), hjust = 0, vjust = 1, inherit.aes = FALSE, size = 3)
+          }
+          print(p)
+        } else {
+          cat("ggplot2 not available; skipping scatter plot for", v, "\n")
+        }
+      }
+    }
+  }, silent = FALSE)
+}
+```
+```{r gene_cov_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=!is.null(gene_cor) && nrow(gene_cor) > 0 && length(unique(gene_cor$variable)) >= 2, fig.align='center'}
+if (!is.null(gene_cor) && nrow(gene_cor) > 0) {
+  suppressWarnings({
+    wide <- reshape2::dcast(gene_cor, gene ~ variable, value.var = "cor")
+    rownames(wide) <- wide$gene; wide$gene <- NULL
+    # drop rows with all NA and columns with no variance
+    if (nrow(wide) > 0) {
+      wide <- wide[rowSums(!is.na(wide)) > 0, , drop = FALSE]
+      nzv <- vapply(wide, function(x) length(unique(stats::na.omit(x))) > 1, logical(1))
+      if (any(!nzv)) wide <- wide[, nzv, drop = FALSE]
+    }
+    # top rows by max |cor|
+    if (nrow(wide) > 50) {
+      safemax <- function(z) { if (all(is.na(z))) 0 else max(abs(z), na.rm = TRUE) }
+      ord <- order(apply(wide, 1, safemax), decreasing = TRUE)
+      wide <- wide[ord[1:50], , drop = FALSE]
+    }
+    cr <- nrow(wide) >= 2
+    cc <- ncol(wide) >= 2
+    if (nrow(wide) >= 1 && ncol(wide) >= 1) {
+      if (requireNamespace("pheatmap", quietly = TRUE)) {
+        pheatmap::pheatmap(as.matrix(wide), cluster_rows = cr, cluster_cols = cc,
+                           breaks = seq(-1, 1, length.out = 101))
+      } else {
+        stats::heatmap(as.matrix(wide), scale = "none")
+      }
+    } else {
+      cat("Not enough non-NA gene–covariate correlations to draw heatmap.\n")
+    }
+  })
+}
+```
+```{r pathway_cov_tables, echo=FALSE, results='asis', eval=!is.null(pw_cor) && nrow(pw_cor) > 0}
+if (!is.null(pw_cor) && nrow(pw_cor) > 0) {
+  vars <- unique(pw_cor$variable)
+  for (v in vars) {
+    sub <- pw_cor[pw_cor$variable == v, ]
+    sub <- sub[order(sub$padj, -abs(sub$cor)), ]
+    show_cols <- intersect(c("pathway","variable","cor","pvalue","padj","n_genes_used"), colnames(sub))
+    # round values in "pvalue" and "padj" and "cor" columns to three significant digits
+    for (col in c("pvalue","padj","cor")) {
+      if (col %in% show_cols) {
+        sub[[col]] <- signif(sub[[col]], 3)
+      }
+    }
+    print(knitr::kable(utils::head(sub[, show_cols, drop=FALSE], 20),
+                       caption = paste("Top pathways for covariate:", v)))
+    cat("\n\n")
+  }
+} else {
+  cat("No pathway–covariate correlations available.\n")
+}
+```
+```{r pathway_cov_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=!is.null(pw_cor) && nrow(pw_cor) > 0 && length(unique(pw_cor$variable)) >= 2, fig.align='center'}
+if (!is.null(pw_cor) && nrow(pw_cor) > 0) {
+  suppressWarnings({
+    wide <- reshape2::dcast(pw_cor, pathway ~ variable, value.var = "cor")
+    rownames(wide) <- wide$pathway; wide$pathway <- NULL
+    # drop rows with all NA and columns with no variance
+    if (nrow(wide) > 0) {
+      wide <- wide[rowSums(!is.na(wide)) > 0, , drop = FALSE]
+      nzv <- vapply(wide, function(x) length(unique(stats::na.omit(x))) > 1, logical(1))
+      if (any(!nzv)) wide <- wide[, nzv, drop = FALSE]
+    }
+    # top rows by max |cor|
+    if (nrow(wide) > 50) {
+      safemax <- function(z) { if (all(is.na(z))) 0 else max(abs(z), na.rm = TRUE) }
+      ord <- order(apply(wide, 1, safemax), decreasing = TRUE)
+      wide <- wide[ord[1:50], , drop = FALSE]
+    }
+    cr <- nrow(wide) >= 2
+    cc <- ncol(wide) >= 2
+    if (nrow(wide) >= 1 && ncol(wide) >= 1) {
+      if (requireNamespace("pheatmap", quietly = TRUE)) {
+        pheatmap::pheatmap(as.matrix(wide), cluster_rows = cr, cluster_cols = cc,
+                           breaks = seq(-1, 1, length.out = 101))
+      } else {
+        stats::heatmap(as.matrix(wide), scale = "none")
+      }
+    } else {
+      cat("Not enough non-NA pathway–covariate correlations to draw heatmap.\n")
+    }
+  })
+}
+```
+### GSEA on correlation ranks
+```{r gsea_covariate_tables, echo=FALSE, results='asis'}
+gsea_cov <- if ("gsea_covariate_results" %in% names(res)) res$gsea_covariate_results else NULL
+if (!is.null(gsea_cov) && length(gsea_cov) > 0) {
+  for (nm in names(gsea_cov)) {
+    df <- tryCatch(as.data.frame(gsea_cov[[nm]]), error = function(e) NULL)
+    if (!is.null(df) && nrow(df) > 0) {
+      if ("NES" %in% colnames(df)) {
+          pos <- df[df$NES > 0, , drop = FALSE]
+          neg <- df[df$NES < 0, , drop = FALSE]
+          if (nrow(pos) > 0) {
+            ordp <- order(pos$pvalue, -pos$NES)
+            show_cols <- intersect(c("ID","Description","NES","pvalue","p.adjust","qvalues","setSize","size"), colnames(pos))
+            print(knitr::kable(utils::head(pos[ordp, show_cols, drop=FALSE], 10), caption = paste("GSEA (ranks) — positive NES for", nm)))
+            cat("\n\n")
+          }
+          if (nrow(neg) > 0) {
+            ordn <- order(neg$pvalue, abs(neg$NES))
+            show_cols <- intersect(c("ID","Description","NES","pvalue","p.adjust","qvalues","setSize","size"), colnames(neg))
+            print(knitr::kable(utils::head(neg[ordn, show_cols, drop=FALSE], 10), caption = paste("GSEA (ranks) — negative NES for", nm)))
+            cat("\n\n")
+          }
+        } else {
+          ord <- order(df$pvalue)
+          show_cols <- intersect(c("ID","Description","pvalue","p.adjust","qvalues","setSize","size"), colnames(df))
+          print(knitr::kable(utils::head(df[ord, show_cols, drop=FALSE], 15), caption = paste("GSEA (correlation ranks) for covariate:", nm)))
+          cat("\n\n")
+        }
+    } else {
+      cat(paste0("No significant GSEA results for covariate: ", nm, ".\n\n"))
+    }
+  }
+} else {
+  cat("No GSEA results on correlation ranks available.\n")
 }
 ```
 \pagebreak
@@ -397,3 +770,8 @@ if("pora_custom_up" %in% names(results)) {
   }
 }
 ```
+
+\pagebreak
+## Session info
+```{r session_info, echo=FALSE}
+print(sessionInfo())
