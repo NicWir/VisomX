@@ -88,6 +88,12 @@ several options for plotting, exporting plots, and creating a report.</p>
 <span>  pathway_kegg <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  kegg_organism <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  custom_pathways <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sample_covariates <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  correlate_genes <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  correlate_pathways <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pathway_min_genes <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  correlation_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spearman"</span>, <span class="st">"pearson"</span><span class="op">)</span>,</span>
+<span>  correlation_p_adjust <span class="op">=</span> <span class="st">"BH"</span>,</span>
 <span>  gsea <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  gsea_gmt <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  gsea_pAdjustMethod <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"BH"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
@@ -253,6 +259,30 @@ or in shrinkage method "apeglm" or "normal".</p></dd>
 
 <dt id="arg-custom-pathways">custom_pathways<a class="anchor" aria-label="anchor" href="#arg-custom-pathways"></a></dt>
 <dd><p>Dataframe providing custom pathway annotations.</p></dd>
+
+
+<dt id="arg-sample-covariates">sample_covariates<a class="anchor" aria-label="anchor" href="#arg-sample-covariates"></a></dt>
+<dd><p>Optional data.frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns will be used for correlation analysis.</p></dd>
+
+
+<dt id="arg-correlate-genes">correlate_genes<a class="anchor" aria-label="anchor" href="#arg-correlate-genes"></a></dt>
+<dd><p>Logical; if TRUE compute per-gene correlations vs provided numeric sample covariates on transformed (rlog/vst) expression values.</p></dd>
+
+
+<dt id="arg-correlate-pathways">correlate_pathways<a class="anchor" aria-label="anchor" href="#arg-correlate-pathways"></a></dt>
+<dd><p>Logical; if TRUE compute per-pathway correlations (mean expression per pathway) vs covariates. Requires <code>custom_pathways</code> as gene set definition (data.frame with Pathway/Accession or GMT filepath).</p></dd>
+
+
+<dt id="arg-pathway-min-genes">pathway_min_genes<a class="anchor" aria-label="anchor" href="#arg-pathway-min-genes"></a></dt>
+<dd><p>Minimum number of genes required in a pathway to compute a pathway score (default 3).</p></dd>
+
+
+<dt id="arg-correlation-method">correlation_method<a class="anchor" aria-label="anchor" href="#arg-correlation-method"></a></dt>
+<dd><p>Correlation method for covariate analyses: "spearman" (default) or "pearson".</p></dd>
+
+
+<dt id="arg-correlation-p-adjust">correlation_p_adjust<a class="anchor" aria-label="anchor" href="#arg-correlation-p-adjust"></a></dt>
+<dd><p>Multiple testing adjustment method applied within each covariate (default "BH").</p></dd>
 
 
 <dt id="arg-gsea">gsea<a class="anchor" aria-label="anchor" href="#arg-gsea"></a></dt>
