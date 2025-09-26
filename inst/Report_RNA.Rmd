@@ -326,16 +326,28 @@ if (exists("dds")) {
 \pagebreak
 ### Heatmaps
 The heat map gives an overview of all genes with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of genes (rows) can indicate genes that behave in a similar way.
-```{r heatmap_contrast,echo=FALSE, warning=F, message=F}
-width = 6+length(dds$condition)/10
-if (width < 7)  { width = 7 }
-if (width > 12) { width = 12 }
-len = nrow(SummarizedExperiment::rowData(dds)[!is.na(SummarizedExperiment::rowData(dds, use.names = FALSE)$significant), ]) / 55
-if (len < 5)  { len = 5 }
-if (len > 30) { len = 30 }
+```{r heatmap_contrast, echo=FALSE, warning=FALSE, message=FALSE}
+# --- Dynamic figure dimensions ---
+# width ~ samples
+n_samp <- tryCatch(ncol(dds), error = function(e) 8L)
+width  <- 5 + 0.45 * n_samp         # linear in samples
+width  <- max(7, min(width, 14))    # clamp [7, 14] inches
+
+# height ~ significant genes
+rd <- SummarizedExperiment::rowData(dds, use.names = FALSE)
+sig <- rd$significant; sig[is.na(sig)] <- FALSE
+n_rows_sig <- sum(sig)
+
+# ~0.06 inch per gene, clamp [4, 11] inches (works for HTML and PDF)
+fig_h <- n_rows_sig * 0.06
+fig_h <- max(4, min(fig_h, 11))
+
+# share with subsequent chunks
+assign(".__hm_width",  width,  envir = knitr::knit_global())
+assign(".__hm_height", fig_h,  envir = knitr::knit_global())
 ```
-```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
-if(export==TRUE){
+```{r heatmap_1, echo=FALSE, fig.width = .__hm_width, fig.height = .__hm_height, warning=F, message=F, fig.align='center'}
+if (isTRUE(export)) {
   knitr::include_graphics(paste0(dirname(wd), "/Plots/HeatMap_contrast.pdf"), dpi = 300)
 } else {
   try(suppressMessages(
@@ -345,30 +357,30 @@ if(export==TRUE){
       kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
       k = ifelse(exists("k"), k, 6),
       show_all = heatmap.show_all,
-      show_row_names = T,
+      show_row_names = TRUE,
       row_font_size = heatmap.row_font_size,
-      plot = T,
-      export = F
+      plot = TRUE,
+      export = FALSE
     )
   ))
 }
 ```
 \pagebreak
-```{r heatmap_condition, echo=FALSE, fig.width = width, fig.height = len, fig.align='center'}
-if(export==TRUE){
-  knitr::include_graphics(paste0(dirname(wd), "/Plots/HeatMap_centered.pdf"),dpi = 300)
+```{r heatmap_condition, echo=FALSE, fig.width = .__hm_width, fig.height = .__hm_height, fig.align='center'}
+if (isTRUE(export)) {
+  knitr::include_graphics(paste0(dirname(wd), "/Plots/HeatMap_centered.pdf"), dpi = 300)
 } else {
   try(suppressMessages(
-        rna.plot_heatmap(dds, type = "centered", 
-                          kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
-                          k = ifelse(exists("k"), k, 6),
-                          show_all = T, 
-                          show_row_names = T, 
-                          row_font_size = heatmap.row_font_size, 
-                          indicate = c("condition"),
-                          plot = T, 
-                          export = F)
-      ))
+    rna.plot_heatmap(dds, type = "centered",
+                     kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
+                     k = ifelse(exists("k"), k, 6),
+                     show_all = TRUE,
+                     show_row_names = TRUE,
+                     row_font_size = heatmap.row_font_size,
+                     indicate = c("condition"),
+                     plot = TRUE,
+                     export = FALSE)
+  ))
 }
 ```
 \pagebreak
