@@ -937,8 +937,9 @@ get_annotation <- function (dep, indicate)
 #' @param ... Additional parameters to be passed to markdown to generate the report.
 #' currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k
 #' @export
-prot.report <- function(results, report.dir = NULL, ...)
+prot.report <- function(results, report.dir = NULL, ..., param = NULL)
 {
+  `%||%` <- function(a, b) if (!is.null(a)) a else b
   assertthat::assert_that(is.list(results))
   if (any(!c("data", "se", "norm",
              "imputed", "diff", "dep", "results",
@@ -955,7 +956,24 @@ prot.report <- function(results, report.dir = NULL, ...)
   imp <- results$imputed
   pca <- results$pca
   dep <- results$dep
-  param <- results$param
+  res <- results
+  param <- `%||%`(param, results$param)
+
+  sample_covariates <- if (exists("sample_covariates")) get("sample_covariates") else NULL
+  if (!is.null(sample_covariates)) {
+    if (!is.data.frame(sample_covariates)) {
+      warning("'sample_covariates' provided to prot.report is not a data.frame; ignoring.")
+      sample_covariates <- NULL
+    } else {
+      common <- intersect(rownames(sample_covariates), colnames(dep))
+      if (length(common) >= 3) {
+        sample_covariates <- sample_covariates[common, , drop = FALSE]
+      } else {
+        warning("<3 overlapping samples between proteomics data and 'sample_covariates'; omitting covariate summaries in report.")
+        sample_covariates <- NULL
+      }
+    }
+  }
 
   # Check if plot_volcano has been defined in the environment
   if (exists("plot_volcano", envir = .GlobalEnv)) {
@@ -979,22 +997,32 @@ prot.report <- function(results, report.dir = NULL, ...)
     pora_custom_dn <- results$pora_custom_dn
   }
   if(!is.null(report.dir)){
-    wd <- report.dir
+    wd <- file.path(getwd(), report.dir)
   } else {
-    wd <- paste(getwd(), "/Report.prot_", format(Sys.time(),
-                                                 "%Y%m%d_%H%M%S"), sep = "")
+    wd <- file.path(getwd(), paste0("Report.prot_", format(Sys.time(), "%Y%m%d_%H%M%S")))
   }
-  dir.create(wd, showWarnings = F)
-  for(i in 1:length(.libPaths())){
-    VisomX.ndx <- grep("VisomX", list.files(.libPaths()[i]))
-    if(length(VisomX.ndx)>0){
-      Report.wd <- paste0(.libPaths()[i], "/VisomX")
+  dir.create(wd, showWarnings = FALSE, recursive = TRUE)
+
+  local_rmd <- file.path(getwd(), "inst", "Report_Prot.Rmd")
+  if (file.exists(local_rmd)) {
+    file <- local_rmd
+  } else {
+    file <- system.file("Report_Prot.Rmd", package = "VisomX")
+    if (!nzchar(file) || !file.exists(file)) {
+      stop("Report_Prot.Rmd not found in local repo or installed package.")
     }
   }
-  file <- paste0(Report.wd, "/Report_Prot.Rmd")
+
   message("Render reports...")
-  rmarkdown::render(file, output_format = "all", output_dir = wd,
-                    quiet = TRUE, intermediates_dir = tempdir())
+  rmarkdown::render(
+    file,
+    output_format = "all",
+    output_dir = wd,
+    intermediates_dir = tempdir(),
+    quiet = TRUE,
+    params = list(param = param),
+    envir = environment()
+  )
 
   message(paste0("Files saved in: '", wd, "'"))
 }

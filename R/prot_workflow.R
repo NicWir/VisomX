@@ -579,14 +579,29 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   }
 
   if(report == TRUE){
-    prot.report(results,
-                volcano.adjusted = volcano.adjusted,
-                pathway_enrichment = pathway_enrichment,
-                heatmap.show_all = heatmap.show_all,
-                heatmap.kmeans = heatmap.kmeans,
-                volcano.add_names = volcano.add_names,
-                k = k,
-                report.dir = report.dir)
+    prot.report(
+      results,
+      report.dir = if (exists("report.dir") && !is.null(report.dir)) report.dir else NULL,
+      volcano.adjusted = volcano.adjusted,
+      volcano.add_names = volcano.add_names,
+      volcano.label_size = volcano.label_size,
+      plot_volcano = plot_volcano,
+      pathway_enrichment = pathway_enrichment,
+      pathway_kegg = pathway_kegg,
+      heatmap.show_all = heatmap.show_all,
+      heatmap.kmeans = heatmap.kmeans,
+      heatmap.col_limit = heatmap.col_limit,
+      heatmap.row_font_size = heatmap.row_font_size,
+      k = k,
+      sample_covariates = sample_covariates,
+      correlation_low_n = correlation_low_n,
+      correlation_var_filter = correlation_var_filter,
+      gsea_covariates = gsea_covariates,
+      gsea_gmt = gsea_gmt,
+      export = export,
+      quiet = quiet,
+      param = param
+    )
   }
   setwd(old_wd)
   return(results)

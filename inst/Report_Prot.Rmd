@@ -15,23 +15,56 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(dev = "pdf")
-diff_true <- nrow(SummarizedExperiment::rowData(dep[SummarizedExperiment::rowData(dep, use.names = FALSE)$significant, 
-    ])) != 0
-knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
+if (knitr::is_html_output()) {
+  knitr::opts_chunk$set(dev = "png", dpi = 150, out.height = 'auto')
+} else {
+  knitr::opts_chunk$set(dev = "pdf")
+}
+diff_true <- nrow(SummarizedExperiment::rowData(dep)[!is.na(SummarizedExperiment::rowData(dep, use.names = FALSE)$significant), , drop = FALSE]) != 0
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
 ```
-````{r,echo=FALSE}
-contrasts <- SummarizedExperiment::rowData(dep) %>% 
-    data.frame(check.names = FALSE) %>% 
-    select(ends_with("_diff")) %>% 
-    colnames() %>% str_replace_all("_diff", "")
-````
+
+```{r init_env, echo=FALSE}
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+param <- tryCatch(params$param, error = function(e) NULL)
+if (is.null(param)) {
+  param <- get0("param", ifnotfound = NULL)
+}
+res <- get0("res", ifnotfound = get0("results", ifnotfound = NULL))
+if (is.null(res) && exists("results")) res <- results
+if (is.null(param) && !is.null(res) && "param" %in% names(res)) param <- res$param
+if (is.null(res)) res <- list()
+rd <- tryCatch(SummarizedExperiment::rowData(dep), error = function(e) NULL)
+if (!is.null(rd)) {
+  lfc_cols <- grep("_diff$", colnames(rd), value = TRUE)
+  contrasts <- gsub("_diff$", "", lfc_cols)
+} else {
+  contrasts <- character(0)
+}
+```
+
+```{r, results='asis', echo=FALSE}
+if (knitr::is_html_output()) cat('
+<style>
+/* allow full-height figures in HTML */
+div.figure, div.knitr-figure, div.figure > div {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+div.figure img, div.knitr-figure img {
+  height: auto !important;
+  max-width: 100%;
+}
+div.scroll-x { overflow-x: auto; overflow-y: visible; }
+</style>
+')
+```
 
 ## Summary
 `r #browser()`
-Original file contains _`r data@metadata$n.pre_filt`_ proteins, of which _`r ifelse(!is.null(data@metadata$n.filtered), data@metadata$n.filtered, 0)`_ were removed due to missing values (_filt_type = '`r data@metadata$filt_type`'_), and `r ifelse(!is.null(data@metadata$n.filtered.rsd), data@metadata$n.filtered.rsd, 0)` due to too high RSD (threshold: `r ifelse(!is.null(data@metadata$rsd.thresh), data@metadata$rsd.thresh, NA)`).
+Original file contains _`r data@metadata$n.pre_filt`_ proteins, of which _`r ifelse(!is.null(data@metadata$n.filtered), data@metadata$n.filtered, 0)`_ were removed due to missing values (_filt_type = '`r data@metadata$filt_type`'_), and _`r ifelse(!is.null(data@metadata$n.filtered.rsd), data@metadata$n.filtered.rsd, 0)`_ due to too high RSD (threshold: `r ifelse(!is.null(data@metadata$rsd.thresh), data@metadata$rsd.thresh, NA)`).
 
-_`r nrow(dep)`_ proteins were reproducibly quantified. 
+_`r nrow(dep)`_ proteins were reproducibly quantified.
 
 In total _`r ncol(data)`_ samples were detected:
 
@@ -39,331 +72,643 @@ In total _`r ncol(data)`_ samples were detected:
    
 Samples were grouped into _`r length(unique(data[['condition']]))`_ conditions:
 
-`r colFmt(unique(data[['condition']]), 'blue')` 
+`r colFmt(unique(data[['condition']]), 'blue')`
 
 
-#### `r nrow(dep[SummarizedExperiment::rowData(dep)[['significant']], ])` proteins differ significantly between samples.
-```{r signif_conditions, echo=FALSE,  results="asis"}
-if (length(contrasts) > 1){
-  for (i in 1:length(contrasts)) {
-    cat(paste0("* _",
-               nrow(dep[SummarizedExperiment::rowData(dep)[[paste0(contrasts[i], "_significant")]],]),
-               "_ proteins for contrast ", contrasts[i], "\n"))
+#### `r sum(SummarizedExperiment::rowData(dep, use.names = FALSE)$significant, na.rm = TRUE)` proteins differ significantly between samples.
+```{r signif_conditions, echo=FALSE, results='asis'}
+if (length(contrasts) > 1) {
+  rd_loc <- SummarizedExperiment::rowData(dep, use.names = FALSE)
+  for (nm in contrasts) {
+    sig_col <- paste0(nm, "_significant")
+    if (sig_col %in% colnames(rd_loc)) {
+      cnt <- sum(rd_loc[[sig_col]], na.rm = TRUE)
+      lbl <- gsub("_", "\_", nm, fixed = TRUE)
+      cat(paste0("* _", cnt, "_ proteins for contrast ", lbl, "
+"))
+    }
   }
 }
 ```
 
-Parameters used for the analysis:  
-
-* missing data was imputed using _`r colFmt(paste0("'", imp@metadata$imp_fun, "'"),'blue')`_
-* selected contrast type: `r colFmt(paste0("'", param[['type']], "'"),'blue')`
-* tested contrasts:
-  `r colFmt(gsub("_p.adj", "", colnames(SummarizedExperiment::rowData(dep))[grep("p.adj", colnames(SummarizedExperiment::rowData(dep)))]),'blue')`
-* adjusted p-value <= `r colFmt(param[['alpha']],'blue')`
-* |logFC| >= `r colFmt(param[['lfc']],'blue')`
+```{r summary_params, echo=FALSE, results='asis'}
+cat("* missing data was imputed using ", colFmt(paste0("'", imp@metadata$imp_fun, "'"), 'blue'), "
+", sep = "")
+cat("* selected contrast type: ", colFmt(paste0("'", param[['type']], "'"), 'blue'), "
+", sep = "")
+if (length(contrasts)) {
+  cat("* tested contrasts: ", colFmt(contrasts, 'blue'), "
+", sep = "")
+}
+cat("* adjusted p-value <= ", colFmt(param[['alpha']], 'blue'), "
+", sep = "")
+cat("* |log2 fold-change| >= ", colFmt(param[['lfc']], 'blue'), "
+", sep = "")
+if (!is.null(param[['alpha_pathways']])) {
+  cat("* pathway FDR threshold <= ", colFmt(param[['alpha_pathways']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['pAdjustMethod']])) {
+  cat("* p-value adjustment method: ", colFmt(param[['pAdjustMethod']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlate_proteins']])) {
+  cat("* protein covariate correlations: ", colFmt(param[['correlate_proteins']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlate_pathways']])) {
+  cat("* pathway covariate correlations: ", colFmt(param[['correlate_pathways']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlation_method']])) {
+  cat("* correlation method: ", colFmt(param[['correlation_method']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlation_low_n']])) {
+  cat("* minimum samples for correlations: ", colFmt(param[['correlation_low_n']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlation_var_filter']])) {
+  cat("* variance filter quantile: ", colFmt(param[['correlation_var_filter']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['correlation_min_sd']])) {
+  cat("* minimum SD filter: ", colFmt(param[['correlation_min_sd']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['gsea']])) {
+  cat("* differential-expression GSEA: ", colFmt(param[['gsea']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['gsea_covariates']])) {
+  cat("* covariate-rank GSEA: ", colFmt(param[['gsea_covariates']], 'blue'), "
+", sep = "")
+}
+if (!is.null(param[['sample_covariates']])) {
+  cat("* sample covariates provided: ", colFmt(param[['sample_covariates']], 'blue'), "
+", sep = "")
+}
+```
 
 \pagebreak
 ## Protein numbers
 
 Protein identifications per sample:
-```{r,echo=FALSE}
-pg_width = ncol(data) / 2
-if (pg_width > 10) { pg_width = 10 }
+```{r, echo=FALSE}
+pg_width <- max(4, min(ncol(data) / 2, 10))
 suppress_ggrepel <- function(w) {
-    if (any(grepl("ggrepel", w)))
-      invokeRestart("muffleWarning")
-  }
+  if (any(grepl("ggrepel", w))) invokeRestart("muffleWarning")
+}
 ```
 ```{r numbers, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = pg_width, fig.align='center'}
-try(prot.plot_numbers(data, plot = T, export = F))
+try(prot.plot_numbers(data, plot = TRUE, export = FALSE))
 ```
 
-Gene coverage in all samples:
+Protein coverage in all samples:
 ```{r coverage, echo=FALSE, warning=FALSE, fig.height = 4, fig.width = 6, fig.align='center'}
 try(plot_coverage(data))
 ```
+
 \pagebreak
 ## Normalization
 
-The data was background corrected and normalized by variance stabilizing transformation (_vsn_).
-VSN transforms the data in such a way that the variance remains nearly constant over the whole intensity spectrum. Without this (or another) normalization a dependency between intensity and variance can be observed in may cases which deteriorates the analysis results.
+The data was background corrected and normalized by variance stabilizing transformation (_vsn_). VSN transforms the data in such a way that the variance remains nearly constant over the whole intensity spectrum. Without this (or another) normalization a dependency between intensity and variance can be observed in many cases which deteriorates the analysis results.
 
-#### Verify the variance stabilisation.\
-  The purpose of the following graph is to determine if there is a systematic trend in the standard deviation of the data as a function of overall expression. These graphs are based on the assumption that most proteins are not differentially expressed, so the running median is a reasonable estimate of the standard deviation of the data at the feature level, as a function of the mean. After vsn normalization, the running median should be approximately a horizontal line. While a completely flat curve of the square root of variance over the mean may seem like the goal of such transformations, this may be unreasonable in the case of datasets with many true differences due to the experimental conditions. There may be random fluctuations, but there should not be a general trend. If this is not the case, it usually indicates a data quality problem or is the result of inadequate data preprocessing.
+#### Verify the variance stabilisation
+```{r meanSDplot1, echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+suppressWarnings(meanSdPlot(data, ranks = TRUE, plot = TRUE, xlab = "Rank(mean)", ylab = "SD"))
+```
+```{r meanSDplot2, echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
+suppressWarnings(meanSdPlot(norm, plot = TRUE, xlab = "Rank(mean)", ylab = "SD"))
+```
 
-SD-Rank(mean) plot before normalization:
-```{r meanSDplot1,echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
-  suppressWarnings(meanSdPlot(data, ranks = TRUE, plot = T, xlab = "Rank(mean)", ylab = "SD"))
+```{r, echo=FALSE}
+norm_height <- min(max(ncol(data) / 2.2, 4), 9.5)
 ```
-SD-Rank(mean) plot after normalization:
-```{r meanSDplot2,echo=FALSE, warning=FALSE, fig.width=5, fig.height=3, fig.align='center'}
-  suppressWarnings(meanSdPlot(norm, plot = T, xlab = "Rank(mean)", ylab = "SD"))
-```
-\pagebreak
-```{r,echo=FALSE}
-norm_height = ncol(data) / 2.2
-if (norm_height > 9.5) {norm_height = 9.5}
-```
- Box plots of the distributions before and after normalization:
+Box plots of the distributions before and after normalization:
 ```{r norm, echo=FALSE, warning=FALSE, fig.height = norm_height, fig.align='center'}
-prot.boxplot_intensity(data, norm, plot = T, export = F)
+prot.boxplot_intensity(data, norm, plot = TRUE, export = FALSE)
 ```
+
 \pagebreak
 ## Missing values
 Missing values in the data set must be imputed. The downstream analysis can be strongly influenced by the imputation. Therefore, the selection of an appropriate method is crucial. 
-The data can be missing at random (MAR), for example if proteins are quantified in some replicates but not in others, without any bias towards low intensities. This class of missing values can arise when the peptide sequence is mapped incorrectly or software erroneously assigns shared peptides to precursors leading to misidentification in some samples and missing values in others.\
-MNAR may result from experimental effects such as (1) enzyme miscleavages, (2) true presence/absence in the biological samples and (3) instrumentation effects (when peptide measurements are low in abundance compared to background noise or constitute low ionization efficiency). Because values are missing because of low abundant nature of the respective proteins, this category of missing values is considered left-censored, i.e., the distribution of values (if present in the data) would fall on the left tail of the total observations in the dataset.
+The data can be missing at random (MAR), for example if proteins are quantified in some replicates but not in others, without any bias towards low intensities. This class of missing values can arise when the peptide sequence is mapped incorrectly or software erroneously assigns shared peptides to precursors leading to misidentification in some samples and missing values in others.MNAR may result from experimental effects such as (1) enzyme miscleavages, (2) true presence/absence in the biological samples and (3) instrumentation effects (when peptide measurements are low in abundance compared to background noise or constitute low ionization efficiency). Because values are missing because of low abundant nature of the respective proteins, this category of missing values is considered left-censored, i.e., the distribution of values (if present in the data) would fall on the left tail of the total observations in the dataset.
 
-To asses the type of missing data (random or not), the following heat map of missing values and density distributions of proteins with/without missing values provide a visual aid.\
-If data is randomly missing, use the k-nearest neighbor (“_knn_”) or maximum likelihood (“_MLE_”) options for imputation.
-If the missing data is biased to certain samples (e.g. controls) which are expected to be depleted of certain proteins and/or if there is a clear bias of missing values towards low abundances, use the "_QRILC_", "_MinProb_", "_SampMin_", or "_man_" options for imputation. For a more detailed description of different imputation methods, see the 
-_[MSnbase](https://bioconductor.org/packages/3.15/bioc/html/MSnbase.html)_ vignette and in particular the _impute_ function description. The "__SampMin__" method was proposed by  [Liu and Dongre (2020)](https://doi.org/10.1093/bib/bbaa112)) and shown to outperform other common methods for MNAR, left-censored datasets.
+To assess the type of missing data (random or not), the following heat map of missing values and density distributions of proteins with/without missing values provide a visual aid.
 ```{r missval, echo=FALSE, fig.width = 7, fig.height = 6, fig.align='center'}
 if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
-  suppressMessages(prot.plot_missval(norm, fontsize = 12, export = F))
+  suppressMessages(prot.plot_missval(data, fontsize = 12, export = FALSE))
 }
 ```
+
 \pagebreak
 To check whether missing values are biased toward low-intensity proteins (i.e., 'left-censored'), densities and cumulative proportions are plotted for proteins with and without missing values.
-
 ```{r missval2, echo=FALSE, fig.width = 7, fig.height = 7, fig.align='center'}
 if (any(is.na(data.frame(SummarizedExperiment::assay(data))))) {
-  suppressMessages(prot.plot_detect(norm, basesize = 10, plot = T, export = F))
+  suppressMessages(prot.plot_detect(norm, basesize = 10, plot = TRUE, export = FALSE))
 }
 ```
+
 \pagebreak
 The effects of data normalization and imputation on the distributions are visualized via density distributions:
-
 ```{r density, echo=FALSE, fig.width = 7, fig.height = 9, fig.align='center'}
-prot.plot_imputation(data, norm, imp, basesize = 13, plot = T, export = F)
+prot.plot_imputation(data, norm, imp, basesize = 13, plot = TRUE, export = FALSE)
 ```
+
 \pagebreak
 ## Quality control
 
 ### Principal component analysis
-To get a high-level overview of the data, the unsupervised method _principal component analysis (PCA)_ reduces the data dimensionality (i.e., number of proteins included in the analysis) while retaining most of the data information.  
-
-```{r screeplot, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
-ncomp <- 10
-if(length(PCAtools::getComponents(pca)) < 10) ncomp = length(PCAtools::getComponents(pca))
-withCallingHandlers(
-    suppressWarnings(
-        prot.plot_screeplot(pca, axisLabSize = 16, titleLabSize = 17, plot = T, export = F, 
-                            components = PCAtools::getComponents(pca)[1:ncomp])
-    ), warning = suppress_ggrepel)
+To get a high-level overview of the data, the unsupervised method _principal component analysis (PCA)_ reduces the data dimensionality (i.e., number of proteins included in the analysis) while retaining most of the data information.
+```{r screeplot, echo=FALSE, fig.width = 7, fig.height=6, warning=FALSE, message=FALSE, fig.align='center'}
+ncomp <- min(length(PCAtools::getComponents(pca)), 10)
+withCallingHandlers(suppressWarnings(prot.plot_screeplot(pca, axisLabSize = 16, titleLabSize = 17, plot = TRUE, export = FALSE, components = PCAtools::getComponents(pca)[1:ncomp])), warning = suppress_ggrepel)
 ```
+
 \pagebreak
 ### 2D PCA plots
-Notice that the new coordinates (PCs) are no longer real variables generated by the system. Thus, applying PCA to your dataset loses its interpretability. However, PCA can be very useful to observe batch effects and helps to assess which original samples are similar and different from each other. 
-```{r plot_pca_1_2, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
-suppressMessages(
-      prot.plot_pca(imp,x = 1, y = 2, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC2 vs. PC1")
-    )
+```{r plot_pca_1_2, echo=FALSE, fig.width = 7, fig.height=6, warning=FALSE, message=FALSE, fig.align='center'}
+suppressMessages(prot.plot_pca(imp, x = 1, y = 2, point_size = 4, basesize = 12, plot = TRUE, export = FALSE, title = "PC Scores - PC2 vs. PC1"))
 ```
-```{r plot_pca_1_3, echo=FALSE, fig.width = 7, fig.height= 6, warning=F, message=F, fig.align='center'}
-suppressMessages(
-      prot.plot_pca(imp,x = 1, y = 3, point_size = 4, basesize = 12, plot = T, export = F, title = "PC Scores - PC3 vs. PC1")
-    )
+```{r plot_pca_1_3, echo=FALSE, fig.width = 7, fig.height=6, warning=FALSE, message=FALSE, fig.align='center'}
+suppressMessages(prot.plot_pca(imp, x = 1, y = 3, point_size = 4, basesize = 12, plot = TRUE, export = FALSE, title = "PC Scores - PC3 vs. PC1"))
 ```
+
 \pagebreak
 ### Loadings plot
-PCA loadings are the coefficients of the linear combination of the original variables (proteins) from which the principal components (PCs) are generated. They describe how much each gene contributes to a particular principal component. Large loadings (positive or negative) indicate that a particular variable has a strong relationship to a particular principal component. The sign of a loading indicates whether a variable and a principal component are positively or negatively correlated.
-```{r loadingsPlot, echo=FALSE, fig.width = 7, fig.height= 8, warning=F, message=F, fig.align='center'}
- withCallingHandlers(suppressMessages(
-      suppressWarnings(prot.plot_loadings(pca,labSize = 3, plot = T, export = F)) ), 
-                     warning = suppress_ggrepel )
+```{r loadingsPlot, echo=FALSE, fig.width = 7, fig.height=8, warning=FALSE, message=FALSE, fig.align='center'}
+withCallingHandlers(suppressMessages(suppressWarnings(prot.plot_loadings(pca, labSize = 3, plot = TRUE, export = FALSE)))), warning = suppress_ggrepel)
 ```
+
 \pagebreak
 ### Correlation matrix for samples with all proteins
-```{r correlation_heatmap_all, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-    prot.plot_corrheatmap(dep, lower = 0.5,
-  upper = 1,  font_size = 12, significant = FALSE )
+```{r correlation_heatmap_all, echo=FALSE, fig.width = 7, fig.height=7, warning=FALSE, message=FALSE, eval = diff_true, fig.align='center'}
+prot.plot_corrheatmap(dep, lower = 0.5, upper = 1, font_size = 12, significant = FALSE)
 ```
+
 \pagebreak
 ## Differential expression analysis
 
-### `r if_else(diff_true, "Correlation matrix for samples with differentially expressed proteins", "")` 
-```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height= 7, warning=F, message=F, eval=diff_true, fig.align='center'}
-  try(prot.plot_corrheatmap(dep, lower = 0.5,
-  upper = 1, font_size = 12, significant = T ))
+### `r if (diff_true) "Correlation matrix for samples with differentially expressed proteins"` 
+```{r correlation_heatmap, echo=FALSE, fig.width = 7, fig.height=7, warning=FALSE, message=FALSE, eval = diff_true, fig.align='center'}
+prot.plot_corrheatmap(dep, lower = 0.5, upper = 1, font_size = 12, significant = TRUE)
 ```
+
 \pagebreak
 ### Heatmaps
-The heat map gives an overview of all proteins with significantly different abundances (rows) in all samples (bars). This allows general trends to be identified, for example when one sample or replicate differs from others. In addition, clustering of samples (columns) can point to more similar samples and clustering of proteins (rows) can indicate proteins that behave in a similar way.
-```{r,echo=FALSE, warning=F, message=F}
-width = ncol(data) / 2
-if (width < 7) { width = 7 }
-if (width > 12) { width = 12 }
-len = nrow(dep[SummarizedExperiment::rowData(dep)$significant, ]) / 13
-if (len < 5) { len = 5 }
+```{r, echo=FALSE}
+n_samp <- ncol(data)
+width <- max(7, min(12, 5 + 0.45 * n_samp))
+rd_loc <- SummarizedExperiment::rowData(dep, use.names = FALSE)
+sig_rows <- rd_loc$significant
+sig_rows[is.na(sig_rows)] <- FALSE
+fig_h <- max(5, min(11, sum(sig_rows) * 0.06 + 4))
+assign(".__hm_width", width, envir = knitr::knit_global())
+assign(".__hm_height", fig_h, envir = knitr::knit_global())
 ```
-```{r heatmap_1, echo=FALSE, fig.width = width*1.3, fig.height = len, warning=F, message=F, fig.align='center'}
-try(suppressMessages(
-  prot.plot_heatmap(
-    dep,
+```{r heatmap_1, echo=FALSE, fig.width = .__hm_width, fig.height = .__hm_height, warning=FALSE, message=FALSE, fig.align='center'}
+try(suppressMessages(prot.plot_heatmap(dep,
     type = "contrast",
     kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
-    k = if_else(exists("k"), k, 6),
+    k = ifelse(exists("k"), k, 6),
     show_all = heatmap.show_all,
-    show_row_names = T,
-    row_font_size = 5,
-    plot = T,
-    export = F
-  )
-))
+    show_row_names = TRUE,
+    row_font_size = heatmap.row_font_size %||% 5,
+    col_limit = if (exists("heatmap.col_limit")) heatmap.col_limit else NA,
+    plot = TRUE,
+    export = FALSE
+  )))
 ```
+
 \pagebreak
-```{r heatmap_2, echo=FALSE, fig.width = width, fig.height = len, fig.align='center'}
-try(suppressMessages(
-      prot.plot_heatmap(dep, type = "centered", 
-                        kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
-                        k = ifelse(exists("k"), k, 6),
-                        show_all = T, 
-                        show_row_names = T, 
-                        row_font_size = 4.5, 
-                        indicate = c("condition"),
-                        plot = T, 
-                        export = F)
-    ))
+```{r heatmap_2, echo=FALSE, fig.width = .__hm_width, fig.height = .__hm_height, fig.align='center'}
+try(suppressMessages(prot.plot_heatmap(dep,
+                     type = "centered",
+                     kmeans = ifelse(exists("heatmap.kmeans"), heatmap.kmeans, FALSE),
+                     k = ifelse(exists("k"), k, 6),
+                     show_all = TRUE,
+                     show_row_names = TRUE,
+                     row_font_size = heatmap.row_font_size %||% 4.5,
+                     indicate = c("condition"),
+                     plot = TRUE,
+                     export = FALSE)))
 ```
+
 \pagebreak
 ### Volcano plot(s)
-Volcano plots can be used to visualize a particular contrast (comparison between two samples). This allows to examine the gene enrichment between two samples (x-axis) and their corresponding (adjusted) p-values (y-axis).
-```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.8, warning=F, message=F, fig.align='center', eval=plot_volcano_report}
-for (i in 1:length(contrasts)){
-  prot.plot_volcano(dep, contrast = contrasts[i], add_names = volcano.add_names, label_size = 2.5, adjusted =  volcano.adjusted,
-                          plot = T, export = F, lfc = dep@metadata$lfc, alpha = dep@metadata$alpha)
+```{r volcano, echo=FALSE, fig.width = 8, fig.height = 8.5, warning=FALSE, message=FALSE, fig.align='center', eval = plot_volcano_report}
+if (isTRUE(export)) {
+  plots_dir <- file.path(dirname(wd), "Plots")
+  volcano_list <- unlist(lapply(contrasts, function(ct){
+    list.files(path = plots_dir, pattern = paste0("VolcanoPlot_", ct, "\.pdf$"), full.names = TRUE)
+  }))
+  if (length(volcano_list)) {
+    knitr::include_graphics(volcano_list, dpi = 300)
+  } else {
+    cat("No exported volcano plots found.
+")
+  }
+} else {
+  lfc_thr <- param[['lfc']] %||% 0
+  alpha_thr <- param[['alpha']] %||% 0.05
+  for (ct in contrasts) {
+    prot.plot_volcano(dep, contrast = ct,
+                      add_names = volcano.add_names, label_size = volcano.label_size %||% 2.5,
+                      adjusted = volcano.adjusted,
+                      plot = TRUE, export = FALSE,
+                      lfc = lfc_thr, alpha = alpha_thr)
+  }
 }
-
 ```
+
+\pagebreak
+## Sample covariate correlations
+
+```{r covariate_setup, echo=FALSE}
+protein_cor <- if ("protein_covariate_correlations" %in% names(res)) res$protein_covariate_correlations else NULL
+pw_cor <- if ("pathway_covariate_correlations" %in% names(res)) res$pathway_covariate_correlations else NULL
+gsea_cov <- if ("gsea_covariate_results" %in% names(res)) res$gsea_covariate_results else NULL
+overlap_samples <- if ("covariate_overlap" %in% names(res)) res$covariate_overlap else character(0)
+low_n_thr <- if (exists("correlation_low_n")) correlation_low_n else 6
+var_filter_q <- if (exists("correlation_var_filter")) correlation_var_filter else NULL
+```
+```{r covariate_overlap, echo=FALSE, results='asis'}
+if (length(overlap_samples) > 0) {
+  cat(paste0("Covariate correlations used ", length(overlap_samples), " samples: ", paste(overlap_samples, collapse = ", "), "
+
+"))
+}
+```
+```{r covariate_notes, echo=FALSE, results='asis'}
+if (!is.null(protein_cor)) {
+  cat_cov  <- attr(protein_cor, "categorical_covariates"); if (length(cat_cov))  cat(paste0("Categorical covariates (not correlated): ", paste(cat_cov, collapse=", "), "
+
+"))
+  low_uni  <- attr(protein_cor, "skipped_covariates_low_unique"); if (length(low_uni))  cat(paste0("Skipped numeric covariates with <4 unique values: ", paste(low_uni, collapse=", "), "
+
+"))
+  num_like <- attr(protein_cor, "numeric_categorical_covariates"); if (length(num_like)) cat(paste0("Numeric covariates that look categorical (integer-like, ≤8 levels): ", paste(num_like, collapse=", "), "
+
+"))
+}
+```
+```{r protein_cov_tables, echo=FALSE, results='asis', eval = !is.null(protein_cor) && nrow(protein_cor) > 0}
+if (!is.null(protein_cor) && nrow(protein_cor) > 0) {
+  vars <- unique(protein_cor$variable)
+  for (v in vars) {
+    sub <- protein_cor[protein_cor$variable == v, ]
+    sub <- sub[order(sub$padj, -abs(sub$cor)), , drop = FALSE]
+    if (all(c("cor","n") %in% colnames(sub))) {
+      fisher_ci <- function(r, n, level = 0.95) {
+        if (is.na(r) || is.na(n) || n < 4) return(c(NA_real_, NA_real_))
+        r <- max(min(r, 0.999999), -0.999999)
+        z <- atanh(r)
+        se <- 1 / sqrt(n - 3)
+        zc <- stats::qnorm(1 - (1 - level)/2)
+        lo <- tanh(z - zc * se); hi <- tanh(z + zc * se)
+        c(lo, hi)
+      }
+      ci_mat <- t(mapply(fisher_ci, sub$cor, sub$n))
+      sub$CI95 <- ifelse(is.finite(ci_mat[,1]), sprintf("[%.2f, %.2f]", ci_mat[,1], ci_mat[,2]), NA_character_)
+    }
+    for (col in intersect(c("pvalue","padj","cor"), colnames(sub))) sub[[col]] <- signif(sub[[col]], 3)
+    if ("n" %in% colnames(sub)) sub$flag_low_n <- ifelse(sub$n < low_n_thr, "*", "")
+    show_cols <- intersect(c("protein","variable","cor","CI95","pvalue","padj","n","flag_low_n"), colnames(sub))
+    print(knitr::kable(utils::head(sub[, show_cols, drop = FALSE], 40), caption = paste("Top proteins for covariate:", v)))
+    if (!is.null(var_filter_q)) cat(paste0("_Note_: variance filter applied (top ", round(100 * var_filter_q), "% most-variable proteins).
+
+"))
+    if ("flag_low_n" %in% colnames(sub)) cat(paste0("_* entries have n < ", low_n_thr, "._
+
+"))
+  }
+} else {
+  cat("No protein–covariate correlations available.
+")
+}
+```
+```{r covariate_diag, echo=FALSE, results='asis', eval = !is.null(protein_cor) && nrow(protein_cor) > 0}
+alpha_fdr <- param[['alpha']] %||% 0.05
+sum_tab <- do.call(rbind, lapply(split(protein_cor, protein_cor$variable), function(df) {
+  pv  <- df$pvalue; pad <- df$padj
+  data.frame(variable = df$variable[1],
+             tests_m = sum(!is.na(pv)),
+             min_p = signif(min(pv, na.rm = TRUE), 3),
+             min_padj = signif(min(pad, na.rm = TRUE), 3),
+             n_sig = sum(pad <= alpha_fdr, na.rm = TRUE),
+             check.names = FALSE)
+}))
+rownames(sum_tab) <- NULL
+print(knitr::kable(sum_tab[order(-sum_tab$n_sig, sum_tab$min_padj), ], caption = "Covariate multiple-testing diagnostics"))
+```
+```{r covariate_p_hist, echo=FALSE, fig.width=5, fig.height=4, warning=FALSE, message=FALSE, eval = !is.null(protein_cor) && nrow(protein_cor) > 0}
+vars <- unique(protein_cor$variable)
+for (v in vars) {
+  pv <- protein_cor$pvalue[protein_cor$variable == v]
+  m  <- sum(!is.na(pv))
+  if (m >= 200) {
+    hist(pv, breaks = 40, main = paste0("P-value distribution: ", v, " (m=", m, ")"), xlab = "p-value")
+  }
+}
+```
+```{r protein_cov_scatter, echo=FALSE, fig.width=7, fig.height=7, warning=FALSE, message=FALSE, eval = !is.null(protein_cor) && nrow(protein_cor) > 0 && !is.null(sample_covariates)}
+if (!is.null(protein_cor) && nrow(protein_cor) > 0 && !is.null(sample_covariates)) {
+  try({
+    expr_mat <- log2(SummarizedExperiment::assay(imp) + 1)
+    vars <- unique(protein_cor$variable)
+    for (v in vars) {
+      sub <- protein_cor[protein_cor$variable == v, ]
+      sub <- sub[order(sub$padj, -abs(sub$cor)), ]
+      top_proteins <- head(sub$protein, 6)
+      common_samples <- intersect(rownames(sample_covariates), colnames(expr_mat))
+      if (length(common_samples) < 3) next
+      df_long <- do.call(rbind, lapply(top_proteins, function(p){
+        if (!p %in% rownames(expr_mat)) return(NULL)
+        data.frame(
+          sample = common_samples,
+          expr = as.numeric(expr_mat[p, common_samples]),
+          covar = as.numeric(sample_covariates[common_samples, v]),
+          protein = p,
+          stringsAsFactors = FALSE
+        )
+      }))
+      df_long <- df_long[stats::complete.cases(df_long), , drop = FALSE]
+      if (nrow(df_long) >= 6 && requireNamespace("ggplot2", quietly = TRUE)) {
+        labs_df <- do.call(rbind, lapply(split(df_long, df_long$protein), function(d){
+          if (nrow(d) < 3) {
+            data.frame(protein = unique(d$protein), lab = NA_character_, x = NA_real_, y = NA_real_)
+          } else {
+            r <- suppressWarnings(stats::cor(d$expr, d$covar, method = "spearman", use = "complete.obs"))
+            data.frame(
+              protein = unique(d$protein),
+              lab = sprintf("r=%.2f, n=%d", r, nrow(d)),
+              x = min(d$covar, na.rm = TRUE),
+              y = max(d$expr, na.rm = TRUE)
+            )
+          }
+        }))
+        p <- ggplot2::ggplot(df_long, ggplot2::aes(x = covar, y = expr)) +
+          ggplot2::geom_point(alpha = 0.8) +
+          ggplot2::geom_smooth(method = "lm", se = FALSE) +
+          ggplot2::facet_wrap(~ protein, scales = "free_y", ncol = 2) +
+          ggplot2::labs(title = paste("Protein expression vs", v), x = v, y = "log2 normalized intensity") +
+          ggplot2::theme_bw(base_size = 10)
+        labs_df <- labs_df[stats::complete.cases(labs_df), , drop = FALSE]
+        if (nrow(labs_df) > 0) {
+          p <- p + ggplot2::geom_text(data = labs_df, ggplot2::aes(x = x, y = y, label = lab), hjust = 0, vjust = 1, inherit.aes = FALSE, size = 3)
+        }
+        print(p)
+      }
+    }
+  }, silent = FALSE)
+}
+```
+```{r protein_cov_heatmap, echo=FALSE, fig.width = 7, fig.height=7, warning=FALSE, message=FALSE, eval = !is.null(protein_cor) && nrow(protein_cor) > 0 && length(unique(protein_cor$variable)) >= 2, fig.align='center'}
+if (!is.null(protein_cor) && nrow(protein_cor) > 0) {
+  suppressWarnings({
+    wide <- reshape2::dcast(protein_cor, protein ~ variable, value.var = "cor")
+    rownames(wide) <- wide$protein; wide$protein <- NULL
+    if (nrow(wide) > 0) {
+      wide <- wide[rowSums(!is.na(wide)) > 0, , drop = FALSE]
+      nzv <- vapply(wide, function(x) length(unique(stats::na.omit(x))) > 1, logical(1))
+      if (any(!nzv)) wide <- wide[, nzv, drop = FALSE]
+    }
+    if (nrow(wide) > 50) {
+      safemax <- function(z) { if (all(is.na(z))) 0 else max(abs(z), na.rm = TRUE) }
+      ord <- order(apply(wide, 1, safemax), decreasing = TRUE)
+      wide <- wide[ord[1:50], , drop = FALSE]
+    }
+    if (nrow(wide) >= 1 && ncol(wide) >= 1) {
+      if (requireNamespace("pheatmap", quietly = TRUE)) {
+        pheatmap::pheatmap(as.matrix(wide), cluster_rows = nrow(wide) >= 2, cluster_cols = ncol(wide) >= 2,
+                           breaks = seq(-1, 1, length.out = 101))
+      } else {
+        stats::heatmap(as.matrix(wide), scale = "none")
+      }
+    } else {
+      cat("Not enough protein–covariate correlations to draw heatmap.
+")
+    }
+  })
+}
+```
+```{r pathway_cov_tables, echo=FALSE, results='asis', eval = !is.null(pw_cor) && nrow(pw_cor) > 0}
+if (!is.null(pw_cor) && nrow(pw_cor) > 0) {
+  vars <- unique(pw_cor$variable)
+  for (v in vars) {
+    sub <- pw_cor[pw_cor$variable == v, ]
+    sub <- sub[order(sub$padj, -abs(sub$cor)), , drop = FALSE]
+    show_cols <- intersect(c("pathway","variable","cor","pvalue","padj","n_genes_used"), colnames(sub))
+    for (col in c("pvalue","padj","cor")) {
+      if (col %in% show_cols) sub[[col]] <- signif(sub[[col]], 3)
+    }
+    print(knitr::kable(utils::head(sub[, show_cols, drop = FALSE], 20), caption = paste("Top pathways for covariate:", v)))
+    cat("
+
+")
+  }
+} else {
+  cat("No pathway–covariate correlations available.
+")
+}
+```
+```{r pathway_cov_heatmap, echo=FALSE, fig.width = 7, fig.height=7, warning=FALSE, message=FALSE, eval = !is.null(pw_cor) && nrow(pw_cor) > 0 && length(unique(pw_cor$variable)) >= 2, fig.align='center'}
+if (!is.null(pw_cor) && nrow(pw_cor) > 0) {
+  suppressWarnings({
+    wide <- reshape2::dcast(pw_cor, pathway ~ variable, value.var = "cor")
+    rownames(wide) <- wide$pathway; wide$pathway <- NULL
+    if (nrow(wide) > 0) {
+      wide <- wide[rowSums(!is.na(wide)) > 0, , drop = FALSE]
+      nzv <- vapply(wide, function(x) length(unique(stats::na.omit(x))) > 1, logical(1))
+      if (any(!nzv)) wide <- wide[, nzv, drop = FALSE]
+    }
+    if (nrow(wide) > 50) {
+      safemax <- function(z) { if (all(is.na(z))) 0 else max(abs(z), na.rm = TRUE) }
+      ord <- order(apply(wide, 1, safemax), decreasing = TRUE)
+      wide <- wide[ord[1:50], , drop = FALSE]
+    }
+    if (nrow(wide) >= 1 && ncol(wide) >= 1) {
+      if (requireNamespace("pheatmap", quietly = TRUE)) {
+        pheatmap::pheatmap(as.matrix(wide), cluster_rows = nrow(wide) >= 2, cluster_cols = ncol(wide) >= 2,
+                           breaks = seq(-1, 1, length.out = 101))
+      } else {
+        stats::heatmap(as.matrix(wide), scale = "none")
+      }
+    } else {
+      cat("Not enough pathway–covariate correlations to draw heatmap.
+")
+    }
+  })
+}
+```
+```{r gsea_covariate_tables, echo=FALSE, results='asis'}
+if (!is.null(gsea_cov) && length(gsea_cov) > 0) {
+  for (nm in names(gsea_cov)) {
+    df <- tryCatch(as.data.frame(gsea_cov[[nm]]), error = function(e) NULL)
+    if (!is.null(df) && nrow(df) > 0) {
+      if ("NES" %in% colnames(df)) {
+        pos <- df[df$NES > 0, , drop = FALSE]
+        neg <- df[df$NES < 0, , drop = FALSE]
+        if (nrow(pos) > 0) {
+          ordp <- order(pos$pvalue, -pos$NES)
+          show_cols <- intersect(c("ID","Description","NES","pvalue","p.adjust","qvalues","setSize","size"), colnames(pos))
+          print(knitr::kable(utils::head(pos[ordp, show_cols, drop = FALSE], 10), caption = paste("GSEA (ranks) — positive NES for", nm)))
+          cat("
+
+")
+        }
+        if (nrow(neg) > 0) {
+          ordn <- order(neg$pvalue, abs(neg$NES))
+          show_cols <- intersect(c("ID","Description","NES","pvalue","p.adjust","qvalues","setSize","size"), colnames(neg))
+          print(knitr::kable(utils::head(neg[ordn, show_cols, drop = FALSE], 10), caption = paste("GSEA (ranks) — negative NES for", nm)))
+          cat("
+
+")
+        }
+      } else {
+        ord <- order(df$pvalue)
+        show_cols <- intersect(c("ID","Description","pvalue","p.adjust","qvalues","setSize","size"), colnames(df))
+        print(knitr::kable(utils::head(df[ord, show_cols, drop = FALSE], 15), caption = paste("GSEA (correlation ranks) for covariate:", nm)))
+        cat("
+
+")
+      }
+    } else {
+      cat(paste0("No significant GSEA results for covariate: ", nm, ".
+
+"))
+    }
+  }
+} else {
+  cat("No GSEA results on correlation ranks available.
+")
+}
+```
+
 \pagebreak
 ## `r if(pathway_enrichment == TRUE){"Pathway overrepresentation analysis"}`
-`r if(pathway_enrichment == TRUE){"proteins that were identified as differentially expressed based on the chosen log2(fold change) and adj. p-value thresholds are used to identify enriched pathways with FDR control (Benjamini-Hochberg method).\n"}`
+`r if(pathway_enrichment == TRUE){"Proteins that were identified as differentially expressed based on the chosen log2(fold change) and adj. p-value thresholds are used to identify enriched pathways with FDR control (Benjamini-Hochberg method).
+"}`
 ### `r if("pora_kegg_up" %in% names(results)){"KEGG pathways"}`
 `r if("pora_kegg_up" %in% names(results)){if(all(sapply(results$pora_kegg_up, is.null))){"No significantly upregulated KEGG pathways found."}}`
 `r if("pora_kegg_dn" %in% names(results)){if(all(sapply(results$pora_kegg_dn, is.null))){"No significantly downregulated KEGG pathways found."}}`
-```{r,echo=FALSE}
+```{r, echo=FALSE}
 w_pora <- 11
 h_pora <- 7
 ```
-```{r enrichment_kegg, echo=FALSE, fig.width = w_pora, fig.height = h_pora, warning=F, message=F, results='asis'}
+```{r enrichment_kegg, echo=FALSE, fig.width = w_pora, fig.height = h_pora, warning=FALSE, message=FALSE, results='asis'}
 if ("pora_kegg_up" %in% names(results)) {
-  for (i in 1:length(contrasts)) {
-    if(!is.null(pora_kegg_up[[i]]) && !(nrow(pora_kegg_up[[i]])) == 0){
+  for (i in seq_along(contrasts)) {
+    if(!is.null(pora_kegg_up[[i]]) && nrow(as.data.frame(pora_kegg_up[[i]])) != 0){
       prot.plot_enrichment(
         pora_kegg_up[[i]],
-        title = paste0(
-          "Upregulated pathways",
-          if_else(pora_kegg_up[[i]]@ontology == "KEGG", " - KEGG", "")
-        ),
-        subtitle =  str_replace(contrasts[i], "_vs_", " vs. "),
-        plot = T,
-        export = F
+        title = paste0("Upregulated pathways", ifelse(pora_kegg_up[[i]]@ontology == "KEGG", " - KEGG", "")),
+        subtitle =  gsub("_vs_", " vs. ", contrasts[i], fixed = TRUE),
+        plot = TRUE,
+        export = FALSE,
+        kegg = TRUE
       )
       if (nrow(as.data.frame(pora_kegg_up[[i]])) > 1) {
-        cat("\n")
-        print(prot.plot_upset(pora_kegg_up[[i]], line.size = 0.9, mb.ratio = c(
-          (1-((15+10*nrow(as.data.frame(pora_kegg_up[[i]]))^(1/2.4))/100)), 
-          ((15+10*nrow(as.data.frame(pora_kegg_up[[i]]))^(1/2.4))/100))) 
-              )
+        cat("
+")
+        print(prot.plot_upset(pora_kegg_up[[i]], line.size = 0.9, mb.ratio = c((1-((15+10*nrow(as.data.frame(pora_kegg_up[[i]]))^(1/2.4))/100)), ((15+10*nrow(as.data.frame(pora_kegg_up[[i]]))^(1/2.4))/100))))
       }
-      cat("\n\n\\pagebreak\n")
+      cat("
+
+\pagebreak
+")
     } else {
-      cat(
-          paste0("No significantly upregulated KEGG pathways found for contrast:\n",
-                 contrasts[i], "\n")
-          )
-      cat("\n\n\\pagebreak\n")
+      cat(paste0("No significantly upregulated KEGG pathways found for contrast:
+", contrasts[i], "
+
+\pagebreak
+"))
     }
-    if(!is.null(pora_kegg_dn[[i]]) && !(nrow(pora_kegg_dn[[i]])) == 0){
+    if(!is.null(pora_kegg_dn[[i]]) && nrow(as.data.frame(pora_kegg_dn[[i]])) != 0){
       prot.plot_enrichment(
         pora_kegg_dn[[i]],
-        title = paste0(
-          "Downregulated pathways",
-          if_else(pora_kegg_dn[[i]]@ontology == "KEGG", " - KEGG", "")
-        ),
-        subtitle = str_replace(contrasts[i], "_vs_", " vs. "),
-        plot = T,
-        export = F
+        title = paste0("Downregulated pathways", ifelse(pora_kegg_dn[[i]]@ontology == "KEGG", " - KEGG", "")),
+        subtitle =  gsub("_vs_", " vs. ", contrasts[i], fixed = TRUE),
+        plot = TRUE,
+        export = FALSE,
+        kegg = TRUE
       )
       if (nrow(as.data.frame(pora_kegg_dn[[i]])) > 1) {
-        cat("\n")
-        print(prot.plot_upset(pora_kegg_dn[[i]], line.size = 0.9, mb.ratio = c(
-          (1-((15+10*nrow(as.data.frame(pora_kegg_dn[[i]]))^(1/2.4))/100)), 
-          ((15+10*nrow(as.data.frame(pora_kegg_dn[[i]]))^(1/2.4))/100))) 
-              )
+        cat("
+")
+        print(prot.plot_upset(pora_kegg_dn[[i]], line.size = 0.9, mb.ratio = c((1-((15+10*nrow(as.data.frame(pora_kegg_dn[[i]]))^(1/2.4))/100)), ((15+10*nrow(as.data.frame(pora_kegg_dn[[i]]))^(1/2.4))/100))))
       }
-      cat("\n\n\\pagebreak\n")
+      cat("
+
+\pagebreak
+")
     } else {
-      cat(
-          paste0("No significantly downregulated KEGG pathways found for contrast:\n",
-                 contrasts[i], "\n")
-          )
-      cat("\n\n\\pagebreak\n")
+      cat(paste0("No significantly downregulated KEGG pathways found for contrast:
+", contrasts[i], "
+
+\pagebreak
+"))
     }
   }
 }
 ```
 ### `r  if("pora_custom_up" %in% names(results)){"Custom pathways"}`
 `r if("pora_custom_up" %in% names(results)) {if(all(sapply(results$pora_custom_up, is.null))){"No significantly upregulated custom pathways found."}}`
-`r if("pora_custom_dn" %in% names(results)) {if(all(sapply(results$pora_custom_up, is.null))){"No significantly downregulated custom pathways found."}}`
-```{r enrichment_custom, echo=FALSE, fig.width = w_pora, fig.height = h_pora, warning=F, message=F, results='asis'}
+`r if("pora_custom_dn" %in% names(results)) {if(all(sapply(results$pora_custom_dn, is.null))){"No significantly downregulated custom pathways found."}}`
+```{r enrichment_custom, echo=FALSE, fig.width = w_pora, fig.height = h_pora, warning=FALSE, message=FALSE, results='asis'}
 if("pora_custom_up" %in% names(results)) {
-  for (i in 1:length(contrasts)) {
-    if (!(nrow(as.data.frame(pora_custom_up[[i]])) == 0)) {
+  for (i in seq_along(contrasts)) {
+    if(!is.null(pora_custom_up[[i]]) && nrow(as.data.frame(pora_custom_up[[i]])) != 0) {
       prot.plot_enrichment(
         pora_custom_up[[i]],
-        title = paste0(
-          "Upregulated pathways",
-          if_else(pora_custom_up[[i]]@ontology == "KEGG", " - KEGG", "")
-        ),
-        subtitle =  str_replace(contrasts[i], "_vs_", " vs. "),
-        plot = T,
-        export = F
+        title = "Upregulated pathways",
+        subtitle =  gsub("_vs_", " vs. ", contrasts[i], fixed = TRUE),
+        plot = TRUE,
+        export = FALSE,
+        kegg = FALSE
       )
       if (nrow(as.data.frame(pora_custom_up[[i]])) > 1) {
-        cat("\n")
-        print(prot.plot_upset(pora_custom_up[[i]], line.size = 0.9, mb.ratio = c(
-          (1-((15+10*nrow(as.data.frame(pora_custom_up[[i]]))^(1/2.4))/100)), 
-          ((15+10*nrow(as.data.frame(pora_custom_up[[i]]))^(1/2.4))/100))) 
-              )
+        cat("
+")
+        print(prot.plot_upset(pora_custom_up[[i]], line.size = 0.9, mb.ratio = c((1-((15+10*nrow(as.data.frame(pora_custom_up[[i]]))^(1/2.4))/100)), ((15+10*nrow(as.data.frame(pora_custom_up[[i]]))^(1/2.4))/100))))
       }
-      cat("\n\n\\pagebreak\n")
+      cat("
+
+\pagebreak
+")
     } else {
-      cat(
-          paste0("No significantly upregulated custom pathways found for contrast:\n",
-                 contrasts[i], "\n")
-          )
-      cat("\n\n\\pagebreak\n")
+      cat(paste0("No significantly upregulated custom pathways found for contrast:
+", contrasts[i], "
+
+\pagebreak
+"))
     }
-    if (!(nrow(as.data.frame(pora_custom_dn[[i]])) == 0)) {
+    if(!is.null(pora_custom_dn[[i]]) && nrow(as.data.frame(pora_custom_dn[[i]])) != 0) {
       prot.plot_enrichment(
         pora_custom_dn[[i]],
-        title = paste0(
-          "Downregulated pathways",
-          if_else(pora_custom_dn[[i]]@ontology == "KEGG", " - KEGG", "")
-        ),
-        subtitle = str_replace(contrasts[i], "_vs_", " vs. "),
-        plot = T,
-        export = F
+        title = "Downregulated pathways",
+        subtitle =  gsub("_vs_", " vs. ", contrasts[i], fixed = TRUE),
+        plot = TRUE,
+        export = FALSE,
+        kegg = FALSE
       )
       if (nrow(as.data.frame(pora_custom_dn[[i]])) > 1) {
-        cat("\n")
-        print(prot.plot_upset(pora_custom_dn[[i]], line.size = 0.9, mb.ratio = c(
-          (1-((15+10*nrow(as.data.frame(pora_custom_dn[[i]]))^(1/2.4))/100)),
-          ((15+10*nrow(as.data.frame(pora_custom_dn[[i]]))^(1/2.4))/100)
-          )) 
-              )
+        cat("
+")
+        print(prot.plot_upset(pora_custom_dn[[i]], line.size = 0.9, mb.ratio = c((1-((15+10*nrow(as.data.frame(pora_custom_dn[[i]]))^(1/2.4))/100)), ((15+10*nrow(as.data.frame(pora_custom_dn[[i]]))^(1/2.4))/100))))
       }
-      cat("\n\n\\pagebreak\n")
+      cat("
+
+\pagebreak
+")
     } else {
-      cat(
-          paste0("No significantly downregulated custom pathways found for contrast:\n",
-                 contrasts[i], "\n")
-          )
-      cat("\n\n\\pagebreak\n")
+      cat(paste0("No significantly downregulated custom pathways found for contrast:
+", contrasts[i], "
+
+\pagebreak
+"))
     }
   }
 }
 ```
-

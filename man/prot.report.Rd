@@ -4,15 +4,19 @@
 \alias{prot.report}
 \title{Report Proteomics Data}
 \usage{
-prot.report(results, report.dir = NULL, ...)
+prot.report(results, report.dir = NULL, ..., param = NULL)
 }
 \arguments{
 \item{results}{A list containing the results of a differential protein expression analysis, generated with \code{prot.workflow}.}
 
 \item{report.dir}{A character string specifying the directory where the report will be saved}
 
-\item{...}{Additional parameters to be passed to markdown to generate the report.
-currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k}
+\item{...}{Additional parameters forwarded to the reporting template, such as
+\code{volcano.adjusted}, \code{volcano.add_names}, \code{volcano.label_size},
+\code{plot_volcano}, heatmap settings, pathway flags, and covariate-analysis
+controls (e.g. \code{sample_covariates}, \code{correlation_low_n}, \code{correlation_var_filter}, \code{gsea_covariates}, \code{gsea_gmt}, \code{export}, \code{quiet}).}
+
+\item{param}{Optional list of workflow parameters; defaults to \code{results$param}.}
 }
 \description{
 Generates a report with proteomics data in PDF and HTML format
