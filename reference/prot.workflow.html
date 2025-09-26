@@ -81,7 +81,18 @@
 <span>  gsea_minGSSize <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  gsea_maxGSSize <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  gsea_nPerm <span class="op">=</span> <span class="fl">1000</span>,</span>
-<span>  out.dir <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  out.dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sample_covariates <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  correlate_proteins <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  correlate_pathways <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pathway_min_genes <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  correlation_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"spearman"</span>, <span class="st">"pearson"</span><span class="op">)</span>,</span>
+<span>  correlation_p_adjust <span class="op">=</span> <span class="st">"BH"</span>,</span>
+<span>  correlation_var_filter <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  correlation_min_sd <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  correlation_low_n <span class="op">=</span> <span class="fl">6</span>,</span>
+<span>  gsea_covariates <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -208,10 +219,54 @@
 <dt id="arg-out-dir">out.dir<a class="anchor" aria-label="anchor" href="#arg-out-dir"></a></dt>
 <dd><p>(Character string) absolute path to the location where result TXT files should be exported to.</p></dd>
 
+
+<dt id="arg-sample-covariates">sample_covariates<a class="anchor" aria-label="anchor" href="#arg-sample-covariates"></a></dt>
+<dd><p>Optional data frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns are used for correlation analysis.</p></dd>
+
+
+<dt id="arg-correlate-proteins">correlate_proteins<a class="anchor" aria-label="anchor" href="#arg-correlate-proteins"></a></dt>
+<dd><p>Logical; if <code>TRUE</code> compute per-protein correlations versus the supplied covariates.</p></dd>
+
+
+<dt id="arg-correlate-pathways">correlate_pathways<a class="anchor" aria-label="anchor" href="#arg-correlate-pathways"></a></dt>
+<dd><p>Logical; if <code>TRUE</code> compute pathway-level correlations (requires <code>custom_pathways</code>).</p></dd>
+
+
+<dt id="arg-pathway-min-genes">pathway_min_genes<a class="anchor" aria-label="anchor" href="#arg-pathway-min-genes"></a></dt>
+<dd><p>Minimum number of proteins required in a pathway to compute a pathway score (default 3).</p></dd>
+
+
+<dt id="arg-correlation-method">correlation_method<a class="anchor" aria-label="anchor" href="#arg-correlation-method"></a></dt>
+<dd><p>Correlation method to be used for covariate analyses ("spearman" or "pearson").</p></dd>
+
+
+<dt id="arg-correlation-p-adjust">correlation_p_adjust<a class="anchor" aria-label="anchor" href="#arg-correlation-p-adjust"></a></dt>
+<dd><p>Multiple testing adjustment method for correlation p-values (default "BH").</p></dd>
+
+
+<dt id="arg-correlation-var-filter">correlation_var_filter<a class="anchor" aria-label="anchor" href="#arg-correlation-var-filter"></a></dt>
+<dd><p>Optional numeric quantile (0-1) to filter out low-variance proteins before correlation analysis.</p></dd>
+
+
+<dt id="arg-correlation-min-sd">correlation_min_sd<a class="anchor" aria-label="anchor" href="#arg-correlation-min-sd"></a></dt>
+<dd><p>Optional minimum standard deviation threshold to filter out low-variance proteins.</p></dd>
+
+
+<dt id="arg-correlation-low-n">correlation_low_n<a class="anchor" aria-label="anchor" href="#arg-correlation-low-n"></a></dt>
+<dd><p>Minimum number of overlapping samples required to compute correlations (default 6).</p></dd>
+
+
+<dt id="arg-gsea-covariates">gsea_covariates<a class="anchor" aria-label="anchor" href="#arg-gsea-covariates"></a></dt>
+<dd><p>Logical; if <code>TRUE</code> run GSEA on correlation-ranked proteins for each numeric covariate (requires <code>gsea_gmt</code>).</p></dd>
+
+
+<dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
+<dd><p>Logical; if <code>TRUE</code> suppress progress messages.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list containing <code>SummarizedExperiment</code> object for every computation step of the workflow, a <code>pca</code> object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).</p>
+    <p>A list containing <code>SummarizedExperiment</code> object for every computation step of the workflow, a <code>pca</code> object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom). When covariate analyses are requested, protein/pathway correlation summaries and optional GSEA results are included.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
