@@ -54,7 +54,7 @@ correlate_features_with_vector <- function(mat, vec, feature_ids = rownames(mat)
 #' @param covariates Data.frame with rownames matching sample IDs (columns numeric or coercible).
 #' @param method Correlation method.
 #' @param adjust_method P-value adjustment method (BH by default) applied within each covariate.
-#' @param feature_type Character label ("gene" or "pathway") used in output column naming.
+#' @param feature_type Character label ("gene", "protein", or "pathway") used in output column naming.
 #' @param var_filter_quantile Optional numeric quantile (0-1) to filter out low-variance features.
 #'   E.g. 0.5 to keep only features with variance in the top 50%. Default NULL (no filtering).
 #' @param min_sd Optional numeric minimum standard deviation threshold to filter out low-variance features.
@@ -65,7 +65,7 @@ correlate_features_with_vector <- function(mat, vec, feature_ids = rownames(mat)
 correlate_matrix_with_covariates <- function(mat, covariates,
                                              method = c("spearman","pearson"),
                                              adjust_method = "BH",
-                                             feature_type = c("gene","pathway"),
+                                             feature_type = c("gene","protein","pathway"),
                                              var_filter_quantile = NULL,
                                              min_sd = NULL,
                                              min_n = 6,

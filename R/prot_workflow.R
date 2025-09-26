@@ -31,7 +31,18 @@
 #' @param pathway_kegg (Logical) Perform pathway over-representation analysis with gene sets in the KEGG database (\code{TRUE}) or not \code{FALSE}).
 #' @param kegg_organism (Character string) Identifier of the organism in the KEGG database (if \code{pathway_kegg = TRUE})
 #' @param custom_pathways (a R dataframe object) Data frame providing custom pathway annotations. The table must contain a "Pathway" column listing identified pathway in the studies organism, and an "Accession" column listing the proteins (or genes) each pathway is composed of. The **Accession** entries must match with protein **IDs**.
+#' @param sample_covariates Optional data.frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns will be used for correlation analysis.
+#' @param correlate_proteins Logical; if TRUE compute per-protein correlations vs provided numeric sample covariates on normalized/imputed expression values.
+#' @param correlate_pathways Logical; if TRUE compute per-pathway correlations (mean expression per pathway) vs covariates. Requires `custom_pathways` as pathway gene/protein definitions.
+#' @param pathway_min_genes Minimum number of proteins required in a pathway to compute a pathway score (default 3).
+#' @param correlation_method Correlation method for covariate analyses: "spearman" (default) or "pearson".
+#' @param correlation_p_adjust Method used to adjust p-values for the correlation analyses (default "BH").
+#' @param correlation_var_filter Optional numeric quantile (0-1) to filter out low-variance proteins before correlation analysis.
+#' @param correlation_min_sd Optional numeric minimum standard deviation threshold to filter out low-variance proteins.
+#' @param correlation_low_n Minimum number of overlapping samples required to compute correlations (default 6).
 #' @param out.dir (Character string) absolute path to the location where result TXT files should be exported to.
+#' @param gsea_covariates Logical; if TRUE run GSEA on correlation-ranked proteins for each numeric covariate (requires `gsea_gmt`).
+#' @param quiet Logical; if TRUE suppress progress messages from the workflow.
 #' @return A list containing `SummarizedExperiment` object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
 #' @export
 #' @importFrom assertthat assert_that
@@ -77,7 +88,18 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
                           gsea_minGSSize = 5,
                           gsea_maxGSSize = 500,
                           gsea_nPerm = 1000,
-                          out.dir = NULL)
+                          out.dir = NULL,
+                          sample_covariates = NULL,
+                          correlate_proteins = FALSE,
+                          correlate_pathways = FALSE,
+                          pathway_min_genes = 3,
+                          correlation_method = c("spearman","pearson"),
+                          correlation_p_adjust = "BH",
+                          correlation_var_filter = NULL,
+                          correlation_min_sd = NULL,
+                          correlation_low_n = 6,
+                          gsea_covariates = FALSE,
+                          quiet = FALSE)
 {
   # Show error if inputs are not the required classes
   if(is.integer(alpha)) alpha <- as.numeric(alpha)
@@ -91,6 +113,10 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
   imp_fun <- match.arg(imp_fun)
   gsea_pAdjustMethod <- match.arg(gsea_pAdjustMethod)
+  correlation_method <- match.arg(correlation_method)
+  if (!is.null(sample_covariates) && !is.data.frame(sample_covariates)) {
+    stop("'sample_covariates' must be a data.frame with rownames matching sample IDs.", call. = FALSE)
+  }
   out_dir <- out.dir
 
   # If out.dir is defined, create the directory and set it as the working directory
@@ -98,7 +124,9 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   if (!is.null(out.dir)) {
     dir.create(out.dir, showWarnings = F)
     setwd(out.dir)
-    message("Running proteomics workflow in the directory:", as.character(getwd()))
+    if (!quiet) {
+      message("Running proteomics workflow in the directory:", as.character(getwd()))
+    }
   }
 
   # if contrast is defined, set type to "manual"
@@ -144,12 +172,154 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   results <- prot.get_results(prot_dep)
   n_significant <- results %>% dplyr::filter(significant) %>% nrow()
 
-  message(paste0(n_significant,
-                 " proteins were found to be differentially expressed with ",
-                 expression(alpha),
-                 " = ", alpha,
-                 " and |log2(fold change)| > ",
-                 lfc, "."))
+  if (!quiet) {
+    message(paste0(n_significant,
+                   " proteins were found to be differentially expressed with ",
+                   expression(alpha),
+                   " = ", alpha,
+                   " and |log2(fold change)| > ",
+                   lfc, "."))
+  }
+
+  protein_covariate_correlations <- NULL
+  pathway_covariate_correlations <- NULL
+  gsea_covariate_results <- list()
+  covariate_overlap <- character()
+
+  if (!is.null(sample_covariates) && (correlate_proteins || correlate_pathways)) {
+    if (!all(rownames(sample_covariates) %in% colnames(SummarizedExperiment::assay(prot_imp)))) {
+      warning("Some rownames in 'sample_covariates' do not match proteomics sample IDs; they will be ignored.")
+    }
+    common_samples <- intersect(rownames(sample_covariates), colnames(SummarizedExperiment::assay(prot_imp)))
+    if (length(common_samples) < correlation_low_n) {
+      warning("<", correlation_low_n, " overlapping samples between proteomics data and 'sample_covariates'; skipping correlation analysis.")
+    } else {
+      covariate_overlap <- common_samples
+      cov_df <- sample_covariates[common_samples, , drop = FALSE]
+      expr_mat <- SummarizedExperiment::assay(prot_imp)[, common_samples, drop = FALSE]
+
+      if (correlate_proteins) {
+        if (!quiet) message("Computing protein-level correlations with sample covariates")
+        protein_covariate_correlations <- tryCatch(
+          correlate_matrix_with_covariates(
+            mat = expr_mat,
+            covariates = cov_df,
+            method = correlation_method,
+            adjust_method = correlation_p_adjust,
+            feature_type = "protein",
+            var_filter_quantile = correlation_var_filter,
+            min_sd = correlation_min_sd,
+            min_n = correlation_low_n,
+            low_n_threshold = correlation_low_n
+          ),
+          error = function(e) {
+            warning("Protein correlation analysis failed: ", e$message)
+            NULL
+          }
+        )
+        if (!is.null(protein_covariate_correlations) && nrow(protein_covariate_correlations) > 0) {
+          if (requireNamespace("reshape2", quietly = TRUE)) {
+            wide_cor <- reshape2::dcast(protein_covariate_correlations, protein ~ variable, value.var = "cor")
+            wide_p <- reshape2::dcast(protein_covariate_correlations, protein ~ variable, value.var = "padj")
+            prot_row_ids <- rownames(prot_dep)
+            prot_imp_ids <- rownames(prot_imp)
+            for (v in setdiff(colnames(wide_cor), "protein")) {
+              SummarizedExperiment::rowData(prot_dep)[[paste0("cov.cor.", v)]] <-
+                wide_cor[[v]][match(prot_row_ids, wide_cor$protein)]
+              SummarizedExperiment::rowData(prot_imp)[[paste0("cov.cor.", v)]] <-
+                wide_cor[[v]][match(prot_imp_ids, wide_cor$protein)]
+            }
+            for (v in setdiff(colnames(wide_p), "protein")) {
+              SummarizedExperiment::rowData(prot_dep)[[paste0("cov.padj.", v)]] <-
+                wide_p[[v]][match(prot_row_ids, wide_p$protein)]
+              SummarizedExperiment::rowData(prot_imp)[[paste0("cov.padj.", v)]] <-
+                wide_p[[v]][match(prot_imp_ids, wide_p$protein)]
+            }
+          } else {
+            warning("Package 'reshape2' is required to reshape covariate correlations for rowData; skipping annotation.")
+          }
+
+          if (gsea_covariates && !is.null(gsea_gmt)) {
+            id_map <- SummarizedExperiment::rowData(prot_dep)$ID
+            names(id_map) <- SummarizedExperiment::rowData(prot_dep)$name
+            gene_cor <- protein_covariate_correlations
+            gene_cor$gene <- gene_cor$protein
+            gsea_covariate_results <- run_gsea_on_correlation(
+              gene_cor_df   = gene_cor,
+              id_map        = id_map,
+              gmt_file      = gsea_gmt,
+              pAdjustMethod = gsea_pAdjustMethod,
+              pvalueCutoff  = gsea_pvalueCutoff,
+              minGSSize     = gsea_minGSSize,
+              maxGSSize     = gsea_maxGSSize
+            )
+            if (length(gsea_covariate_results) > 0 && export) {
+              for (nm in names(gsea_covariate_results)) {
+                res_df <- gsea_covariate_results[[nm]]
+                if (!is.null(res_df) && nrow(as.data.frame(res_df)) > 0) {
+                  utils::write.table(as.data.frame(res_df),
+                                     file = file.path(getwd(), paste0("gsea_covariate_", nm, ".txt")),
+                                     sep = "\t", row.names = FALSE)
+                }
+              }
+            }
+          }
+
+          if (export) {
+            utils::write.table(protein_covariate_correlations,
+                               file = file.path(getwd(), "protein_covariate_correlations.txt"),
+                               sep = "\t", row.names = FALSE)
+          }
+        }
+      }
+
+      if (correlate_pathways) {
+        if (is.null(custom_pathways)) {
+          warning("'correlate_pathways = TRUE' requires 'custom_pathways'; skipping pathway correlation analysis.")
+        } else {
+          if (!quiet) message("Computing pathway-level correlations with sample covariates")
+          pathway_list <- list()
+          if (is.data.frame(custom_pathways)) {
+            if (!all(c("Pathway", "Accession") %in% colnames(custom_pathways))) {
+              warning("custom_pathways must contain 'Pathway' and 'Accession' columns for pathway correlations; skipping.")
+            } else {
+              pathway_list <- lapply(seq_len(nrow(custom_pathways)), function(i) {
+                acc <- custom_pathways$Accession[i]
+                unlist(strsplit(acc, "[,;/] ?| // "))
+              })
+              names(pathway_list) <- custom_pathways$Pathway
+            }
+          } else if (is.character(custom_pathways) && length(custom_pathways) == 1 && grepl("\\.gmt$", custom_pathways) && file.exists(custom_pathways)) {
+            gmt_df <- clusterProfiler::read.gmt(custom_pathways)
+            pathway_list <- split(gmt_df$gene, gmt_df$term)
+          } else {
+            warning("Unsupported 'custom_pathways' format for pathway correlation; expected data.frame or GMT filepath.")
+          }
+          if (length(pathway_list) > 0) {
+            pathway_covariate_correlations <- tryCatch(
+              correlate_pathways(
+                expr_mat = expr_mat,
+                pathway_list = pathway_list,
+                covariates = cov_df,
+                min_genes = pathway_min_genes,
+                method = correlation_method,
+                adjust_method = correlation_p_adjust
+              ),
+              error = function(e) {
+                warning("Pathway correlation analysis failed: ", e$message)
+                NULL
+              }
+            )
+            if (!is.null(pathway_covariate_correlations) && nrow(pathway_covariate_correlations) > 0 && export) {
+              utils::write.table(pathway_covariate_correlations,
+                                 file = file.path(getwd(), "pathway_covariate_correlations.txt"),
+                                 sep = "\t", row.names = FALSE)
+            }
+          }
+        }
+      }
+    }
+  }
   # Perform pathway enrichment analysis
   if (pathway_enrichment) {
     res.pathway <- enrich_pathways(prot_dep, contrasts, alpha_pathways = alpha_pathways,
@@ -171,7 +341,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     }
 
     if (!is.null(contrasts) && length(contrasts) > 0) {
-      if (!isTRUE(plot) && !isTRUE(export)) {
+      if (!isTRUE(plot) && !isTRUE(export) && !quiet) {
         message("performing GSEA for each contrast")
       }
       ls_gsea <- vector("list", length(contrasts))
@@ -217,7 +387,7 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
 
   if (export == TRUE |
       plot == TRUE) {
-    if (export == TRUE){
+    if (export == TRUE && !quiet){
       message(paste0("Rendering and exporting figures to:\n",
                      getwd(), "/Plots."))
     }
@@ -318,21 +488,64 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
     }
   }
 
-  param <- data.frame(type, alpha, lfc, check.names = FALSE)
-  results <- list(data = SummarizedExperiment::rowData(se), se = se, norm = prot_norm,
-                  imputed = prot_imp, pca = prot_pca, diff = prot_diff, dep = prot_dep,
-                  results = results, param = param)
+  param <- list(
+    type = type,
+    alpha = alpha,
+    alpha_pathways = alpha_pathways,
+    lfc = lfc,
+    normalize = normalize,
+    imp_fun = imp_fun,
+    sample_covariates = if (is.null(sample_covariates)) "none" else ncol(sample_covariates),
+    correlate_proteins = correlate_proteins,
+    correlate_pathways = correlate_pathways,
+    correlation_method = correlation_method,
+    correlation_p_adjust = correlation_p_adjust,
+    correlation_var_filter = correlation_var_filter,
+    correlation_min_sd = correlation_min_sd,
+    correlation_low_n = correlation_low_n,
+    gsea = gsea,
+    gsea_covariates = gsea_covariates
+  )
 
-  message(paste0("Save results as tab-delimited table to: ", getwd(), "/results.txt"))
+  results <- list(
+    data = SummarizedExperiment::rowData(se),
+    se = se,
+    norm = prot_norm,
+    imputed = prot_imp,
+    pca = prot_pca,
+    diff = prot_diff,
+    dep = prot_dep,
+    results = results,
+    param = param,
+    covariate_overlap = covariate_overlap
+  )
+
+  if (!is.null(protein_covariate_correlations)) {
+    results$protein_covariate_correlations <- protein_covariate_correlations
+  }
+  if (!is.null(pathway_covariate_correlations)) {
+    results$pathway_covariate_correlations <- pathway_covariate_correlations
+  }
+  if (length(gsea_covariate_results) > 0) {
+    results$gsea_covariate_results <- gsea_covariate_results
+  }
+
+  if (!quiet) {
+    message(paste0("Save results as tab-delimited table to: ", getwd(), "/results.txt"))
+  }
   utils::write.table(results$results, paste(getwd(), "results.txt",
                                             sep = "/"), row.names = FALSE, sep = "\t")
 
-  message("Save RData object")
+  if (!quiet) {
+    message("Save RData object")
+  }
   save(results, file = paste(out_dir, "results.RData", sep = "/"))
 
   if (pathway_enrichment == T && pathway_kegg) {
     results <- c(results, pora_kegg_up = list(res.pathway$ls.pora_kegg_up), pora_kegg_dn = list(res.pathway$ls.pora_kegg_dn))
-    message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "/pora_kegg_contrast...txt'"))
+    if (!quiet) {
+      message(paste0("Writing results of KEGG pathway enrichment analysis to: ", out_dir, "/pora_kegg_contrast...txt'"))
+    }
     for(i in 1:length(res.pathway$ls.pora_kegg_up)){
       if(!is.null(res.pathway$ls.pora_kegg_up[[i]])){
         utils::write.table(res.pathway$ls.pora_kegg_up[[i]]@result, paste(out_dir, paste0("pora_kegg_", names(res.pathway$ls.pora_kegg_up)[i], "_up.txt"),
@@ -348,7 +561,9 @@ prot.workflow <- function(se, # SummarizedExperiment, generated with read_prot()
   }
   if (pathway_enrichment == T && !is.null(custom_pathways)) {
     results <- c(results, pora_custom_up = list(res.pathway$ls.pora_custom_up), pora_custom_dn = list(res.pathway$ls.pora_custom_dn))
-    message(paste0("Writing results of custom pathway enrichment analysis to: ", out_dir, "/pora_custom_contrast...txt"))
+    if (!quiet) {
+      message(paste0("Writing results of custom pathway enrichment analysis to: ", out_dir, "/pora_custom_contrast...txt"))
+    }
     for(i in 1:length(res.pathway$ls.pora_custom_up)){
       if(!is.null(res.pathway$ls.pora_custom_up[[i]])){
         utils::write.table(res.pathway$ls.pora_custom_up[[i]]@result, paste(out_dir, paste0("pora_custom_", names(res.pathway$ls.pora_custom_up)[i], "_up.txt"),

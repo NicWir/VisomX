@@ -42,7 +42,18 @@ prot.workflow(
   gsea_minGSSize = 5,
   gsea_maxGSSize = 500,
   gsea_nPerm = 1000,
-  out.dir = NULL
+  out.dir = NULL,
+  sample_covariates = NULL,
+  correlate_proteins = FALSE,
+  correlate_pathways = FALSE,
+  pathway_min_genes = 3,
+  correlation_method = c("spearman", "pearson"),
+  correlation_p_adjust = "BH",
+  correlation_var_filter = NULL,
+  correlation_min_sd = NULL,
+  correlation_low_n = 6,
+  gsea_covariates = FALSE,
+  quiet = FALSE
 )
 }
 \arguments{
@@ -105,9 +116,31 @@ prot.workflow(
 \item{custom_pathways}{(a R dataframe object) Data frame providing custom pathway annotations. The table must contain a "Pathway" column listing identified pathway in the studies organism, and an "Accession" column listing the proteins (or genes) each pathway is composed of. The \strong{Accession} entries must match with protein \strong{IDs}.}
 
 \item{out.dir}{(Character string) absolute path to the location where result TXT files should be exported to.}
+
+\item{sample_covariates}{Optional data frame of sample-level covariates (rownames must match sample IDs / column names of the expression matrix). Numeric columns are used for correlation analysis.}
+
+\item{correlate_proteins}{Logical; if \code{TRUE} compute per-protein correlations versus the supplied covariates.}
+
+\item{correlate_pathways}{Logical; if \code{TRUE} compute pathway-level correlations (requires \code{custom_pathways}).}
+
+\item{pathway_min_genes}{Minimum number of proteins required in a pathway to compute a pathway score (default 3).}
+
+\item{correlation_method}{Correlation method to be used for covariate analyses ("spearman" or "pearson").}
+
+\item{correlation_p_adjust}{Multiple testing adjustment method for correlation p-values (default "BH").}
+
+\item{correlation_var_filter}{Optional numeric quantile (0-1) to filter out low-variance proteins before correlation analysis.}
+
+\item{correlation_min_sd}{Optional minimum standard deviation threshold to filter out low-variance proteins.}
+
+\item{correlation_low_n}{Minimum number of overlapping samples required to compute correlations (default 6).}
+
+\item{gsea_covariates}{Logical; if \code{TRUE} run GSEA on correlation-ranked proteins for each numeric covariate (requires \code{gsea_gmt}).}
+
+\item{quiet}{Logical; if \code{TRUE} suppress progress messages.}
 }
 \value{
-A list containing \code{SummarizedExperiment} object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom).
+A list containing \code{SummarizedExperiment} object for every computation step of the workflow, a \code{pca} object, and lists of up- or down regulated pathways for each tested contrast and method (KEGG and/or custom). When covariate analyses are requested, protein/pathway correlation summaries and optional GSEA results are included.
 }
 \description{
 \code{prot.workflow} performs variance stabilization normalization (\code{\link{prot.normalize_vsn}}), missing value imputation (\code{\link{prot.impute}}), principal component analysis (\code{\link{prot.pca}}), differential enrichment test (\code{\link{prot.test_diff}}), and pathway enrichment analysis. If desired, standardized plots and a report are generated and exported as separate files.

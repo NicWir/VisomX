@@ -9,7 +9,7 @@ correlate_matrix_with_covariates(
   covariates,
   method = c("spearman", "pearson"),
   adjust_method = "BH",
-  feature_type = c("gene", "pathway")
+  feature_type = c("gene", "protein", "pathway")
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ correlate_matrix_with_covariates(
 
 \item{adjust_method}{P-value adjustment method (BH by default) applied within each covariate.}
 
-\item{feature_type}{Character label ("gene" or "pathway") used in output column naming.}
+\item{feature_type}{Character label ("gene", "protein", or "pathway") used in output column naming.}
 }
 \value{
 Long-format data.frame: feature, variable, cor, pvalue, padj.
