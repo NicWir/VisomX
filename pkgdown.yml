@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   vignette_proteomics: vignette_proteomics.html
   vignette_transcriptomics: vignette_transcriptomics.html
-last_built: 2025-09-25T09:59Z
+last_built: 2025-09-26T11:30Z
 urls:
   reference: https://nicwir.github.io/VisomX/reference
   article: https://nicwir.github.io/VisomX/articles
