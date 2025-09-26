@@ -43,7 +43,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">prot.report</span><span class="op">(</span><span class="va">results</span>, report.dir <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">prot.report</span><span class="op">(</span><span class="va">results</span>, report.dir <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, param <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -59,8 +59,14 @@
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional parameters to be passed to markdown to generate the report.
-currently supported: volcano.adjusted, pathway_enrichment, heatmap.show_all, heatmap.kmeans,volcano.add_names, k = k</p></dd>
+<dd><p>Additional parameters forwarded to the reporting template, such as
+<code>volcano.adjusted</code>, <code>volcano.add_names</code>, <code>volcano.label_size</code>,
+<code>plot_volcano</code>, heatmap settings, pathway flags, and covariate-analysis
+controls (e.g. <code>sample_covariates</code>, <code>correlation_low_n</code>, <code>correlation_var_filter</code>, <code>gsea_covariates</code>, <code>gsea_gmt</code>, <code>export</code>, <code>quiet</code>).</p></dd>
+
+
+<dt id="arg-param">param<a class="anchor" aria-label="anchor" href="#arg-param"></a></dt>
+<dd><p>Optional list of workflow parameters; defaults to <code>results$param</code>.</p></dd>
 
 </dl></div>
 
